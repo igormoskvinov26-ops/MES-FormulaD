@@ -11,6 +11,7 @@ import type { SendTarget } from '../telegram/types.js';
 import { buildCtaStoryAreas } from './areas.js';
 import { renderStoryPng } from './renderer.js';
 import { getStoryState, saveStoryState, type StoryState } from './state.js';
+import { setMeta } from '../../store/backend.js';
 
 export type StoryPlan = {
   barber: BarberConfig;
@@ -215,6 +216,7 @@ export async function publishStory(
     telegramStoryId: result.storyId ?? undefined,
   });
 
+  if (!result.dryRun) await setMeta('lastStoryPublish', new Date().toISOString());
   return { status, storyId: result.storyId ?? null, fingerprint: plan.fingerprint };
 }
 

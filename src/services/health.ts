@@ -4,9 +4,13 @@ import {
   telegramConfigured,
   yclientsConfigured,
 } from '../config/settings.js';
-import { read } from '../store/db.js';
+import { storage } from '../store/backend.js';
 import { telegramService } from './telegram/service.js';
 import { schedulerStatus } from './scheduler/scheduler.js';
+
+async function getMeta(key: string): Promise<string | null> {
+  return storage().getRaw(`meta:${key}`);
+}
 
 /**
  * Safe integration health. Never returns secrets — presence booleans and
@@ -26,7 +30,8 @@ export async function integrationsHealth(): Promise<IntegrationsHealth> {
     yclients: yclientsConfigured(),
     telegram: telegramConfigured(),
     telegramBusiness: business.configured && business.connected && business.canManageStories,
-    scheduler: schedulerStatus().running,
+    // On Vercel the scheduler is Vercel Cron (no in-process node-cron).
+    scheduler: schedulerStatus().running || Boolean(process.env.VERCEL),
   };
 }
 
@@ -34,7 +39,6 @@ export async function integrationsHealth(): Promise<IntegrationsHealth> {
 export async function dashboardStatus() {
   const business = await telegramService().checkBusinessConnection();
   const sched = schedulerStatus();
-  const meta = await read((db) => db.meta as Record<string, unknown>);
 
   return {
     config: safeConfigSnapshot(),
@@ -51,11 +55,11 @@ export async function dashboardStatus() {
           ? 'OK'
           : 'NO'
         : 'NOT CONFIGURED',
-      scheduler: sched.running ? 'RUNNING' : sched.enabled ? 'STOPPED' : 'DISABLED',
+      scheduler: sched.running ? 'RUNNING' : process.env.VERCEL ? 'VERCEL CRON' : sched.enabled ? 'STOPPED' : 'DISABLED',
     },
     scheduler: sched,
-    lastYclientsSync: (meta.lastYclientsSync as string) ?? null,
-    lastStoryPublish: (meta.lastStoryPublish as string) ?? null,
-    lastDailyReport: (meta.lastDailyReport as string) ?? null,
+    lastYclientsSync: await getMeta('lastYclientsSync'),
+    lastStoryPublish: await getMeta('lastStoryPublish'),
+    lastDailyReport: await getMeta('lastDailyReport'),
   };
 }

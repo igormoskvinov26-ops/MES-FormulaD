@@ -1,4 +1,5 @@
 import { logger } from '../../lib/logger.js';
+import { setMeta } from '../../store/backend.js';
 import { isValidBusinessDate } from '../../lib/time.js';
 import { AppError } from '../../lib/errors.js';
 import { telegramService } from '../telegram/service.js';
@@ -28,5 +29,6 @@ export async function sendDailyReport(date: string, target: SendTarget = 'test')
     telegramDestination: res.destination,
     telegramMessageId: res.messageId,
   });
+  if (!res.dryRun) await setMeta('lastDailyReport', new Date().toISOString());
   return { report, text, send: res };
 }

@@ -2,6 +2,8 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:
 import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
 import path from 'node:path';
 import { env, BUSINESS_TZ } from './env.js';
+import { storage, backendKind } from '../store/backend.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * Runtime settings store.
@@ -44,8 +46,8 @@ export type AppSettings = {
 
 const IN_MEMORY = Boolean(process.env.VITEST);
 const DATA_DIR = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
-const CONFIG_FILE = path.join(DATA_DIR, 'config.enc');
 const KEY_FILE = path.join(DATA_DIR, '.appkey');
+const SETTINGS_KEY = 'settings';
 
 const DEFAULT_BARBERS: Array<Omit<BarberSetting, 'staffId' | 'enabled'>> = [
   { slug: 'artash', displayName: 'Арташ', template: 'artash' },
@@ -87,26 +89,40 @@ function seedFromEnv(): AppSettings {
 // ---------------------------------------------------------------------------
 // Encryption at rest
 // ---------------------------------------------------------------------------
-function loadKey(): Buffer {
+// Key selection:
+//   APP_MASTER_KEY set      → derive key from it (works on Vercel/KV)
+//   else local file backend → generated key file (data/.appkey, 0600)
+//   else (KV without master key) → no encryption (KV is access-controlled;
+//                                   a warning recommends APP_MASTER_KEY)
+function loadKey(): Buffer | null {
   if (process.env.APP_MASTER_KEY) {
     return scryptSync(process.env.APP_MASTER_KEY, 'rubl-telegram-admin', 32);
   }
-  mkdirSync(DATA_DIR, { recursive: true });
-  if (existsSync(KEY_FILE)) {
-    return Buffer.from(readFileSync(KEY_FILE, 'utf8').trim(), 'base64');
+  if (backendKind() === 'file') {
+    mkdirSync(DATA_DIR, { recursive: true });
+    if (existsSync(KEY_FILE)) return Buffer.from(readFileSync(KEY_FILE, 'utf8').trim(), 'base64');
+    const key = randomBytes(32);
+    writeFileSync(KEY_FILE, key.toString('base64'), { mode: 0o600 });
+    try {
+      chmodSync(KEY_FILE, 0o600);
+    } catch {
+      /* ignore */
+    }
+    return key;
   }
-  const key = randomBytes(32);
-  writeFileSync(KEY_FILE, key.toString('base64'), { mode: 0o600 });
-  try {
-    chmodSync(KEY_FILE, 0o600);
-  } catch {
-    /* ignore */
-  }
-  return key;
+  return null;
 }
 
-function encrypt(plain: string): string {
+let warnedNoEncryption = false;
+function encryptBlob(plain: string): string {
   const key = loadKey();
+  if (!key) {
+    if (!warnedNoEncryption && !IN_MEMORY) {
+      warnedNoEncryption = true;
+      logger.warn('settings stored without encryption — set APP_MASTER_KEY to encrypt at rest');
+    }
+    return plain; // plaintext JSON (access-controlled store)
+  }
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const data = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
@@ -114,16 +130,24 @@ function encrypt(plain: string): string {
   return JSON.stringify({ v: 1, iv: iv.toString('base64'), tag: tag.toString('base64'), data: data.toString('base64') });
 }
 
-function decrypt(raw: string): string {
-  const parsed = JSON.parse(raw) as { iv: string; tag: string; data: string };
+function decryptBlob(raw: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+  const env0 = parsed as { v?: number; iv?: string; tag?: string; data?: string };
+  if (!env0 || !env0.iv || !env0.tag || !env0.data) return raw; // plaintext JSON
   const key = loadKey();
-  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(parsed.iv, 'base64'));
-  decipher.setAuthTag(Buffer.from(parsed.tag, 'base64'));
-  return Buffer.concat([decipher.update(Buffer.from(parsed.data, 'base64')), decipher.final()]).toString('utf8');
+  if (!key) throw new Error('settings are encrypted but no key is available (set APP_MASTER_KEY)');
+  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(env0.iv, 'base64'));
+  decipher.setAuthTag(Buffer.from(env0.tag, 'base64'));
+  return Buffer.concat([decipher.update(Buffer.from(env0.data, 'base64')), decipher.final()]).toString('utf8');
 }
 
 // ---------------------------------------------------------------------------
-// Load / persist
+// Load / persist (via storage backend)
 // ---------------------------------------------------------------------------
 let cache: AppSettings | null = null;
 
@@ -149,29 +173,36 @@ function normalize(s: AppSettings): AppSettings {
   };
 }
 
+/**
+ * Synchronous accessor. Returns the loaded settings, or seeds from env on first
+ * access before initSettings() has run. On serverless, call initSettings() at
+ * the start of each request so this returns the persisted (KV) settings.
+ */
 export function getSettings(): AppSettings {
-  if (cache) return cache;
-  if (IN_MEMORY) {
-    cache = seedFromEnv();
-    return cache;
-  }
-  try {
-    if (existsSync(CONFIG_FILE)) {
-      cache = normalize(JSON.parse(decrypt(readFileSync(CONFIG_FILE, 'utf8'))) as AppSettings);
-      return cache;
-    }
-  } catch {
-    // corrupt/unreadable config → fall back to env seed (do not crash)
-  }
-  cache = seedFromEnv();
-  persist(cache);
+  if (!cache) cache = seedFromEnv();
   return cache;
 }
 
-function persist(s: AppSettings): void {
-  if (IN_MEMORY) return;
-  mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(CONFIG_FILE, encrypt(JSON.stringify(s)), { mode: 0o600 });
+/** Load persisted settings from the backend into the cache (cold start). */
+export async function initSettings(): Promise<AppSettings> {
+  try {
+    const raw = await storage().getRaw(SETTINGS_KEY);
+    if (raw) {
+      cache = normalize(JSON.parse(decryptBlob(raw)) as AppSettings);
+      return cache;
+    }
+  } catch (err) {
+    logger.warn('failed to load settings, seeding from env', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  cache = seedFromEnv();
+  await persist(cache);
+  return cache;
+}
+
+async function persist(s: AppSettings): Promise<void> {
+  await storage().setRaw(SETTINGS_KEY, encryptBlob(JSON.stringify(s)));
 }
 
 /**
@@ -200,7 +231,7 @@ function mergeSection<T extends Record<string, unknown>>(current: T, patch: Part
   return out as T;
 }
 
-export function updateSettings(patch: SettingsPatch): AppSettings {
+export async function updateSettings(patch: SettingsPatch): Promise<AppSettings> {
   const cur = getSettings();
   const next: AppSettings = {
     yclients: mergeSection(cur.yclients, patch.yclients),
@@ -210,7 +241,7 @@ export function updateSettings(patch: SettingsPatch): AppSettings {
     barbers: patch.barbers ? normalizeBarbers(patch.barbers) : cur.barbers,
   };
   cache = next;
-  persist(next);
+  await persist(next);
   return next;
 }
 

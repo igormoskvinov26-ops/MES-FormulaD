@@ -3,6 +3,7 @@ import { BUSINESS_TZ } from '../../config/env.js';
 import { Errors } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { isSlotInPast, nowMsk } from '../../lib/time.js';
+import { setMeta } from '../../store/backend.js';
 import { yclientsClient } from './client.js';
 import type {
   DailyFigures,
@@ -53,6 +54,7 @@ export async function getStaffSchedule(date: string): Promise<StaffScheduleEntry
     throw Errors.yclientsScheduleUnavailable();
   }
 
+  await setMeta('lastYclientsSync', new Date().toISOString());
   // Response shape (v2): array of { staff_id, date, slots:[{from,to}], busy_intervals... }
   const rows = Array.isArray(raw) ? (raw as Array<Record<string, unknown>>) : [];
   const entries: StaffScheduleEntry[] = [];

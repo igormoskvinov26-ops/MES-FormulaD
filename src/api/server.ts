@@ -4,6 +4,7 @@ import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { adminRouter } from './routes/admin.js';
 import { settingsRouter } from './routes/settings.js';
+import { cronRouter } from './routes/cron.js';
 
 const WEB_DIR = process.env.WEB_DIR || path.resolve(process.cwd(), 'web');
 
@@ -35,6 +36,9 @@ export function createApp() {
 
   // Liveness — no secrets.
   app.get('/healthz', (_req, res) => res.json({ ok: true }));
+
+  // Cron endpoints authenticate via CRON_SECRET (not the admin token).
+  app.use('/api/cron', cronRouter);
 
   app.use('/api/admin/settings', adminAuth, settingsRouter);
   app.use('/api/admin', adminAuth, adminRouter);

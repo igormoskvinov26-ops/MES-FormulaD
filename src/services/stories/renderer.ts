@@ -1,31 +1,48 @@
-import { chromium, type Browser } from 'playwright-core';
+import { chromium as pwChromium, type Browser } from 'playwright-core';
 import { STORY_HEIGHT, STORY_WIDTH } from '../../config/templates.js';
 import { Errors } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { buildStoryHtml, type StoryRenderData } from './html.js';
 
 /**
- * Deterministic 1080×1920 PNG renderer using the project's Chromium via
- * Playwright. Same inputs → same PNG (spec §10). No AI image generation at
- * runtime.
+ * Deterministic 1080×1920 PNG renderer using Chromium via Playwright. Same
+ * inputs → same PNG (spec §10). No AI image generation at runtime.
+ *
+ * Two runtimes:
+ *  - serverless (Vercel/Lambda) → @sparticuz/chromium (bundled headless build)
+ *  - local / always-on          → local Chromium (CHROMIUM_EXECUTABLE_PATH or
+ *    the project's /opt/pw-browsers/chromium)
  */
 
-const EXECUTABLE_PATH =
-  process.env.CHROMIUM_EXECUTABLE_PATH || '/opt/pw-browsers/chromium';
+const EXECUTABLE_PATH = process.env.CHROMIUM_EXECUTABLE_PATH || '/opt/pw-browsers/chromium';
+const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
 let browserPromise: Promise<Browser> | null = null;
 
+async function launch(): Promise<Browser> {
+  if (IS_SERVERLESS) {
+    const mod = (await import('@sparticuz/chromium')) as unknown as {
+      default: { args: string[]; executablePath: () => Promise<string>; headless: boolean };
+    };
+    const chromium = mod.default;
+    return pwChromium.launch({
+      args: [...chromium.args, '--force-color-profile=srgb'],
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+  }
+  return pwChromium.launch({
+    executablePath: EXECUTABLE_PATH,
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--force-color-profile=srgb'],
+  });
+}
+
 async function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    browserPromise = chromium
-      .launch({
-        executablePath: EXECUTABLE_PATH,
-        args: ['--no-sandbox', '--disable-dev-shm-usage', '--force-color-profile=srgb'],
-      })
-      .catch((err) => {
-        browserPromise = null;
-        throw err;
-      });
+    browserPromise = launch().catch((err) => {
+      browserPromise = null;
+      throw err;
+    });
   }
   return browserPromise;
 }

@@ -88,8 +88,14 @@ npm run dev               # API + scheduler
 ### Токены вводятся в приложении (не в `.env`)
 
 Все секреты (YCLIENTS/Telegram) вводятся на странице **Настройки** и хранятся
-**внутри приложения** в зашифрованном файле `data/config.enc` (AES-256-GCM,
-ключ в `data/.appkey`, права `0600`, оба в `.gitignore`). Через UI также:
+**внутри приложения** через слой хранения, который сам выбирается по окружению:
+
+- локально / always-on — зашифрованный blob в `data/store.json` (AES-256-GCM,
+  ключ `data/.appkey` или `APP_MASTER_KEY`, всё в `.gitignore`);
+- на Vercel — **Vercel KV** (Redis); шифрование blob включается `APP_MASTER_KEY`;
+- в тестах — in-memory (гермётично).
+
+Через UI также:
 
 - **мастер подключения YCLIENTS**: логин/пароль → user token, выбор компании,
   подтягивание списка мастеров и привязка их к staff id;
@@ -117,6 +123,15 @@ npm test        # 40 unit-тестов (edge cases §45)
 ```
 
 ---
+
+## Деплой
+
+- **Vercel** (serverless, поддомен `app.rublbarber.ru`) — см. **[DEPLOY.md](DEPLOY.md)**.
+  Хранилище → Vercel KV, расписание → Vercel Cron (`/api/cron/tick`), рендер →
+  `@sparticuz/chromium`. Для Story-рендера нужен план Pro (60 c / 1024 МБ / cron
+  каждые 10 мин).
+- **Always-on** (Railway/Render/Fly/VPS) — код работает как есть:
+  `npm ci && npm run build && npm start` (node-cron + файловое хранилище).
 
 ## Ключевые гарантии
 

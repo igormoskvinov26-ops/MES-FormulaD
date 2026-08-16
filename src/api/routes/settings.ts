@@ -28,7 +28,7 @@ settingsRouter.get('/', (_req, res) => {
   res.json({ ok: true, settings: getSafeSettings() });
 });
 
-settingsRouter.post('/', (req, res) => {
+settingsRouter.post('/', async (req, res) => {
   try {
     const body = (req.body ?? {}) as SettingsPatch;
     // light validation for schedule times
@@ -43,7 +43,7 @@ settingsRouter.post('/', (req, res) => {
       return fail(res, new Error('mode must be test or production'));
     }
     const before = getSettings().schedule;
-    const next = updateSettings(body);
+    const next = await updateSettings(body);
     // re-arm scheduler if any schedule time changed
     const changed =
       before.morning !== next.schedule.morning ||
@@ -67,7 +67,7 @@ settingsRouter.post('/yclients/auth', async (req, res) => {
   try {
     const result = await authenticate(login, password);
     if (!result.ok) return fail(res, new Error(result.error));
-    updateSettings({ yclients: { userToken: result.userToken } });
+    await updateSettings({ yclients: { userToken: result.userToken } });
     res.json({ ok: true, name: result.name, userTokenSet: true });
   } catch (err) {
     fail(res, err);

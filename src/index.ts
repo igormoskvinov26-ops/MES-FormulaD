@@ -1,4 +1,4 @@
-import { missingCredentials, safeConfigSnapshot, getSettings } from './config/settings.js';
+import { missingCredentials, safeConfigSnapshot, getSettings, initSettings } from './config/settings.js';
 import { activeBarbers } from './config/barbers.js';
 import { logger } from './lib/logger.js';
 import { formatMsk } from './lib/time.js';
@@ -7,7 +7,8 @@ import { startScheduler, stopScheduler } from './services/scheduler/scheduler.js
 import { closeRenderer } from './services/stories/renderer.js';
 
 /** Application entry point: HTTP API + background scheduler. */
-function main() {
+async function main() {
+  await initSettings();
   logger.info('Rubl Telegram Admin starting', {
     now: formatMsk(),
     config: safeConfigSnapshot(),
@@ -36,4 +37,7 @@ function main() {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
 }
 
-main();
+main().catch((err) => {
+  logger.error('fatal startup error', { error: err instanceof Error ? err.message : String(err) });
+  process.exit(1);
+});
