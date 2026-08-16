@@ -102,54 +102,6 @@ export const env = {
   },
 } as const;
 
-export const isTestMode = () => env.telegram.mode === 'test';
-export const isDryRun = () => env.telegram.dryRun;
-
-/** True when the core YCLIENTS credentials are present. */
-export const yclientsConfigured = () =>
-  Boolean(env.yclients.partnerToken && env.yclients.userToken && env.yclients.companyId);
-
-/** True when the bot token + a test chat are configured. */
-export const telegramConfigured = () =>
-  Boolean(env.telegram.botToken && env.telegram.testChatId);
-
-/** True when Telegram Business (Stories) is configured. */
-export const telegramBusinessConfigured = () =>
-  Boolean(env.telegram.botToken && env.telegram.businessConnectionId);
-
-/**
- * A non-secret snapshot of configuration for dashboards / health checks.
- * Presence booleans only — never the values themselves.
- */
-export function safeConfigSnapshot() {
-  return {
-    telegramMode: env.telegram.mode,
-    dryRun: env.telegram.dryRun,
-    tz: env.tz,
-    bookingUrl: env.bookingUrl,
-    schedule: env.schedule,
-    yclients: {
-      configured: yclientsConfigured(),
-      apiBase: env.yclients.apiBase,
-      companyIdSet: Boolean(env.yclients.companyId),
-    },
-    telegram: {
-      botTokenSet: Boolean(env.telegram.botToken),
-      testChatIdSet: Boolean(env.telegram.testChatId),
-      productionChatIdSet: Boolean(env.telegram.productionChatId),
-      businessConnectionIdSet: Boolean(env.telegram.businessConnectionId),
-    },
-    schedulerEnabled: env.server.schedulerEnabled,
-  };
-}
-
-/** Returns a list of required-but-missing credentials (names only). */
-export function missingCredentials(): string[] {
-  const missing: string[] = [];
-  if (!env.yclients.partnerToken) missing.push('YCLIENTS_PARTNER_TOKEN');
-  if (!env.yclients.userToken) missing.push('YCLIENTS_USER_TOKEN');
-  if (!env.yclients.companyId) missing.push('YCLIENTS_COMPANY_ID');
-  if (!env.telegram.botToken) missing.push('TELEGRAM_BOT_TOKEN');
-  if (!env.telegram.testChatId) missing.push('TELEGRAM_TEST_CHAT_ID');
-  return missing;
-}
+// Runtime-mutable helpers (isTestMode, *Configured, safeConfigSnapshot,
+// missingCredentials, …) live in ./settings.ts, which seeds from `env` above
+// and is the source of truth once the app is running.

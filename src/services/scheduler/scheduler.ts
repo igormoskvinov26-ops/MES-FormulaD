@@ -1,12 +1,14 @@
 import cron, { type ScheduledTask } from 'node-cron';
-import { env } from '../../config/env.js';
+import { env, BUSINESS_TZ } from '../../config/env.js';
+import { getSettings } from '../../config/settings.js';
 import { logger } from '../../lib/logger.js';
 import { formatMsk, nowMsk, parseHHmm } from '../../lib/time.js';
 import { runDailyReportJob, runDayStoryJob, runEveningStoryJob, runMorningStoryJob } from './jobs.js';
 
 /**
- * Cron scheduler running in Europe/Moscow. Times come from env (HH:mm). The
- * scheduler only triggers jobs — it holds no business logic.
+ * Cron scheduler running in Europe/Moscow. Times come from the runtime settings
+ * store (HH:mm). The scheduler only triggers jobs — it holds no business logic.
+ * Call restartScheduler() after settings change to apply new times.
  */
 
 type Job = { name: string; hhmm: string; run: () => Promise<unknown>; task?: ScheduledTask };
@@ -27,24 +29,25 @@ export function startScheduler(): void {
     return;
   }
 
+  const schedule = getSettings().schedule;
   jobs = [
-    { name: 'story:morning', hhmm: env.schedule.morning, run: wrap('story:morning', runMorningStoryJob) },
-    { name: 'story:day', hhmm: env.schedule.day, run: wrap('story:day', runDayStoryJob) },
-    { name: 'story:evening', hhmm: env.schedule.evening, run: wrap('story:evening', runEveningStoryJob) },
-    { name: 'daily-report', hhmm: env.schedule.dailyReport, run: wrap('daily-report', runDailyReportJob) },
+    { name: 'story:morning', hhmm: schedule.morning, run: wrap('story:morning', runMorningStoryJob) },
+    { name: 'story:day', hhmm: schedule.day, run: wrap('story:day', runDayStoryJob) },
+    { name: 'story:evening', hhmm: schedule.evening, run: wrap('story:evening', runEveningStoryJob) },
+    { name: 'daily-report', hhmm: schedule.dailyReport, run: wrap('daily-report', runDailyReportJob) },
   ];
 
   for (const job of jobs) {
-    job.task = cron.schedule(cronExpr(job.hhmm), job.run, {
-      timezone: env.tz,
-    });
+    job.task = cron.schedule(cronExpr(job.hhmm), job.run, { timezone: BUSINESS_TZ });
   }
   started = true;
-  logger.info('scheduler started', {
-    tz: env.tz,
-    schedule: env.schedule,
-    now: formatMsk(),
-  });
+  logger.info('scheduler started', { tz: BUSINESS_TZ, schedule, now: formatMsk() });
+}
+
+/** Re-read schedule from settings and re-arm cron jobs. */
+export function restartScheduler(): void {
+  stopScheduler();
+  startScheduler();
 }
 
 function wrap(name: string, fn: () => Promise<unknown>): () => Promise<void> {
@@ -69,9 +72,9 @@ export function schedulerStatus() {
   return {
     running: started,
     enabled: env.server.schedulerEnabled,
-    tz: env.tz,
+    tz: BUSINESS_TZ,
     now: formatMsk(nowMsk()),
-    schedule: env.schedule,
+    schedule: getSettings().schedule,
     lastRun,
     jobs: jobs.map((j) => ({ name: j.name, at: j.hhmm })),
   };

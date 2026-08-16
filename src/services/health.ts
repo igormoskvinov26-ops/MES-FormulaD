@@ -3,7 +3,7 @@ import {
   telegramBusinessConfigured,
   telegramConfigured,
   yclientsConfigured,
-} from '../config/env.js';
+} from '../config/settings.js';
 import { read } from '../store/db.js';
 import { telegramService } from './telegram/service.js';
 import { schedulerStatus } from './scheduler/scheduler.js';

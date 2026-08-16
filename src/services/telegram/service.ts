@@ -1,10 +1,10 @@
 import {
-  env,
+  getSettings,
   isDryRun,
   isTestMode,
   telegramBusinessConfigured,
   telegramConfigured,
-} from '../../config/env.js';
+} from '../../config/settings.js';
 import { Errors } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { withRetry } from '../../lib/retry.js';
@@ -31,7 +31,7 @@ const API_ROOT = 'https://api.telegram.org';
  */
 export class TelegramService {
   private get token(): string {
-    return env.telegram.botToken;
+    return getSettings().telegram.botToken;
   }
 
   /**
@@ -44,16 +44,16 @@ export class TelegramService {
         // Production destination is unreachable in TEST mode.
         throw Errors.productionDisabledInTestMode();
       }
-      if (!env.telegram.productionChatId) {
+      if (!getSettings().telegram.productionChatId) {
         throw new Error('TELEGRAM_PRODUCTION_CHAT_ID is not configured');
       }
-      return env.telegram.productionChatId;
+      return getSettings().telegram.productionChatId;
     }
     // target === 'test'
-    if (!env.telegram.testChatId) {
+    if (!getSettings().telegram.testChatId) {
       throw new Error('TELEGRAM_TEST_CHAT_ID is not configured');
     }
-    return env.telegram.testChatId;
+    return getSettings().telegram.testChatId;
   }
 
   private async call<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
@@ -159,7 +159,7 @@ export class TelegramService {
         rights?: { can_manage_stories?: boolean };
         can_reply?: boolean;
       }>('getBusinessConnection', {
-        business_connection_id: env.telegram.businessConnectionId,
+        business_connection_id: getSettings().telegram.businessConnectionId,
       });
       const canManageStories = Boolean(conn.rights?.can_manage_stories);
       return {
@@ -215,7 +215,7 @@ export class TelegramService {
     }
 
     const form = new FormData();
-    form.set('business_connection_id', env.telegram.businessConnectionId);
+    form.set('business_connection_id', getSettings().telegram.businessConnectionId);
     form.set(
       'content',
       JSON.stringify({ type: 'photo', photo: 'attach://story.png' }),
@@ -259,7 +259,7 @@ export class TelegramService {
     }
 
     const form = new FormData();
-    form.set('business_connection_id', env.telegram.businessConnectionId);
+    form.set('business_connection_id', getSettings().telegram.businessConnectionId);
     form.set('story_id', String(input.storyId));
     form.set('content', JSON.stringify({ type: 'photo', photo: 'attach://story.png' }));
     if (input.areas.length) form.set('areas', JSON.stringify(input.areas));
@@ -290,7 +290,7 @@ export class TelegramService {
       return { ok: true, dryRun: true, destination: 'business', status: 'dry_run' };
     }
     await this.call('deleteStory', {
-      business_connection_id: env.telegram.businessConnectionId,
+      business_connection_id: getSettings().telegram.businessConnectionId,
       story_id: storyId,
     });
     logger.action({ job: 'deleteStory', result: 'sent', telegramStoryId: storyId });
@@ -299,6 +299,42 @@ export class TelegramService {
 
   get isConfigured(): boolean {
     return telegramConfigured();
+  }
+
+  /** Validate the bot token (getMe). Used by the Settings UI. */
+  async getMe(): Promise<{ ok: boolean; username?: string; canConnectToBusiness?: boolean; error?: string }> {
+    if (!this.token) return { ok: false, error: 'bot token not set' };
+    try {
+      const me = await this.call<{ username?: string; can_connect_to_business?: boolean }>('getMe', {});
+      return { ok: true, username: me.username, canConnectToBusiness: Boolean(me.can_connect_to_business) };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'getMe failed' };
+    }
+  }
+
+  /**
+   * Poll getUpdates and return the distinct chats the bot has seen — used by the
+   * Settings UI to auto-detect the test chat id (add the bot to the group, send
+   * a message, then detect).
+   */
+  async detectChats(): Promise<Array<{ id: number; type: string; title: string }>> {
+    if (!this.token) return [];
+    try {
+      const updates = await this.call<Array<Record<string, unknown>>>('getUpdates', { timeout: 0 });
+      const seen = new Map<number, { id: number; type: string; title: string }>();
+      for (const u of updates ?? []) {
+        for (const key of ['message', 'my_chat_member', 'channel_post', 'edited_message', 'chat_member']) {
+          const obj = u[key] as { chat?: { id: number; type: string; title?: string; username?: string } } | undefined;
+          if (obj?.chat) {
+            const c = obj.chat;
+            seen.set(c.id, { id: c.id, type: c.type, title: c.title || c.username || String(c.id) });
+          }
+        }
+      }
+      return [...seen.values()];
+    } catch {
+      return [];
+    }
   }
 }
 

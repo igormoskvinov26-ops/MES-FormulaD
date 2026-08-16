@@ -1,4 +1,4 @@
-import { env, yclientsConfigured } from '../../config/env.js';
+import { getSettings, yclientsConfigured } from '../../config/settings.js';
 import { Errors } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { withRetry } from '../../lib/retry.js';
@@ -10,15 +10,13 @@ import { withRetry } from '../../lib/retry.js';
  *   Authorization: Bearer <partner_token>, User <user_token>
  *   Accept: application/vnd.yclients.v2+json
  *
- * This wraps the EXISTING integration's credentials (from env). It does not
- * re-implement or replace a working auth flow — tokens are supplied, not minted
- * here. No credential is ever logged.
+ * Credentials come from the runtime settings store (entered in the Settings UI
+ * or seeded from env). They are read live on each call so changes take effect
+ * without a restart. No credential is ever logged.
  */
 export class YclientsClient {
-  private readonly base: string;
-
-  constructor() {
-    this.base = env.yclients.apiBase.replace(/\/$/, '');
+  private get base(): string {
+    return getSettings().yclients.apiBase.replace(/\/$/, '');
   }
 
   get configured(): boolean {
@@ -26,10 +24,11 @@ export class YclientsClient {
   }
 
   private headers(): Record<string, string> {
+    const y = getSettings().yclients;
     return {
       Accept: 'application/vnd.yclients.v2+json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.yclients.partnerToken}, User ${env.yclients.userToken}`,
+      Authorization: `Bearer ${y.partnerToken}, User ${y.userToken}`,
     };
   }
 
@@ -63,7 +62,7 @@ export class YclientsClient {
   }
 
   get companyId(): string {
-    return env.yclients.companyId;
+    return getSettings().yclients.companyId;
   }
 }
 

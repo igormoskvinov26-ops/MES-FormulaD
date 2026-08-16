@@ -1,4 +1,4 @@
-import { env } from '../../config/env.js';
+import { getSettings } from '../../config/settings.js';
 import type { TemplateConfig } from '../../config/templates.js';
 import type { StoryArea } from '../telegram/types.js';
 
@@ -21,7 +21,7 @@ export function buildCtaStoryAreas(template: TemplateConfig): StoryArea[] {
         height_percentage: round2(a.height * 100),
         rotation_angle: 0,
       },
-      type: { type: 'link', url: env.bookingUrl },
+      type: { type: 'link', url: getSettings().bookingUrl },
     },
   ];
 }

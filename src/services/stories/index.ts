@@ -1,6 +1,6 @@
 import type { BarberConfig } from '../../config/barbers.js';
 import { templateForBarber } from '../../config/templates.js';
-import { isDryRun } from '../../config/env.js';
+import { isDryRun } from '../../config/settings.js';
 import { AppError, Errors } from '../../lib/errors.js';
 import { slotFingerprint } from '../../lib/fingerprint.js';
 import { logger } from '../../lib/logger.js';

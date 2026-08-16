@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { activeBarbers, barberBySlug } from '../../config/barbers.js';
 import { templateForBarber } from '../../config/templates.js';
-import { env, yclientsConfigured } from '../../config/env.js';
+import { getSettings, yclientsConfigured } from '../../config/settings.js';
 import { toUserMessage } from '../../lib/errors.js';
 import { logger } from '../../lib/logger.js';
 import { todayMsk } from '../../lib/time.js';
@@ -198,7 +198,8 @@ adminRouter.post('/report/send-test', async (req, res) => {
   const date = dateParam(req);
   try {
     const result = await sendDailyReport(date, 'test');
-    res.json({ ok: true, mode: env.telegram.mode, dryRun: env.telegram.dryRun, send: result.send, text: result.text });
+    const tg = getSettings().telegram;
+    res.json({ ok: true, mode: tg.mode, dryRun: tg.dryRun, send: result.send, text: result.text });
   } catch (err) {
     fail(res, err);
   }

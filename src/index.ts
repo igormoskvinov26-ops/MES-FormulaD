@@ -1,4 +1,4 @@
-import { env, missingCredentials, safeConfigSnapshot } from './config/env.js';
+import { missingCredentials, safeConfigSnapshot, getSettings } from './config/settings.js';
 import { activeBarbers } from './config/barbers.js';
 import { logger } from './lib/logger.js';
 import { formatMsk } from './lib/time.js';
@@ -18,7 +18,7 @@ function main() {
   if (missing.length) {
     logger.warn('missing credentials — related features will be inert until provided', { missing });
   }
-  if (env.telegram.mode === 'test') {
+  if (getSettings().telegram.mode === 'test') {
     logger.info('TELEGRAM_MODE=test — all sends go to the TEST contour; production is blocked');
   }
 
