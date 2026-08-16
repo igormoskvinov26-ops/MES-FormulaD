@@ -1,14 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
-  <!-- PLACEHOLDER background for barber "Арташ". Replace with real artwork. -->
+  <!-- PLACEHOLDER full-bleed background for barber "Арташ". Replace with real artwork.
+       The real master photo goes here (never generated). -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#141210"/>
-      <stop offset="1" stop-color="#0a0908"/>
+      <stop offset="0" stop-color="#171310"/>
+      <stop offset="0.55" stop-color="#0d0a08"/>
+      <stop offset="1" stop-color="#070605"/>
     </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="0" stop-color="#2a2118" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
   </defs>
   <rect width="1080" height="1920" fill="url(#bg)"/>
-  <!-- photo region placeholder (real master photo goes here, never generated) -->
-  <rect x="90" y="300" width="900" height="520" rx="24" fill="#1e1b18" stroke="#3a332c" stroke-width="2"/>
-  <text x="540" y="565" fill="#5a5148" font-family="Arial, sans-serif" font-size="34" text-anchor="middle">ФОТО МАСТЕРА · АРТАШ</text>
-  <text x="540" y="610" fill="#3f382f" font-family="Arial, sans-serif" font-size="22" text-anchor="middle">(placeholder — replace with real artwork)</text>
+  <rect width="1080" height="1920" fill="url(#glow)"/>
+  <text x="540" y="700" fill="#2c261e" font-family="Arial, sans-serif" font-size="30" letter-spacing="4" text-anchor="middle">ФОТО МАСТЕРА · АРТАШ</text>
 </svg>

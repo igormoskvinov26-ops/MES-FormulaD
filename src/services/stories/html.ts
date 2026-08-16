@@ -98,21 +98,21 @@ export async function buildStoryHtml(data: StoryRenderData): Promise<string> {
   .overlay { position: absolute; inset: 0; background:
     linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 78%); }
   .logo {
-    position: absolute; top: 96px; left: 50%; transform: translateX(-50%);
-    width: 260px; height: auto; max-height: 130px; object-fit: contain;
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    width: 460px; height: 300px; object-fit: contain; object-position: center;
   }
   .logo-missing {
     display: flex; align-items: center; justify-content: center;
-    width: 260px; height: 90px; border: 2px dashed #6b5f52; color: #6b5f52;
-    letter-spacing: 6px; font-size: 34px; border-radius: 8px;
+    width: 300px; height: 110px; border: 2px dashed #6b5f52; color: #6b5f52;
+    letter-spacing: 6px; font-size: 38px; border-radius: 8px;
   }
   .headline {
-    position: absolute; top: 168px; left: 60px; right: 60px; text-align: center;
+    position: absolute; top: 380px; left: 60px; right: 60px; text-align: center;
     font-size: 54px; font-weight: 800; letter-spacing: 1px; line-height: 1.1;
     text-transform: uppercase; text-shadow: 0 4px 24px rgba(0,0,0,0.6);
   }
   .date {
-    position: absolute; top: 320px; left: 0; right: 0; text-align: center;
+    position: absolute; top: 486px; left: 0; right: 0; text-align: center;
     font-size: 30px; font-weight: 600; color: #d9cbb4; letter-spacing: 3px;
     text-shadow: 0 2px 12px rgba(0,0,0,0.8);
   }

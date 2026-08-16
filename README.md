@@ -39,6 +39,10 @@ YCLIENTS ID и без моковых данных в production-коде.
 - `BARBER_ARTASH_STAFF_ID`, `BARBER_KSENIA_STAFF_ID`, `BARBER_DMITRIY_STAFF_ID`
   — **реальные** YCLIENTS staff id (не выдумываются)
 
+> Оригинальный логотип уже получен и подключён (`assets/logo/rubl_logo.png`,
+> + варианты gold/cream/black и векторный PDF-исходник). Логотип используется
+> как есть, только масштабирование/позиционирование (§7).
+
 > Замечание по `work_schedule/2036703`: этот id из веб-интерфейса YCLIENTS
 > **не** трактуется автоматически как company/staff/application id — его нужно
 > сверить с реальными ответами API перед использованием.
@@ -130,8 +134,8 @@ npm test        # 40 unit-тестов (edge cases §45)
 
 1. Заполнить `TELEGRAM_PRODUCTION_CHAT_ID`.
 2. Явно переключить `TELEGRAM_MODE=production` и `TELEGRAM_DRY_RUN=false`.
-3. Заменить плейсхолдеры в `assets/templates/*` реальным артворком и положить
-   оригинальный `assets/logo/rubl_logo.svg`.
+3. Заменить плейсхолдеры в `assets/templates/*` реальным артворком (фото
+   мастеров). Оригинальный логотип уже подключён (`assets/logo/rubl_logo.png`).
 
 Отдельного «production publish» маршрута в API нет — это осознанное требование
 безопасности (§31): переключение режима — единственный способ.
