@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <!-- PLACEHOLDER background for barber "Дмитрий". Replace with real artwork. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101312"/>
+      <stop offset="1" stop-color="#070908"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <rect x="90" y="300" width="900" height="520" rx="24" fill="#181d1b" stroke="#2f3a35" stroke-width="2"/>
+  <text x="540" y="565" fill="#54605a" font-family="Arial, sans-serif" font-size="34" text-anchor="middle">ФОТО МАСТЕРА · ДМИТРИЙ</text>
+  <text x="540" y="610" fill="#2f3f39" font-family="Arial, sans-serif" font-size="22" text-anchor="middle">(placeholder — replace with real artwork)</text>
+</svg>

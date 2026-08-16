@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# runtime data / state store
+data/
+*.sqlite
+*.db
+
+# generated story artifacts / previews
+output/
+*.png
+!assets/**/*.png
+
+# logs
+logs/
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

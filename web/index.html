@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rubl Telegram Admin</title>
+<style>
+  :root {
+    --bg: #0d0b0a; --panel: #161311; --panel2: #1e1a17; --line: #2c2621;
+    --text: #f2ece1; --muted: #9c8f7d; --accent: #e8c37a; --ok: #4caf7d;
+    --warn: #d8a24a; --err: #d66; --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 15px; }
+  header { padding: 18px 20px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: 1px; }
+  .mode { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+  .mode.test { background: #33240f; color: var(--accent); border: 1px solid #5a441c; }
+  .mode.prod { background: #3a1414; color: #f4a; border: 1px solid #6a2020; }
+  .mode.dry { background: #14243a; color: #7ab6f0; border: 1px solid #274a6a; }
+  main { max-width: 900px; margin: 0 auto; padding: 20px; display: grid; gap: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+  .kv .k { color: var(--muted); }
+  .pill { font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+  .pill.ok { color: var(--ok); background: #12281d; }
+  .pill.no { color: var(--err); background: #2a1414; }
+  .pill.na { color: var(--warn); background: #2a2110; }
+  .barber { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: var(--panel2); }
+  .barber .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .barber .name { font-weight: 700; }
+  .slots { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #1a1206; border-color: var(--accent); font-weight: 700; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  input { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+  pre { background: #0a0807; border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow: auto;
+    white-space: pre-wrap; word-break: break-word; font-size: 13px; max-height: 340px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .muted { color: var(--muted); font-size: 13px; }
+  img.preview { max-width: 240px; border: 1px solid var(--line); border-radius: 10px; display: block; margin-top: 10px; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: #23201c; border: 1px solid var(--line); padding: 10px 16px; border-radius: 10px; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>RUBL · TELEGRAM ADMIN</h1>
+  <span id="modeBadge" class="mode test">…</span>
+  <span id="dryBadge" class="mode dry" style="display:none">DRY-RUN</span>
+  <span class="muted" id="clock"></span>
+  <span style="margin-left:auto" class="row">
+    <input id="date" type="date" />
+    <input id="token" type="password" placeholder="admin token (если задан)" style="width:180px" />
+  </span>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Состояние интеграций</h2>
+    <div id="integrations" class="grid"><span class="muted">загрузка…</span></div>
+  </section>
+
+  <section class="card">
+    <h2>Сегодня работают</h2>
+    <div id="today"><span class="muted">загрузка…</span></div>
+    <div class="btns"><button onclick="loadToday()">Обновить данные</button></div>
+  </section>
+
+  <section class="card">
+    <h2>Статус Stories</h2>
+    <div id="storyStatus"><span class="muted">—</span></div>
+  </section>
+
+  <section class="card">
+    <h2>Вечерний отчёт</h2>
+    <div class="btns">
+      <button onclick="reportGenerate()">Сформировать отчёт</button>
+      <button onclick="reportPreview()">Preview</button>
+      <button class="primary" onclick="reportSendTest()">Отправить TEST</button>
+    </div>
+    <pre id="reportOut" style="display:none"></pre>
+  </section>
+
+  <section class="card">
+    <h2>Preview Story</h2>
+    <img id="previewImg" class="preview" style="display:none" alt="preview" />
+    <div id="previewMeta" class="muted"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { date: new Date().toISOString().slice(0,10) };
+$('date').value = state.date;
+$('token').value = localStorage.getItem('adminToken') || '';
+$('date').onchange = () => { state.date = $('date').value; init(); };
+$('token').oninput = () => localStorage.setItem('adminToken', $('token').value);
+
+function headers() {
+  const t = $('token').value.trim();
+  return t ? { 'x-admin-token': t, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+}
+async function api(path, opts = {}) {
+  const res = await fetch('/api/admin' + path, { headers: headers(), ...opts });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+  return json;
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display='none', 3200); }
+function pill(v) {
+  const cls = v === 'OK' || v === 'RUNNING' ? 'ok' : v === 'NOT CONFIGURED' || v === 'DISABLED' || v === 'NO' ? 'na' : 'no';
+  return `<span class="pill ${cls}">${v}</span>`;
+}
+
+async function loadDashboard() {
+  try {
+    const d = await api('/dashboard');
+    $('modeBadge').textContent = 'MODE: ' + d.config.telegramMode.toUpperCase();
+    $('modeBadge').className = 'mode ' + (d.config.telegramMode === 'test' ? 'test' : 'prod');
+    $('dryBadge').style.display = d.config.dryRun ? 'inline-block' : 'none';
+    const i = d.integrations;
+    $('integrations').innerHTML = [
+      ['YCLIENTS', i.yclients], ['Telegram bot', i.telegramBot],
+      ['Business connection', i.businessConnection], ['Stories permission', i.storiesPermission],
+      ['Scheduler', i.scheduler], ['Last Story publish', d.lastStoryPublish || '—'],
+      ['Last daily report', d.lastDailyReport || '—'], ['TZ', d.config.tz],
+    ].map(([k,v]) => `<div class="kv"><span class="k">${k}</span>${/^(OK|NO|RUNNING|DISABLED|NOT CONFIGURED|UNAVAILABLE|STOPPED)$/.test(v)?pill(v):`<span>${v}</span>`}</div>`).join('');
+    const s = d.scheduler;
+    $('clock').textContent = s.now + ' · утро ' + s.schedule.morning + ' · день ' + s.schedule.day + ' · вечер ' + s.schedule.evening + ' · отчёт ' + s.schedule.dailyReport;
+  } catch (e) { $('integrations').innerHTML = `<span class="muted">${e.message}</span>`; }
+}
+
+async function loadToday() {
+  $('today').innerHTML = '<span class="muted">загрузка…</span>';
+  try {
+    const d = await api('/today?date=' + state.date);
+    if (!d.configured) { $('today').innerHTML = '<span class="muted">YCLIENTS не настроен</span>'; return; }
+    if (!d.barbers.length) { $('today').innerHTML = '<span class="muted">нет активных мастеров (задайте BARBER_*_STAFF_ID)</span>'; return; }
+    $('today').innerHTML = d.barbers.map(renderBarber).join('');
+    loadStoryStatus();
+  } catch (e) { $('today').innerHTML = `<span class="muted">${e.message}</span>`; }
+}
+
+function renderBarber(b) {
+  return `<div class="barber">
+    <div class="top"><span class="name">${b.displayName}</span>
+      <span>${b.worksToday ? (b.shift || 'работает') : 'сегодня не работает'}</span></div>
+    <div>Свободно: <span class="slots">${b.slots.length ? b.slots.join(', ') : '—'}</span></div>
+    <div class="btns">
+      <button onclick="preview('${b.slug}')">Preview</button>
+      <button class="primary" onclick="publish('${b.slug}')" ${b.shouldPublish?'':'disabled'}>Опубликовать TEST</button>
+      <button onclick="update('${b.slug}')">Обновить Story</button>
+      <button onclick="del('${b.slug}')">Удалить TEST Story</button>
+    </div>
+  </div>`;
+}
+
+async function loadStoryStatus() {
+  try {
+    const d = await api('/stories/status?date=' + state.date);
+    if (!d.stories.length) { $('storyStatus').innerHTML = '<span class="muted">публикаций ещё не было</span>'; return; }
+    $('storyStatus').innerHTML = d.stories.map(s =>
+      `<div class="kv"><span class="k">${s.period} · staff ${s.staffId}</span>${pill((s.status||'').toUpperCase())}</div>`).join('');
+  } catch (e) { $('storyStatus').innerHTML = `<span class="muted">${e.message}</span>`; }
+}
+
+function preview(slug) {
+  const url = '/api/admin/stories/preview?slug=' + slug + '&date=' + state.date + (($('token').value)?('&token='+encodeURIComponent($('token').value.trim())):'');
+  $('previewImg').src = url + '&t=' + Date.now();
+  $('previewImg').style.display = 'block';
+  $('previewMeta').textContent = 'Это тот же PNG, который уйдёт в Telegram (' + slug + ').';
+}
+async function publish(slug) { await act('/stories/publish-test', slug, 'Опубликовано (TEST)'); }
+async function update(slug) { await act('/stories/update', slug, 'Story обновлена (TEST)'); }
+async function del(slug) { await act('/stories/delete-test', slug, 'TEST Story удалена'); }
+async function act(path, slug, okMsg) {
+  try { const r = await api(path, { method: 'POST', body: JSON.stringify({ slug, date: state.date, period: 'manual' }) });
+    toast(okMsg + ' · ' + JSON.stringify(r.result)); loadStoryStatus();
+  } catch (e) { toast('Ошибка: ' + e.message); }
+}
+
+async function reportGenerate() { await reportShow('/report/generate', 'POST'); }
+async function reportPreview() { await reportShow('/report/preview?date=' + state.date, 'GET'); }
+async function reportShow(path, method) {
+  try { const r = await api(path, method === 'POST' ? { method, body: JSON.stringify({ date: state.date }) } : {});
+    $('reportOut').style.display = 'block'; $('reportOut').textContent = r.text;
+  } catch (e) { $('reportOut').style.display = 'block'; $('reportOut').textContent = 'Ошибка: ' + e.message; }
+}
+async function reportSendTest() {
+  try { const r = await api('/report/send-test', { method: 'POST', body: JSON.stringify({ date: state.date }) });
+    $('reportOut').style.display = 'block'; $('reportOut').textContent = r.text;
+    toast('Отчёт отправлен в TEST' + (r.dryRun ? ' (dry-run)' : '')); loadDashboard();
+  } catch (e) { toast('Ошибка: ' + e.message); }
+}
+
+function init() { loadDashboard(); loadToday(); }
+init();
+setInterval(loadDashboard, 30000);
+</script>
+</body>
+</html>
