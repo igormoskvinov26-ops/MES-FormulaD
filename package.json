@@ -17,6 +17,7 @@
     "cli": "tsx src/cli.ts"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@sparticuz/chromium": "^131.0.0",
     "@vercel/kv": "^3.0.0",
     "dotenv": "^16.4.5",

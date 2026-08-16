@@ -1,0 +1,29 @@
+name: Rubl cron tick
+
+# Free scheduler for the Vercel Hobby plan: pings the app's /api/cron/tick every
+# 15 minutes. The tick endpoint decides which job (morning/day/evening story,
+# daily report) is due from the in-app Europe/Moscow schedule, and runs each at
+# most once per day (idempotent). No Vercel Pro cron required.
+#
+# Repo secrets required (Settings → Secrets and variables → Actions):
+#   APP_URL      e.g. https://app.rublbarber.ru   (no trailing slash)
+#   CRON_SECRET  same value as the Vercel env var CRON_SECRET
+#
+# Note: GitHub-scheduled runs can be delayed a few minutes under load and are
+# paused after ~60 days of repo inactivity. cron-job.org / UptimeRobot are
+# equivalent free alternatives if you prefer.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping cron tick
+        run: |
+          curl -fsS --max-time 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/tick"

@@ -127,9 +127,9 @@ npm test        # 40 unit-тестов (edge cases §45)
 ## Деплой
 
 - **Vercel** (serverless, поддомен `app.rublbarber.ru`) — см. **[DEPLOY.md](DEPLOY.md)**.
-  Хранилище → Vercel KV, расписание → Vercel Cron (`/api/cron/tick`), рендер →
-  `@sparticuz/chromium`. Для Story-рендера нужен план Pro (60 c / 1024 МБ / cron
-  каждые 10 мин).
+  Работает на **бесплатном плане Hobby**: рендер картинок — через `resvg` без
+  браузера (~300 мс, укладывается в лимит 10 c), хранилище → Vercel KV,
+  расписание → бесплатный внешний пинговщик (GitHub Actions) на `/api/cron/tick`.
 - **Always-on** (Railway/Render/Fly/VPS) — код работает как есть:
   `npm ci && npm run build && npm start` (node-cron + файловое хранилище).
 

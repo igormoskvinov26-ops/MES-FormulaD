@@ -4,14 +4,17 @@ This app runs on Vercel as a **separate project** in team `rubl1`, on the
 subdomain `app.rublbarber.ru`. It does not touch the existing `rublbarber`
 project. The wildcard DNS (`*` → Vercel) already routes the subdomain.
 
-The code auto-adapts to serverless:
+The code auto-adapts to serverless and **runs on the free Vercel Hobby plan**:
 
+- **Images** → rendered with **resvg** (SVG → PNG, no browser), ~300 ms, well
+  under Hobby's 10 s function limit. No Vercel Pro needed. (Set
+  `RENDERER=chromium` only if you specifically want the Playwright engine.)
 - **Storage** → Vercel KV (Redis) when `KV_REST_API_URL`/`KV_REST_API_TOKEN`
   are present (settings, Story state, job locks). Locally it uses files.
-- **Scheduler** → **Vercel Cron** hits `/api/cron/tick` (there is no always-on
-  process). The tick is schedule-aware and idempotent: each job runs once per
-  day at/after its configured Europe/Moscow time.
-- **Chromium** → `@sparticuz/chromium` (bundled headless build) for Story PNGs.
+- **Scheduler** → a free external pinger hits `/api/cron/tick` every ~15 min
+  (GitHub Actions workflow included, or cron-job.org / UptimeRobot). The tick is
+  schedule-aware and idempotent: each job runs once per day at/after its
+  configured Europe/Moscow time. (Vercel Cron also works if you're on Pro.)
 
 ## 1. Import the repo
 
@@ -58,21 +61,37 @@ Open `https://app.rublbarber.ru`, paste your `ADMIN_API_TOKENS` value into the
 
 Then use the dashboard buttons to test (TEST contour only).
 
-## 6. Cron
+## 6. Cron (free, no Vercel Pro)
 
-`vercel.json` registers one cron: `/api/cron/tick` every 10 minutes. Verify in
-Project → **Settings → Cron Jobs**. The endpoint decides which job is due from
-the in-app schedule, so you change times in the UI — no `vercel.json` edits.
+The schedule is driven by an external pinger calling `/api/cron/tick` every
+~15 min. A ready GitHub Actions workflow is included at
+`.github/workflows/cron.yml` — add two repo secrets (Settings → Secrets and
+variables → Actions):
 
-## Plan requirements & limits
+| Secret | Value |
+|---|---|
+| `APP_URL` | `https://app.rublbarber.ru` (no trailing slash) |
+| `CRON_SECRET` | same value as the Vercel `CRON_SECRET` env var |
 
-- **Story rendering** needs `maxDuration: 60` and `memory: 1024` (set in
-  `vercel.json`) plus a **10-minute cron** → these require the **Vercel Pro**
-  plan. On Hobby, functions cap at 10 s and cron is daily-only, so Story
-  rendering may time out and the tick can't run every 10 min. The **daily
-  report** (no Chromium) works within Hobby limits.
-- Cold starts for the Story function are ~2–4 s (Chromium). Acceptable for
-  scheduled/manual posting.
+Enable Actions for the repo and the workflow runs automatically (also
+runnable manually via "Run workflow"). Equivalent free alternatives:
+**cron-job.org** or **UptimeRobot** — point them at
+`https://app.rublbarber.ru/api/cron/tick` with header
+`Authorization: Bearer <CRON_SECRET>`.
+
+The tick chooses which job is due from the in-app schedule, so you change times
+in the UI — no code or workflow edits.
+
+> On **Vercel Pro** you can instead add a `crons` block to `vercel.json`
+> (`{ "path": "/api/cron/tick", "schedule": "*/10 * * * *" }`) and skip the
+> external pinger.
+
+## Limits (Hobby)
+
+- Image rendering is browser-free (resvg), so it fits Hobby's 10 s limit with
+  room to spare — no Pro required.
+- GitHub-scheduled runs can be delayed a few minutes under load and pause after
+  ~60 days of repo inactivity; cron-job.org/UptimeRobot avoid that.
 
 ## TEST vs PRODUCTION
 

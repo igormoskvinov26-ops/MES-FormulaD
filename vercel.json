@@ -5,14 +5,11 @@
   "functions": {
     "api/index.js": {
       "memory": 1024,
-      "maxDuration": 60,
+      "maxDuration": 10,
       "includeFiles": "{assets,web,dist}/**"
     }
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/api" }
-  ],
-  "crons": [
-    { "path": "/api/cron/tick", "schedule": "*/10 * * * *" }
   ]
 }
