@@ -36,6 +36,13 @@ export type TemplateConfig = {
   /** Which side the barber stands on in the photo; slots go on the opposite side. */
   photoSide: PhotoSide;
   /**
+   * When true the photo already contains the full brand composition (background,
+   * logo, "СВОБОДНЫЕ СЛОТЫ / БАРБЕР {ИМЯ}" heading). The renderer then overlays
+   * ONLY the slot column and the booking button — it does not redraw the logo or
+   * heading. Requires the composed photo to be present.
+   */
+  prebaked?: boolean;
+  /**
    * Clickable "ЗАПИСАТЬСЯ →" link area, as a normalized area over the CTA
    * pixels of the design. Stored in config, never hard-coded inside the
    * Telegram send function.
@@ -62,6 +69,11 @@ const SHARED_CTA_AREA: RelativeArea = {
   height: 0.08,
 };
 
+// Booking button placed on the SLOTS side (opposite the barber), below the
+// slot column. The visible button and the Telegram tap link-area share these.
+const CTA_LEFT: RelativeArea = { x: 0.3, y: 0.82, width: 0.44, height: 0.062 };
+const CTA_RIGHT: RelativeArea = { x: 0.7, y: 0.82, width: 0.44, height: 0.062 };
+
 const SHARED_SLOTS_SAFE_AREA = {
   top: 780, // below headline + face region
   bottom: 380, // above CTA + brand phrase
@@ -73,28 +85,31 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
   artash: {
     id: 'artash',
     barberSlug: 'artash',
-    backgroundAsset: 'templates/artash.svg',
+    backgroundAsset: 'photos/artash.jpg',
     logoAsset: 'logo/rubl_logo.png',
-    photoSide: 'left',
-    ctaArea: SHARED_CTA_AREA,
+    photoSide: 'left', // barber left → slots + button on the right
+    prebaked: true,
+    ctaArea: CTA_RIGHT,
     slotsSafeArea: SHARED_SLOTS_SAFE_AREA,
   },
   ksenia: {
     id: 'ksenia',
     barberSlug: 'ksenia',
-    backgroundAsset: 'templates/ksenia.svg',
+    backgroundAsset: 'photos/ksenia.jpg',
     logoAsset: 'logo/rubl_logo.png',
-    photoSide: 'right',
-    ctaArea: SHARED_CTA_AREA,
+    photoSide: 'right', // barber right → slots + button on the left
+    prebaked: true,
+    ctaArea: CTA_LEFT,
     slotsSafeArea: SHARED_SLOTS_SAFE_AREA,
   },
   dmitriy: {
     id: 'dmitriy',
     barberSlug: 'dmitriy',
-    backgroundAsset: 'templates/dmitriy.svg',
+    backgroundAsset: 'photos/dmitriy.jpg',
     logoAsset: 'logo/rubl_logo.png',
-    photoSide: 'left',
-    ctaArea: SHARED_CTA_AREA,
+    photoSide: 'left', // barber left → slots + button on the right
+    prebaked: true,
+    ctaArea: CTA_RIGHT,
     slotsSafeArea: SHARED_SLOTS_SAFE_AREA,
   },
 };

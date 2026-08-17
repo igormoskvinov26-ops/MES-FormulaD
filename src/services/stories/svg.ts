@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { STORY_COPY, STORY_HEIGHT, STORY_WIDTH } from '../../config/templates.js';
+import { STORY_COPY, STORY_HEIGHT, STORY_WIDTH, areaToPixels } from '../../config/templates.js';
 import type { StoryRenderData } from './html.js';
 
 /**
@@ -99,6 +99,16 @@ export async function buildStorySvg(data: StoryRenderData): Promise<string> {
     );
   }
   p.push(`<rect width="${STORY_WIDTH}" height="${STORY_HEIGHT}" fill="url(#side)"/>`);
+
+  // Prebaked composition: the photo already has the logo + heading; overlay only
+  // the slot column and the booking button.
+  if (template.prebaked && photo) {
+    p.push(renderSlotsColumn(data.slots, photoSide));
+    p.push(ctaButton(template));
+    p.push('</svg>');
+    return p.join('\n');
+  }
+
   p.push(`<rect width="${STORY_WIDTH}" height="${STORY_HEIGHT}" fill="url(#top)"/>`);
 
   // logo (original asset, only scaled/positioned)
@@ -129,6 +139,18 @@ export async function buildStorySvg(data: StoryRenderData): Promise<string> {
   return p.join('\n');
 }
 
+/** Gold booking button ("ЗАПИСАТЬСЯ →") drawn from the template's ctaArea so the
+ * visible button and the Telegram tap link-area coincide. */
+function ctaButton(template: StoryRenderData['template']): string {
+  const c = areaToPixels(template.ctaArea);
+  const x = c.x - c.width / 2;
+  const y = c.y - c.height / 2;
+  return (
+    `<rect x="${x}" y="${y}" width="${c.width}" height="${c.height}" rx="${Math.round(c.height / 2)}" fill="#e8c37a"/>` +
+    `<text x="${c.x}" y="${c.y + 16}" fill="#0a0908" font-family="${FF}" font-weight="700" font-size="44" text-anchor="middle" letter-spacing="1">${esc(STORY_COPY.cta)}</text>`
+  );
+}
+
 function divider(cx: number, y: number): string {
   const half = 170;
   const d = 11;
@@ -156,8 +178,8 @@ function renderSlotsColumn(slots: string[], photoSide: 'left' | 'right'): string
   const n = list.length;
   const fontSize = n <= 5 ? 92 : 80;
   const lineH = Math.round(fontSize * 1.28);
-  const topBand = 820;
-  const bottomBand = 1780;
+  const topBand = 800;
+  const bottomBand = 1420; // leave room for the booking button below
   const blockH = n * lineH;
   let startY = topBand + (bottomBand - topBand - blockH) / 2 + fontSize * 0.75;
   if (startY < topBand + fontSize) startY = topBand + fontSize;
