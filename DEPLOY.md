@@ -55,11 +55,16 @@ Project → **Settings → Environment Variables** (Production):
 | `APP_MASTER_KEY` | long random string | encrypts the settings blob in KV |
 | `CRON_SECRET` | long random string | secures `/api/cron/tick`; Vercel sends it automatically |
 | `ADMIN_API_TOKENS` | a token you choose | **required** — protects the admin API/UI on a public URL |
+| `TELEGRAM_DRY_RUN` | `false` | **IMPORTANT** — enable real Telegram sends; default `true` = messages are faked, never sent |
 | `TZ` | `Europe/Moscow` | business timezone |
 
-You do **not** need to set the YCLIENTS/Telegram tokens here — they are entered
+You do **not** need to set the YCLIENTS/Telegram bot tokens here — they are entered
 in the **Settings** page after deploy and stored (encrypted) in KV. (You *may*
 seed them via env if you prefer; the UI can override later.)
+
+⚠️ **Critical**: If `TELEGRAM_DRY_RUN` is not explicitly set to `false`, messages
+will **NOT** be sent to Telegram — they will only be logged as "dry-run". This is
+the safe default for development, but must be disabled for production.
 
 Redeploy after setting env vars.
 
