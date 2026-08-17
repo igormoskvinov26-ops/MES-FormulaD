@@ -76,10 +76,58 @@ export async function getStaffSchedule(date: string): Promise<StaffScheduleEntry
   return entries;
 }
 
-/** Staff with a shift today, per the work schedule. */
+/**
+ * Staff working today. Primary source is the management work schedule
+ * (staff/schedule). When the token lacks rights for it (HTTP 403) it falls back
+ * to the booking calendar (book_dates), which is available with the partner
+ * token and reports the barber's real working/bookable days.
+ */
 export async function getWorkingStaff(date: string): Promise<StaffScheduleEntry[]> {
-  const schedule = await getStaffSchedule(date);
-  return schedule.filter((s) => s.worksToday);
+  try {
+    const schedule = await getStaffSchedule(date);
+    if (schedule.length) return schedule.filter((s) => s.worksToday);
+  } catch (err) {
+    logger.warn('staff schedule unavailable — using booking calendar fallback', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return getWorkingStaffViaBooking(date);
+}
+
+/** Booking-calendar dates on which a staff member is bookable (works). */
+async function getBookingDates(staffId: number, date: string): Promise<string[]> {
+  const c = client();
+  try {
+    const raw = await c.get<{ booking_dates?: string[] }>(`/book_dates/${c.companyId}`, {
+      staff_id: staffId,
+      date,
+    });
+    return Array.isArray(raw?.booking_dates) ? raw.booking_dates : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fallback "who works today" from the booking calendar, for the configured
+ * barbers only. A barber works today if today is among their bookable days.
+ */
+async function getWorkingStaffViaBooking(date: string): Promise<StaffScheduleEntry[]> {
+  const { activeBarbers } = await import('../../config/barbers.js');
+  const out: StaffScheduleEntry[] = [];
+  for (const b of activeBarbers()) {
+    const dates = await getBookingDates(b.yclientsStaffId, date);
+    if (dates.includes(date)) {
+      out.push({
+        staffId: b.yclientsStaffId,
+        displayName: b.displayName,
+        worksToday: true,
+        shiftStart: null,
+        shiftEnd: null,
+      });
+    }
+  }
+  return out;
 }
 
 /**

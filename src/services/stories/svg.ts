@@ -150,10 +150,11 @@ function renderSlotsColumn(slots: string[], photoSide: 'left' | 'right'): string
     return `<text x="${cx}" y="1060" fill="${CREAM}" font-family="Playfair Display" font-weight="700" font-size="60" text-anchor="middle" ${OUTLINE}>—</text>`;
   }
 
-  const MAX = 8;
+  // Show the nearest few (design shows ~5); truthful subset when there are many.
+  const MAX = 6;
   const list = slots.slice(0, MAX);
   const n = list.length;
-  const fontSize = n <= 5 ? 92 : n <= 6 ? 78 : 66;
+  const fontSize = n <= 5 ? 92 : 80;
   const lineH = Math.round(fontSize * 1.28);
   const topBand = 820;
   const bottomBand = 1780;

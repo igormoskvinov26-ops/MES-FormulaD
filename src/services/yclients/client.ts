@@ -45,11 +45,10 @@ export class YclientsClient {
       async () => {
         const res = await fetch(url, { method: 'GET', headers: this.headers() });
         if (!res.ok) {
-          logger.warn('yclients request failed', {
-            path,
-            status: res.status,
-          });
-          throw new Error(`YCLIENTS ${path} → HTTP ${res.status}`);
+          logger.warn('yclients request failed', { path, status: res.status });
+          const err = new Error(`YCLIENTS ${path} → HTTP ${res.status}`) as Error & { status?: number };
+          err.status = res.status;
+          throw err;
         }
         const json = (await res.json()) as { success?: boolean; data?: T };
         if (json && typeof json === 'object' && 'data' in json) {
@@ -57,7 +56,17 @@ export class YclientsClient {
         }
         return json as unknown as T;
       },
-      { label: `yclients GET ${path}`, retries: 1, delaysMs: [5000, 30000] },
+      {
+        label: `yclients GET ${path}`,
+        retries: 1,
+        delaysMs: [5000, 30000],
+        // Retry only transient failures — never permanent 4xx (e.g. 403 rights).
+        retryable: (err) => {
+          const status = (err as { status?: number })?.status;
+          if (status === undefined) return true; // network error
+          return status >= 500 || status === 429;
+        },
+      },
     );
   }
 
