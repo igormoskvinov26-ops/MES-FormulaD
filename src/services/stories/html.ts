@@ -42,6 +42,8 @@ export type StoryRenderData = {
   slots: string[];
   /** Optional date label shown when useful. */
   dateLabel?: string;
+  /** Barber display name for the "БАРБЕР {NAME}" subtitle. */
+  barberName?: string;
 };
 
 /**
@@ -158,7 +160,7 @@ export async function buildStoryHtml(data: StoryRenderData): Promise<string> {
   ${dateLine}
   ${slotsHtml ? `<div class="slots">${slotsHtml}</div>` : `<div class="empty">Скоро новые окна</div>`}
   <div class="cta">${escapeHtml(STORY_COPY.cta)}</div>
-  <div class="brand">${escapeHtml(STORY_COPY.brandPhrase)}</div>
+  <div class="brand">${escapeHtml(data.barberName ? `${STORY_COPY.subtitlePrefix} ${data.barberName.toUpperCase()}` : '')}</div>
 </body>
 </html>`;
 }

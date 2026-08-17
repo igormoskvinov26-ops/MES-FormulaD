@@ -4,7 +4,7 @@ import { isDryRun } from '../../config/settings.js';
 import { AppError, Errors } from '../../lib/errors.js';
 import { slotFingerprint } from '../../lib/fingerprint.js';
 import { logger } from '../../lib/logger.js';
-import { isToday, isValidBusinessDate, reportDateLabel } from '../../lib/time.js';
+import { isToday, isValidBusinessDate } from '../../lib/time.js';
 import { getAvailableSlots, getWorkingStaff } from '../yclients/index.js';
 import { telegramService } from '../telegram/service.js';
 import type { SendTarget } from '../telegram/types.js';
@@ -77,7 +77,7 @@ export async function renderStoryForPlan(plan: StoryPlan): Promise<Buffer> {
   return renderStoryPng({
     template,
     slots: plan.slots,
-    dateLabel: reportDateLabel(plan.date),
+    barberName: plan.barber.displayName,
   });
 }
 

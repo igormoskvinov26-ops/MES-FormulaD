@@ -23,6 +23,8 @@ export type RelativeArea = {
   height: number; // 0..1
 };
 
+export type PhotoSide = 'left' | 'right';
+
 export type TemplateConfig = {
   id: string;
   /** Barber slug this template belongs to. */
@@ -31,6 +33,8 @@ export type TemplateConfig = {
   backgroundAsset: string;
   /** Original brand logo asset — NEVER generated/redrawn, only placed/scaled. */
   logoAsset: string;
+  /** Which side the barber stands on in the photo; slots go on the opposite side. */
+  photoSide: PhotoSide;
   /**
    * Clickable "ЗАПИСАТЬСЯ →" link area, as a normalized area over the CTA
    * pixels of the design. Stored in config, never hard-coded inside the
@@ -71,6 +75,7 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     barberSlug: 'artash',
     backgroundAsset: 'templates/artash.svg',
     logoAsset: 'logo/rubl_logo.png',
+    photoSide: 'left',
     ctaArea: SHARED_CTA_AREA,
     slotsSafeArea: SHARED_SLOTS_SAFE_AREA,
   },
@@ -79,6 +84,7 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     barberSlug: 'ksenia',
     backgroundAsset: 'templates/ksenia.svg',
     logoAsset: 'logo/rubl_logo.png',
+    photoSide: 'right',
     ctaArea: SHARED_CTA_AREA,
     slotsSafeArea: SHARED_SLOTS_SAFE_AREA,
   },
@@ -87,6 +93,7 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     barberSlug: 'dmitriy',
     backgroundAsset: 'templates/dmitriy.svg',
     logoAsset: 'logo/rubl_logo.png',
+    photoSide: 'left',
     ctaArea: SHARED_CTA_AREA,
     slotsSafeArea: SHARED_SLOTS_SAFE_AREA,
   },
@@ -94,9 +101,11 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
 
 /** Fixed brand copy — never algorithmically rewritten. */
 export const STORY_COPY = {
-  headline: 'В РУБЛЪ ТЕБЯ СЕГОДНЯ ЖДУТ',
+  headline: 'СВОБОДНЫЕ СЛОТЫ',
+  /** Rendered as "БАРБЕР {NAME}". */
+  subtitlePrefix: 'БАРБЕР',
+  /** Booking call-to-action — used for the Telegram tap link-area. */
   cta: 'ЗАПИСАТЬСЯ →',
-  brandPhrase: 'НАМ ДОВЕРЯЮТ СВОИ ГОЛОВЫ',
 } as const;
 
 export function templateFor(slug: string): TemplateConfig | undefined {

@@ -118,7 +118,7 @@ adminRouter.get('/stories/preview', async (req, res) => {
     let png: Buffer;
     if (manualSlots && manualSlots.length) {
       res.setHeader('X-Preview-Mode', 'manual-slots');
-      png = await renderStoryPng({ template, slots: manualSlots });
+      png = await renderStoryPng({ template, slots: manualSlots, barberName: barber.displayName });
     } else {
       const plan = await buildStoryPlan(barber, date);
       res.setHeader('X-Preview-Mode', 'live');

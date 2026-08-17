@@ -10,8 +10,14 @@ assets/photos/dmitriy.jpg
 
 - Portrait orientation, ideally **1080×1920** (9:16). Other sizes are
   center-cropped to fill (`preserveAspectRatio="xMidYMid slice"`).
-- Keep the face in the **upper/middle** area — the lower third is covered by a
-  dark scrim where the free-time slots and the «ЗАПИСАТЬСЯ →» button sit.
+- The layout is two-column: the barber stands on one side, the free-time slots
+  are a serif column on the **opposite** side. Shoot/crop each barber on their
+  configured side so the slots don't cover them:
+  - `artash` → **left**, `dmitriy` → **left**, `ksenia` → **right**
+    (set per template via `photoSide` in `src/config/templates.ts`).
+- Best on the brand's dark textured wall (like the approved design) so the photo
+  blends into the composition. Keep the upper-center clear for the logo +
+  «СВОБОДНЫЕ СЛОТЫ» / «БАРБЕР {ИМЯ}» heading.
 - These must be **real supplied photos** — never AI-generated (spec §43).
 
 When a barber has no photo here yet, the Story falls back to a dark gradient
