@@ -1,7 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "name": "mes-formulad",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
+  "outputDirectory": "dist",
   "functions": {
     "api/index.js": {
       "memory": 1024,
