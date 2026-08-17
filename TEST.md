@@ -27,7 +27,7 @@ Before testing, ensure:
 Verify integrations are configured:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_ADMIN_API_TOKENS" \
+curl -H "x-admin-token: YOUR_ADMIN_API_TOKENS" \
   https://app.rublbarber.ru/api/admin/integrations/health
 ```
 
@@ -46,7 +46,7 @@ If either shows `ok: false`, check environment variables and Telegram bot token 
 Preview a Story with manual slots (doesn't hit YCLIENTS, doesn't send to Telegram):
 
 ```bash
-curl -H "Authorization: Bearer YOUR_ADMIN_API_TOKENS" \
+curl -H "x-admin-token: YOUR_ADMIN_API_TOKENS" \
   'https://app.rublbarber.ru/api/admin/stories/preview?slug=artash&slots=10:00,10:30,11:00' \
   -o artash_preview.png
 ```
@@ -58,7 +58,7 @@ This renders the exact PNG that would be published. Check layout, fonts, slots p
 Check real YCLIENTS data for today (no publish yet):
 
 ```bash
-curl -H "Authorization: Bearer YOUR_ADMIN_API_TOKENS" \
+curl -H "x-admin-token: YOUR_ADMIN_API_TOKENS" \
   https://app.rublbarber.ru/api/admin/today
 ```
 
@@ -87,21 +87,22 @@ Send a test Story to `TELEGRAM_TEST_CHAT_ID`:
 
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer YOUR_ADMIN_API_TOKENS" \
+  -H "x-admin-token: YOUR_ADMIN_API_TOKENS" \
   -H "Content-Type: application/json" \
   -d '{"slug": "artash", "period": "morning"}' \
   https://app.rublbarber.ru/api/admin/stories/publish-test
 ```
+
+**⚠️ Important**: The endpoint automatically uses **today's date** (Europe/Moscow timezone). The date parameter is optional and must be in `YYYY-MM-DD` format. Past dates will return `"Story date must be today (Europe/Moscow)"`.
 
 Expected response:
 ```json
 {
   "ok": true,
   "result": {
-    "barberSlug": "artash",
-    "sent": true,
-    "storyId": "1234567890:...",
-    "date": "2026-08-17"
+    "status": "published",
+    "storyId": 9876543210,
+    "fingerprint": "f1a2b3c4d5e6f7g8h9i0"
   }
 }
 ```
@@ -117,7 +118,7 @@ Send a test daily report to `TELEGRAM_TEST_CHAT_ID`:
 
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer YOUR_ADMIN_API_TOKENS" \
+  -H "x-admin-token: YOUR_ADMIN_API_TOKENS" \
   https://app.rublbarber.ru/api/admin/report/send-test
 ```
 
@@ -139,7 +140,7 @@ Expected response:
 Check which Stories have been published today:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_ADMIN_API_TOKENS" \
+curl -H "x-admin-token: YOUR_ADMIN_API_TOKENS" \
   https://app.rublbarber.ru/api/admin/stories/status
 ```
 
@@ -160,7 +161,7 @@ Remove a test Story to re-run the test:
 
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer YOUR_ADMIN_API_TOKENS" \
+  -H "x-admin-token: YOUR_ADMIN_API_TOKENS" \
   -d '{"slug": "artash"}' \
   https://app.rublbarber.ru/api/admin/stories/delete-test
 ```
@@ -168,7 +169,9 @@ curl -X POST \
 ## Troubleshooting
 
 ### 401 Unauthorized
-- Verify `Authorization: Bearer YOUR_ADMIN_API_TOKENS` header matches Vercel env var exactly
+- Verify `x-admin-token: YOUR_ADMIN_API_TOKENS` header matches Vercel env var exactly
+- Use `-H "x-admin-token: TOKEN"` not `Authorization: Bearer`
+- If `ADMIN_API_TOKENS` is not set, loopback (127.0.0.1) calls are allowed without token
 
 ### Telegram: "401 Unauthorized"
 - Check `TELEGRAM_BOT_TOKEN` is valid (get from BotFather, format: `123456789:ABCdefGHIJklmnoPQRstuvWXYZabCdEFg`)
@@ -182,6 +185,17 @@ curl -X POST \
 - Partner-level token is enough for Stories (book_times, book_dates)
 - Daily report needs manager/admin token (records/analytics endpoints)
 - See `.env.example` for details
+
+### "Story date must be today (Europe/Moscow)"
+- The publish endpoint only works with today's date
+- Don't pass a `date` parameter or ensure it matches today's date in MSK timezone
+- The date must be in format `YYYY-MM-DD` (e.g., `2026-08-17`)
+- The endpoint auto-uses today's date if no date is provided
+
+### "Invalid date" error
+- Ensure date string is in `YYYY-MM-DD` format
+- The date must be a valid calendar date (not 2024-13-45, etc.)
+- If testing locally in a different timezone, verify `TZ` env var is set to `Europe/Moscow`
 
 ### Story looks wrong (slots in wrong place, button misaligned)
 - Template config may need tuning — see `src/config/templates.ts`
