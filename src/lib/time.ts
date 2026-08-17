@@ -28,6 +28,8 @@ export function isToday(date: string): boolean {
 
 /** Validate a YYYY-MM-DD string. */
 export function isValidBusinessDate(date: string): boolean {
+  if (!date || typeof date !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
   const dt = DateTime.fromFormat(date, 'yyyy-MM-dd', { zone: BUSINESS_TZ });
   return dt.isValid;
 }
