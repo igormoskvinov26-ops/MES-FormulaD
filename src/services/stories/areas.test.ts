@@ -15,8 +15,9 @@ describe('CTA story areas (spec §12)', () => {
     expect(areas).toHaveLength(1);
     const area = areas[0]!;
     expect(area.type).toEqual({ type: 'link', url: 'https://n2387007.yclients.com' });
-    // normalized 0..1 → percentage 0..100
-    expect(area.position.x_percentage).toBeCloseTo(50, 5);
+    // normalized 0..1 → percentage 0..100; artash's button sits on the right
+    // side (barber is on the left), so x ≈ 70%.
+    expect(area.position.x_percentage).toBeCloseTo(70, 5);
     expect(area.position.width_percentage).toBeGreaterThan(0);
     expect(area.position.width_percentage).toBeLessThanOrEqual(100);
   });
