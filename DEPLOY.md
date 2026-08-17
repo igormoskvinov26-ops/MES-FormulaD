@@ -4,6 +4,25 @@ This app runs on Vercel as a **separate project** in team `rubl1`, on the
 subdomain `app.rublbarber.ru`. It does not touch the existing `rublbarber`
 project. The wildcard DNS (`*` → Vercel) already routes the subdomain.
 
+## ⚠️ Do NOT break the existing site (rublbarber.ru)
+
+The production site `rublbarber.ru` is a **different Vercel project from a
+different repo**. This module is fully isolated — separate project, build, env
+and storage. The only way to affect the live site is domain assignment, so:
+
+- ✅ Create a **NEW** Vercel project from this repo (`MES-FormulaD`). Do **not**
+  import this code into the existing `rublbarber` project.
+- ✅ Assign this project **only a new subdomain** — `app.rublbarber.ru` (or e.g.
+  `slots.rublbarber.ru`). The wildcard `*` already points at Vercel, so it just
+  works.
+- ❌ **Never** add `rublbarber.ru` or `www.rublbarber.ru` to this project —
+  Vercel would move the apex/www away from the live site and break it.
+- ❌ Do not edit the `rublbarber` project's settings, env, domains or storage.
+- Create a **separate KV store** for this project; don't reuse the live one.
+
+Nothing in this repo can reach the other project on its own — the `vercel.json`
+rewrites/cron only apply inside this project.
+
 The code auto-adapts to serverless and **runs on the free Vercel Hobby plan**:
 
 - **Images** → rendered with **resvg** (SVG → PNG, no browser), ~300 ms, well
