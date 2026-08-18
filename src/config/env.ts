@@ -1,7 +1,10 @@
 import { config as loadDotenv } from 'dotenv';
 import { z } from 'zod';
 
-loadDotenv();
+const dotenvResult = loadDotenv();
+if (process.env.DEBUG_ENV) {
+  console.error('[env.ts] dotenv loaded:', dotenvResult.parsed ? Object.keys(dotenvResult.parsed).length + ' vars' : 'FAILED');
+}
 
 /**
  * Central, validated configuration.
