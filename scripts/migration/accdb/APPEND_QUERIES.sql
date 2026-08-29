@@ -87,13 +87,10 @@ WHERE dst.id IS NULL;
 -- 9. tblProductionPlan  (сверка по VIN - серверные ID заняты другими записями,
 --    join по ID давал ложные совпадения и новые строки не доезжали)
 INSERT INTO dbo_tblProductionPlan ( ID, ModelArticle, ModelName, VIN, EngineNumber, Color, PlannedShipmentDate, ValidationStatus, ErrorMessage, StartDate, CompleteDate, plannedstartdate, Status, Specification_id, SpecificationName, ColorID, SEQN, NEWSEQN, statusid, PrintDate, validationdate, shipmentdate, reworkdate, reworkcompletedate, rework_comments, shipment_comments )
-SELECT src.ID, src.ModelArticle, Left(src.ModelName,50), src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, Left(src.ErrorMessage,50), src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments
+SELECT src.ID, src.ModelArticle, src.ModelName, src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, src.ErrorMessage, src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments
 FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.VIN = dst.VIN
 WHERE dst.VIN IS NULL;
--- ModelName и ErrorMessage урезаны до 50 - столько на сервере. Чтобы сохранить
--- данные целиком, лучше расширить колонки на сервере и убрать Left():
---   ALTER TABLE dbo.tblProductionPlan ALTER COLUMN ModelName nvarchar(100) NULL;
---   ALTER TABLE dbo.tblProductionPlan ALTER COLUMN ErrorMessage nvarchar(255) NULL;
+-- Без Left(): ModelName и ErrorMessage на сервере расширены под исходные размеры.
 
 
 -- 10. tblPlanTemp

@@ -109,7 +109,7 @@ Sub MigrateAll()
     ' поэтому join по ID давал ложные совпадения и новые строки не доезжали
     Xfer "tblProductionPlan", "dbo_tblProductionPlan", "VIN", "VIN", _
         "INSERT INTO dbo_tblProductionPlan ( ID, ModelArticle, ModelName, VIN, EngineNumber, Color, PlannedShipmentDate, ValidationStatus, ErrorMessage, StartDate, CompleteDate, plannedstartdate, Status, Specification_id, SpecificationName, ColorID, SEQN, NEWSEQN, statusid, PrintDate, validationdate, shipmentdate, reworkdate, reworkcompletedate, rework_comments, shipment_comments ) " & _
-        "SELECT src.ID, src.ModelArticle, Left(src.ModelName,50), src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, Left(src.ErrorMessage,50), src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments " & _
+        "SELECT src.ID, src.ModelArticle, src.ModelName, src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, src.ErrorMessage, src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments " & _
         "FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.VIN = dst.VIN " & _
         "WHERE dst.VIN IS NULL"
 
