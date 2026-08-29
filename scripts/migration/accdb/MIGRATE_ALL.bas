@@ -143,11 +143,13 @@ Sub MigrateAll()
     Say "ЭТАП 4: КОНТРОЛЬ КАЧЕСТВА"
     Say String(78, "-")
 
-    Xfer "tblNCP", "dbo_tblNCP", "ID", "id", _
-        "INSERT INTO dbo_tblNCP ( id, StationID, ComponentID, VIN, Quantity, DiscrepancyTypeID, Comment, Status, CreatedBy, CreatedAt, ClosedBy, ClosedAt ) " & _
-        "SELECT src.ID, src.StationID, src.ComponentID, src.VIN, src.Quantity, src.DiscrepancyTypeID, Left(src.Comment,50), src.Status, Left(src.CreatedBy,50), src.CreatedAt, Left(src.ClosedBy,50), src.ClosedAt " & _
-        "FROM tblNCP AS src LEFT JOIN dbo_tblNCP AS dst ON src.ID = dst.id " & _
-        "WHERE dst.id IS NULL"
+    ' id на сервере - IDENTITY, явную вставку не принимает: не переносим его,
+    ' сервер выдаёт свой номер. Сверка по VIN.
+    Xfer "tblNCP", "dbo_tblNCP", "VIN", "VIN", _
+        "INSERT INTO dbo_tblNCP ( StationID, ComponentID, VIN, Quantity, DiscrepancyTypeID, Comment, Status, CreatedBy, CreatedAt, ClosedBy, ClosedAt ) " & _
+        "SELECT src.StationID, src.ComponentID, src.VIN, src.Quantity, src.DiscrepancyTypeID, src.Comment, src.Status, src.CreatedBy, src.CreatedAt, src.ClosedBy, src.ClosedAt " & _
+        "FROM tblNCP AS src LEFT JOIN dbo_tblNCP AS dst ON src.VIN = dst.VIN " & _
+        "WHERE dst.VIN IS NULL"
 
     Xfer "tblDiscrepancy", "dbo_tblDiscrepancy", "ID", "id", _
         "INSERT INTO dbo_tblDiscrepancy ( id, AssemblyEventID, ComponentID, DiscrepancyType, Comment, WasReplaced, DetectionTime, ResolutionTime, DiscrepancyStatus, NCP_Number, PhotoPath ) " & _

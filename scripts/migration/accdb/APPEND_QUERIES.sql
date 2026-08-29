@@ -125,11 +125,13 @@ WHERE dst.id IS NULL;
 -- ЭТАП 4: КОНТРОЛЬ КАЧЕСТВА
 -- ============================================================================
 
--- 14. tblNCP  (Comment/CreatedBy/ClosedBy урезаны до 50 - на сервере nvarchar(50))
-INSERT INTO dbo_tblNCP ( id, StationID, ComponentID, VIN, Quantity, DiscrepancyTypeID, Comment, Status, CreatedBy, CreatedAt, ClosedBy, ClosedAt )
-SELECT src.ID, src.StationID, src.ComponentID, src.VIN, src.Quantity, src.DiscrepancyTypeID, Left(src.Comment,50), src.Status, Left(src.CreatedBy,50), src.CreatedAt, Left(src.ClosedBy,50), src.ClosedAt
-FROM tblNCP AS src LEFT JOIN dbo_tblNCP AS dst ON src.ID = dst.id
-WHERE dst.id IS NULL;
+-- 14. tblNCP
+--     id на сервере - IDENTITY: явную вставку не принимает, поэтому колонка
+--     не переносится, номер выдаёт сервер. Сверка по VIN.
+INSERT INTO dbo_tblNCP ( StationID, ComponentID, VIN, Quantity, DiscrepancyTypeID, Comment, Status, CreatedBy, CreatedAt, ClosedBy, ClosedAt )
+SELECT src.StationID, src.ComponentID, src.VIN, src.Quantity, src.DiscrepancyTypeID, src.Comment, src.Status, src.CreatedBy, src.CreatedAt, src.ClosedBy, src.ClosedAt
+FROM tblNCP AS src LEFT JOIN dbo_tblNCP AS dst ON src.VIN = dst.VIN
+WHERE dst.VIN IS NULL;
 
 
 -- 15. tblDiscrepancy  (Comment -> 250, PhotoPath -> 50)
