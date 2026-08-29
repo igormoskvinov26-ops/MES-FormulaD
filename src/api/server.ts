@@ -5,6 +5,7 @@ import { logger } from '../lib/logger.js';
 import { adminRouter } from './routes/admin.js';
 import { settingsRouter } from './routes/settings.js';
 import { cronRouter } from './routes/cron.js';
+import { importRouter } from './routes/import.js';
 
 const WEB_DIR = process.env.WEB_DIR || path.resolve(process.cwd(), 'web');
 
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/cron', cronRouter);
 
   app.use('/api/admin/settings', adminAuth, settingsRouter);
+  app.use('/api/admin/import', adminAuth, importRouter);
   app.use('/api/admin', adminAuth, adminRouter);
 
   // Static admin UI.
