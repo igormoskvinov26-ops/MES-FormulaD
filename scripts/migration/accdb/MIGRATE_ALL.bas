@@ -44,25 +44,25 @@ Sub MigrateAll()
     Say "ЭТАП 1: СПРАВОЧНИКИ"
     Say String(78, "-")
 
-    Run "tblRole", "dbo_tblRole", "ID", "ID", _
+    Xfer "tblRole", "dbo_tblRole", "ID", "ID", _
         "INSERT INTO dbo_tblRole ( ID, RoleName, Description, IsActive ) " & _
         "SELECT src.ID, src.RoleName, src.Description, src.IsActive " & _
         "FROM tblRole AS src LEFT JOIN dbo_tblRole AS dst ON src.ID = dst.ID " & _
         "WHERE dst.ID IS NULL"
 
-    Run "tblStatus", "dbo_tblStatus", "id", "id", _
+    Xfer "tblStatus", "dbo_tblStatus", "id", "id", _
         "INSERT INTO dbo_tblStatus ( id, statusid, statename ) " & _
         "SELECT src.id, src.statusid, src.statename " & _
         "FROM tblStatus AS src LEFT JOIN dbo_tblStatus AS dst ON src.id = dst.id " & _
         "WHERE dst.id IS NULL"
 
-    Run "tblColors", "dbo_tblColors", "id", "id", _
+    Xfer "tblColors", "dbo_tblColors", "id", "id", _
         "INSERT INTO dbo_tblColors ( id, color ) " & _
         "SELECT src.id, src.color " & _
         "FROM tblColors AS src LEFT JOIN dbo_tblColors AS dst ON src.id = dst.id " & _
         "WHERE dst.id IS NULL"
 
-    Run "tblDiscrepancyList", "dbo_tblDiscrepancyList", "id", "id", _
+    Xfer "tblDiscrepancyList", "dbo_tblDiscrepancyList", "id", "id", _
         "INSERT INTO dbo_tblDiscrepancyList ( id, discrepancy ) " & _
         "SELECT src.id, src.discrepancy " & _
         "FROM tblDiscrepancyList AS src LEFT JOIN dbo_tblDiscrepancyList AS dst ON src.id = dst.id " & _
@@ -74,26 +74,26 @@ Sub MigrateAll()
     Say "ЭТАП 2: ОСНОВНЫЕ СПРАВОЧНЫЕ ДАННЫЕ"
     Say String(78, "-")
 
-    Run "tblUser", "dbo_tblUser", "ID", "ID", _
+    Xfer "tblUser", "dbo_tblUser", "ID", "ID", _
         "INSERT INTO dbo_tblUser ( ID, Login, PasswordHash, FullName, UserRole, IsActive, Email, Phone ) " & _
         "SELECT src.ID, src.Login, src.PasswordHash, src.FullName, src.UserRole, src.IsActive, src.Email, src.Phone " & _
         "FROM tblUser AS src LEFT JOIN dbo_tblUser AS dst ON src.ID = dst.ID " & _
         "WHERE dst.ID IS NULL"
 
     ' без id_assembly - поля нет в целевой таблице
-    Run "tblSpecifications", "dbo_tblSpecifications", "id", "id", _
+    Xfer "tblSpecifications", "dbo_tblSpecifications", "id", "id", _
         "INSERT INTO dbo_tblSpecifications ( id, specificationName, valid, ModelArticle ) " & _
         "SELECT src.id, src.specificationName, src.valid, src.ModelArticle " & _
         "FROM tblSpecifications AS src LEFT JOIN dbo_tblSpecifications AS dst ON src.id = dst.id " & _
         "WHERE dst.id IS NULL"
 
-    Run "tblComponent", "dbo_tblComponent", "ID", "id", _
+    Xfer "tblComponent", "dbo_tblComponent", "ID", "id", _
         "INSERT INTO dbo_tblComponent ( id, ComponentCode, ComponentName, ComponentName_RUS, PointOfPart, StationID, StandardQty, IsMandatory, Supplier ) " & _
         "SELECT src.ID, src.ComponentCode, src.ComponentName, src.ComponentName_RUS, src.PointOfPart, src.StationID, src.StandardQty, src.IsMandatory, src.Supplier " & _
         "FROM tblComponent AS src LEFT JOIN dbo_tblComponent AS dst ON src.ID = dst.id " & _
         "WHERE dst.id IS NULL"
 
-    Run "tblConnections", "dbo_tblConnections", "Код", "id", _
+    Xfer "tblConnections", "dbo_tblConnections", "Код", "id", _
         "INSERT INTO dbo_tblConnections ( id, [Критические соединения], [Кол-во соединений], Станция, Код_колмплектации, [Станция проверки] ) " & _
         "SELECT src.Код, src.[Критические соединения], src.[Кол-во соединений], src.Станция, src.Код_колмплектации, src.[Станция проверки] " & _
         "FROM tblConnections AS src LEFT JOIN dbo_tblConnections AS dst ON src.Код = dst.id " & _
@@ -107,31 +107,31 @@ Sub MigrateAll()
 
     ' сверка по VIN, а не по ID: серверные ID заняты другими записями,
     ' поэтому join по ID давал ложные совпадения и новые строки не доезжали
-    Run "tblProductionPlan", "dbo_tblProductionPlan", "VIN", "VIN", _
+    Xfer "tblProductionPlan", "dbo_tblProductionPlan", "VIN", "VIN", _
         "INSERT INTO dbo_tblProductionPlan ( ID, ModelArticle, ModelName, VIN, EngineNumber, Color, PlannedShipmentDate, ValidationStatus, ErrorMessage, StartDate, CompleteDate, plannedstartdate, Status, Specification_id, SpecificationName, ColorID, SEQN, NEWSEQN, statusid, PrintDate, validationdate, shipmentdate, reworkdate, reworkcompletedate, rework_comments, shipment_comments ) " & _
         "SELECT src.ID, src.ModelArticle, src.ModelName, src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, src.ErrorMessage, src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments " & _
         "FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.VIN = dst.VIN " & _
         "WHERE dst.VIN IS NULL"
 
-    Run "tblPlanTemp", "dbo_tblPlanTemp", "TempID", "TempID", _
+    Xfer "tblPlanTemp", "dbo_tblPlanTemp", "TempID", "TempID", _
         "INSERT INTO dbo_tblPlanTemp ( TempID, OriginalID, VIN, ModelArticle, ModelName, Color, EngineNumber, Status, NEWSEQN, DisplaySeq, statusid ) " & _
         "SELECT src.TempID, src.OriginalID, src.VIN, src.ModelArticle, src.ModelName, src.Color, src.EngineNumber, src.Status, src.NEWSEQN, src.DisplaySeq, src.statusid " & _
         "FROM tblPlanTemp AS src LEFT JOIN dbo_tblPlanTemp AS dst ON src.TempID = dst.TempID " & _
         "WHERE dst.TempID IS NULL"
 
-    Run "tblProductionOrder", "dbo_tblProductionOrder", "ID", "ID", _
+    Xfer "tblProductionOrder", "dbo_tblProductionOrder", "ID", "ID", _
         "INSERT INTO dbo_tblProductionOrder ( ID, PlanID, VIN, EngineNumber, ModelArticle, ModelName, Color, PlannedShipmentDate, OrderStatus, CurrentStation, AssemblyStartTime, AssemblyEndTime ) " & _
         "SELECT src.ID, src.PlanID, src.VIN, src.EngineNumber, src.ModelArticle, src.ModelName, src.Color, src.PlannedShipmentDate, src.OrderStatus, src.CurrentStation, src.AssemblyStartTime, src.AssemblyEndTime " & _
         "FROM tblProductionOrder AS src LEFT JOIN dbo_tblProductionOrder AS dst ON src.ID = dst.ID " & _
         "WHERE dst.ID IS NULL"
 
-    Run "tblUpdColor", "dbo_tblUpdColor", "vin", "vin", _
+    Xfer "tblUpdColor", "dbo_tblUpdColor", "vin", "vin", _
         "INSERT INTO dbo_tblUpdColor ( vin, color ) " & _
         "SELECT src.vin, src.color " & _
         "FROM tblUpdColor AS src LEFT JOIN dbo_tblUpdColor AS dst ON src.vin = dst.vin " & _
         "WHERE dst.vin IS NULL"
 
-    Run "tblImportplan", "dbo_tblImportplan", "id", "id", _
+    Xfer "tblImportplan", "dbo_tblImportplan", "id", "id", _
         "INSERT INTO dbo_tblImportplan ( F1, арт, название, вин, [номер двс], [цвет согласованный], [готов к отгрузке], [Плановая дата готовности к отгрузке], [Дата отгрузки фактическая], id ) " & _
         "SELECT src.F1, src.арт, src.название, src.вин, src.[номер двс], src.[цвет согласованный], src.[готов к отгрузке], src.[Плановая дата готовности к отгрузке], src.[Дата отгрузки фактическая], src.id " & _
         "FROM tblImportplan AS src LEFT JOIN dbo_tblImportplan AS dst ON src.id = dst.id " & _
@@ -143,31 +143,31 @@ Sub MigrateAll()
     Say "ЭТАП 4: КОНТРОЛЬ КАЧЕСТВА"
     Say String(78, "-")
 
-    Run "tblNCP", "dbo_tblNCP", "ID", "id", _
+    Xfer "tblNCP", "dbo_tblNCP", "ID", "id", _
         "INSERT INTO dbo_tblNCP ( id, StationID, ComponentID, VIN, Quantity, DiscrepancyTypeID, Comment, Status, CreatedBy, CreatedAt, ClosedBy, ClosedAt ) " & _
         "SELECT src.ID, src.StationID, src.ComponentID, src.VIN, src.Quantity, src.DiscrepancyTypeID, Left(src.Comment,50), src.Status, Left(src.CreatedBy,50), src.CreatedAt, Left(src.ClosedBy,50), src.ClosedAt " & _
         "FROM tblNCP AS src LEFT JOIN dbo_tblNCP AS dst ON src.ID = dst.id " & _
         "WHERE dst.id IS NULL"
 
-    Run "tblDiscrepancy", "dbo_tblDiscrepancy", "ID", "id", _
+    Xfer "tblDiscrepancy", "dbo_tblDiscrepancy", "ID", "id", _
         "INSERT INTO dbo_tblDiscrepancy ( id, AssemblyEventID, ComponentID, DiscrepancyType, Comment, WasReplaced, DetectionTime, ResolutionTime, DiscrepancyStatus, NCP_Number, PhotoPath ) " & _
         "SELECT src.ID, src.AssemblyEventID, src.ComponentID, src.DiscrepancyType, Left(src.Comment,250), src.WasReplaced, src.DetectionTime, src.ResolutionTime, src.DiscrepancyStatus, src.NCP_Number, Left(src.PhotoPath,50) " & _
         "FROM tblDiscrepancy AS src LEFT JOIN dbo_tblDiscrepancy AS dst ON src.ID = dst.id " & _
         "WHERE dst.id IS NULL"
 
-    Run "tblCrippleRecord", "dbo_tblCrippleRecord", "ID", "ID", _
+    Xfer "tblCrippleRecord", "dbo_tblCrippleRecord", "ID", "ID", _
         "INSERT INTO dbo_tblCrippleRecord ( ID, OrderID, DiscrepancyID, ComponentID, CrippleReason, RegistrationDate, ExpectedResolutionDate, StorageLocation ) " & _
         "SELECT src.ID, src.OrderID, src.DiscrepancyID, src.ComponentID, src.CrippleReason, src.RegistrationDate, src.ExpectedResolutionDate, src.StorageLocation " & _
         "FROM tblCrippleRecord AS src LEFT JOIN dbo_tblCrippleRecord AS dst ON src.ID = dst.ID " & _
         "WHERE dst.ID IS NULL"
 
-    Run "tblJobCard", "dbo_tblJobCard", "ID", "ID", _
+    Xfer "tblJobCard", "dbo_tblJobCard", "ID", "ID", _
         "INSERT INTO dbo_tblJobCard ( ID, OrderID, JobCardNumber, PrintDate, CardStatus, BarcodeData ) " & _
         "SELECT src.ID, src.OrderID, src.JobCardNumber, src.PrintDate, src.CardStatus, src.BarcodeData " & _
         "FROM tblJobCard AS src LEFT JOIN dbo_tblJobCard AS dst ON src.ID = dst.ID " & _
         "WHERE dst.ID IS NULL"
 
-    Run "tblImportLog", "dbo_tblImportLog", "ID", "ID", _
+    Xfer "tblImportLog", "dbo_tblImportLog", "ID", "ID", _
         "INSERT INTO dbo_tblImportLog ( ID, ImportDate, FileName, ImportedBy, RowsImported, RowsFailed, ErrorDescription, ImportBatchID ) " & _
         "SELECT src.ID, src.ImportDate, Left(src.FileName,50), src.ImportedBy, src.RowsImported, src.RowsFailed, src.ErrorDescription, src.ImportBatchID " & _
         "FROM tblImportLog AS src LEFT JOIN dbo_tblImportLog AS dst ON src.ID = dst.ID " & _
@@ -202,7 +202,7 @@ End Sub
 ' ============================================================================
 ' Выполнить один INSERT с полным контролем результата
 ' ============================================================================
-Private Sub Run(srcTable As String, dstTable As String, _
+Private Sub Xfer(srcTable As String, dstTable As String, _
                 srcKey As String, dstKey As String, sql As String)
     Dim srcN As Long, dstBefore As Long, dstAfter As Long
     Dim expected As Long, actual As Long
