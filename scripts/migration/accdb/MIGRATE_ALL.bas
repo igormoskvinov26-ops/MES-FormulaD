@@ -105,11 +105,13 @@ Sub MigrateAll()
     Say "ЭТАП 3: ПРОИЗВОДСТВЕННЫЕ ДАННЫЕ"
     Say String(78, "-")
 
-    Run "tblProductionPlan", "dbo_tblProductionPlan", "ID", "ID", _
+    ' сверка по VIN, а не по ID: серверные ID заняты другими записями,
+    ' поэтому join по ID давал ложные совпадения и новые строки не доезжали
+    Run "tblProductionPlan", "dbo_tblProductionPlan", "VIN", "VIN", _
         "INSERT INTO dbo_tblProductionPlan ( ID, ModelArticle, ModelName, VIN, EngineNumber, Color, PlannedShipmentDate, ValidationStatus, ErrorMessage, StartDate, CompleteDate, plannedstartdate, Status, Specification_id, SpecificationName, ColorID, SEQN, NEWSEQN, statusid, PrintDate, validationdate, shipmentdate, reworkdate, reworkcompletedate, rework_comments, shipment_comments ) " & _
         "SELECT src.ID, src.ModelArticle, src.ModelName, src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, src.ErrorMessage, src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments " & _
-        "FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.ID = dst.ID " & _
-        "WHERE dst.ID IS NULL"
+        "FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.VIN = dst.VIN " & _
+        "WHERE dst.VIN IS NULL"
 
     Run "tblPlanTemp", "dbo_tblPlanTemp", "TempID", "TempID", _
         "INSERT INTO dbo_tblPlanTemp ( TempID, OriginalID, VIN, ModelArticle, ModelName, Color, EngineNumber, Status, NEWSEQN, DisplaySeq, statusid ) " & _

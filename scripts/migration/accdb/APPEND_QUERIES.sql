@@ -84,11 +84,12 @@ WHERE dst.id IS NULL;
 -- ЭТАП 3: ПРОИЗВОДСТВЕННЫЕ ДАННЫЕ
 -- ============================================================================
 
--- 9. tblProductionPlan
+-- 9. tblProductionPlan  (сверка по VIN - серверные ID заняты другими записями,
+--    join по ID давал ложные совпадения и новые строки не доезжали)
 INSERT INTO dbo_tblProductionPlan ( ID, ModelArticle, ModelName, VIN, EngineNumber, Color, PlannedShipmentDate, ValidationStatus, ErrorMessage, StartDate, CompleteDate, plannedstartdate, Status, Specification_id, SpecificationName, ColorID, SEQN, NEWSEQN, statusid, PrintDate, validationdate, shipmentdate, reworkdate, reworkcompletedate, rework_comments, shipment_comments )
 SELECT src.ID, src.ModelArticle, src.ModelName, src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, src.ErrorMessage, src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments
-FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.ID = dst.ID
-WHERE dst.ID IS NULL;
+FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.VIN = dst.VIN
+WHERE dst.VIN IS NULL;
 
 
 -- 10. tblPlanTemp
