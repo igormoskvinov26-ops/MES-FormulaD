@@ -97,15 +97,10 @@ Sub MigrateAll()
         "FROM tblComponent AS src LEFT JOIN dbo_tblComponent AS dst ON src.ComponentCode = dst.ComponentCode " & _
         "WHERE dst.ComponentCode IS NULL"
 
-    ' Кол-во соединений, Станция, Станция проверки: 255->50
-    ' ПРОВЕРИТЬ ключ: Код_колмплектации может повторяться
-    Xfer "tblConnections", "dbo_tblConnections", _
-        "src.[Код_колмплектации] = dst.[Код_колмплектации] AND src.[Станция] = dst.[Станция]", "Код_колмплектации", _
-        "INSERT INTO dbo_tblConnections ( [Критические соединения], [Кол-во соединений], [Станция], [Код_колмплектации], [Станция проверки] ) " & _
-        "SELECT src.[Критические соединения], Left(src.[Кол-во соединений],50), Left(src.[Станция],50), src.[Код_колмплектации], Left(src.[Станция проверки],50) " & _
-        "FROM tblConnections AS src LEFT JOIN dbo_tblConnections AS dst " & _
-        "ON src.[Код_колмплектации] = dst.[Код_колмплектации] AND src.[Станция] = dst.[Станция] " & _
-        "WHERE dst.[Код_колмплектации] IS NULL"
+    ' Кириллические имена колонок берутся из TableDefs, а не из литералов:
+    ' VBA хранит литералы в ANSI системной локали и кириллица гибнет.
+    ' Индекс 4 в dbo_tblConnections - Код_колмплектации.
+    XferAuto "tblConnections", "dbo_tblConnections", 4
 
     Say ""
 
@@ -147,12 +142,9 @@ Sub MigrateAll()
         "FROM tblUpdColor AS src LEFT JOIN dbo_tblUpdColor AS dst ON src.vin = dst.vin " & _
         "WHERE dst.vin IS NULL"
 
-    Xfer "tblImportplan", "dbo_tblImportplan", "src.[вин] = dst.[вин]", "вин", _
-        "INSERT INTO dbo_tblImportplan ( F1, [арт], [название], [вин], [номер двс], [цвет согласованный], [готов к отгрузке], [Плановая дата готовности к отгрузке], [Дата отгрузки фактическая] ) " & _
-        "SELECT src.F1, src.[арт], src.[название], src.[вин], src.[номер двс], src.[цвет согласованный], src.[готов к отгрузке], " & _
-        DT("src.[Плановая дата готовности к отгрузке]") & ", " & DT("src.[Дата отгрузки фактическая]") & " " & _
-        "FROM tblImportplan AS src LEFT JOIN dbo_tblImportplan AS dst ON src.[вин] = dst.[вин] " & _
-        "WHERE dst.[вин] IS NULL"
+    ' то же самое: имена колонок кириллические, берём их из TableDefs.
+    ' Индекс 3 в dbo_tblImportplan - вин.
+    XferAuto "tblImportplan", "dbo_tblImportplan", 3
 
     Say ""
 
@@ -233,6 +225,91 @@ End Sub
 ' ============================================================================
 Private Function DT(col As String) As String
     DT = "IIf(" & col & "<#1/1/1753#,Null," & col & ")"
+End Function
+
+' ============================================================================
+' Перенос без единого литерала с именем колонки.
+' Список полей строится как пересечение имён источника и приёмника (кроме id),
+' а обрезка и защита дат проставляются по типу и размеру колонки приёмника.
+' Нужен там, где имена кириллические: VBA хранит литералы в ANSI системной
+' локали, и при нерусской локали они превращаются в ???.
+'   joinIdx - номер колонки сверки в таблице приёмника, считая с нуля
+' ============================================================================
+Private Sub XferAuto(srcTable As String, dstTable As String, joinIdx As Long)
+    Dim srcTd As Object, dstTd As Object
+    Dim cols As String, vals As String, nm As String, joinName As String
+    Dim i As Long
+    Dim sql As String, joinCond As String
+
+    On Error GoTo Failed
+
+    Set srcTd = mDb.TableDefs(srcTable)
+    Set dstTd = mDb.TableDefs(dstTable)
+    joinName = dstTd.Fields(joinIdx).Name
+
+    For i = 0 To dstTd.Fields.Count - 1
+        nm = dstTd.Fields(i).Name
+        If LCase$(nm) <> "id" And HasField(srcTd, nm) Then
+            If Len(cols) > 0 Then
+                cols = cols & ", "
+                vals = vals & ", "
+            End If
+            cols = cols & "[" & nm & "]"
+            vals = vals & ValueExpr(dstTd.Fields(i), nm)
+        End If
+    Next i
+
+    If Len(cols) = 0 Then
+        mFailed = mFailed + 1
+        Say srcTable & " -> " & dstTable
+        Say "    общих колонок не найдено"
+        Say ""
+        Exit Sub
+    End If
+
+    joinCond = "src.[" & joinName & "] = dst.[" & joinName & "]"
+
+    sql = "INSERT INTO " & dstTable & " ( " & cols & " ) " & _
+          "SELECT " & vals & " " & _
+          "FROM " & srcTable & " AS src LEFT JOIN " & dstTable & " AS dst ON " & joinCond & " " & _
+          "WHERE dst.[" & joinName & "] IS NULL"
+
+    Xfer srcTable, dstTable, joinCond, joinName, sql
+    Exit Sub
+
+Failed:
+    mFailed = mFailed + 1
+    Say srcTable & " -> " & dstTable
+    Say "    ОШИБКА подготовки: " & Err.Number & ": " & Err.Description
+    Say ""
+End Sub
+
+' Выражение для колонки: обрезка по размеру приёмника, защита диапазона дат
+Private Function ValueExpr(dstFld As Object, nm As String) As String
+    Const dbDate As Long = 8
+    Const dbText As Long = 10
+
+    Select Case dstFld.Type
+        Case dbDate
+            ValueExpr = DT("src.[" & nm & "]")
+        Case dbText
+            If dstFld.Size > 0 Then
+                ValueExpr = "Left(src.[" & nm & "]," & dstFld.Size & ")"
+            Else
+                ValueExpr = "src.[" & nm & "]"
+            End If
+        Case Else
+            ValueExpr = "src.[" & nm & "]"
+    End Select
+End Function
+
+Private Function HasField(td As Object, nm As String) As Boolean
+    Dim f As Object
+
+    On Error Resume Next
+    Set f = Nothing
+    Set f = td.Fields(nm)
+    HasField = Not (f Is Nothing)
 End Function
 
 ' ============================================================================
