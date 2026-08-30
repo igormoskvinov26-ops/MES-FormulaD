@@ -100,12 +100,12 @@ Sub MigrateAll()
     ' Кол-во соединений, Станция, Станция проверки: 255->50
     ' ПРОВЕРИТЬ ключ: Код_колмплектации может повторяться
     Xfer "tblConnections", "dbo_tblConnections", _
-        "src.Код_колмплектации = dst.Код_колмплектации AND src.Станция = dst.Станция", "Код_колмплектации", _
-        "INSERT INTO dbo_tblConnections ( [Критические соединения], [Кол-во соединений], Станция, Код_колмплектации, [Станция проверки] ) " & _
-        "SELECT src.[Критические соединения], Left(src.[Кол-во соединений],50), Left(src.Станция,50), src.Код_колмплектации, Left(src.[Станция проверки],50) " & _
+        "src.[Код_колмплектации] = dst.[Код_колмплектации] AND src.[Станция] = dst.[Станция]", "Код_колмплектации", _
+        "INSERT INTO dbo_tblConnections ( [Критические соединения], [Кол-во соединений], [Станция], [Код_колмплектации], [Станция проверки] ) " & _
+        "SELECT src.[Критические соединения], Left(src.[Кол-во соединений],50), Left(src.[Станция],50), src.[Код_колмплектации], Left(src.[Станция проверки],50) " & _
         "FROM tblConnections AS src LEFT JOIN dbo_tblConnections AS dst " & _
-        "ON src.Код_колмплектации = dst.Код_колмплектации AND src.Станция = dst.Станция " & _
-        "WHERE dst.Код_колмплектации IS NULL"
+        "ON src.[Код_колмплектации] = dst.[Код_колмплектации] AND src.[Станция] = dst.[Станция] " & _
+        "WHERE dst.[Код_колмплектации] IS NULL"
 
     Say ""
 
@@ -147,12 +147,12 @@ Sub MigrateAll()
         "FROM tblUpdColor AS src LEFT JOIN dbo_tblUpdColor AS dst ON src.vin = dst.vin " & _
         "WHERE dst.vin IS NULL"
 
-    Xfer "tblImportplan", "dbo_tblImportplan", "src.вин = dst.вин", "вин", _
-        "INSERT INTO dbo_tblImportplan ( F1, арт, название, вин, [номер двс], [цвет согласованный], [готов к отгрузке], [Плановая дата готовности к отгрузке], [Дата отгрузки фактическая] ) " & _
-        "SELECT src.F1, src.арт, src.название, src.вин, src.[номер двс], src.[цвет согласованный], src.[готов к отгрузке], " & _
+    Xfer "tblImportplan", "dbo_tblImportplan", "src.[вин] = dst.[вин]", "вин", _
+        "INSERT INTO dbo_tblImportplan ( F1, [арт], [название], [вин], [номер двс], [цвет согласованный], [готов к отгрузке], [Плановая дата готовности к отгрузке], [Дата отгрузки фактическая] ) " & _
+        "SELECT src.F1, src.[арт], src.[название], src.[вин], src.[номер двс], src.[цвет согласованный], src.[готов к отгрузке], " & _
         DT("src.[Плановая дата готовности к отгрузке]") & ", " & DT("src.[Дата отгрузки фактическая]") & " " & _
-        "FROM tblImportplan AS src LEFT JOIN dbo_tblImportplan AS dst ON src.вин = dst.вин " & _
-        "WHERE dst.вин IS NULL"
+        "FROM tblImportplan AS src LEFT JOIN dbo_tblImportplan AS dst ON src.[вин] = dst.[вин] " & _
+        "WHERE dst.[вин] IS NULL"
 
     Say ""
 
@@ -314,7 +314,8 @@ Private Sub WriteReport(text As String)
 
     Set fso = CreateObject("Scripting.FileSystemObject")
     p = Application.CurrentProject.Path & "\MIGRATION_RESULT.txt"
-    Set f = fso.CreateTextFile(p, True)
+    ' третий параметр True - Unicode, иначе кириллица уходит вопросиками
+    Set f = fso.CreateTextFile(p, True, True)
     f.Write text
     f.Close
 
