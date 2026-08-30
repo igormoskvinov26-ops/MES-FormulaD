@@ -3,15 +3,18 @@
 ' Локальные таблицы Access -> связанные таблицы SQL Server (dbo_*)
 ' Запуск: MigrateAll
 ' ============================================================================
-' Ключевое: колонки id на сервере объявлены IDENTITY и явную вставку не
-' принимают, поэтому id нигде не переносится - номера выдаёт сервер.
-' Следствие: ссылки между таблицами (PlanID, ComponentID, OrderID,
-' DiscrepancyID, Specification_id, ColorID) сохраняют СТАРЫЕ значения и
-' после переноса указывают не на те строки. Чтобы этого избежать, нужно
-' временно снимать IDENTITY на сервере и переносить с исходными id.
+' id нигде не переносится - на сервере это счётчик IDENTITY.
+' Сверка идёт по бизнес-ключам.
 '
-' Сверка идёт по бизнес-ключам. Там, где ключ неочевиден, он помечен
-' комментарием ПРОВЕРИТЬ - подтверди или замени.
+' Два системных источника отказа ODBC закрыты заранее:
+'   1. Усечение строк. Все колонки, суженные на сервере относительно Access
+'      (по DATA_TYPE_MAPPING.md), обрезаются через Left().
+'   2. Даты вне диапазона. Минимум datetime в SQL Server - 01.01.1753,
+'      Access держит 1899 и пустые даты. Одна такая строка рушит вставку
+'      целиком, поэтому каждое датное поле проходит через DT().
+'
+' При отказе печатается не только код 3146, но и настоящий ответ сервера
+' из DBEngine.Errors - с именем колонки и значением.
 ' ============================================================================
 
 Option Compare Database
@@ -55,9 +58,10 @@ Sub MigrateAll()
         "FROM tblStatus AS src LEFT JOIN dbo_tblStatus AS dst ON src.statusid = dst.statusid " & _
         "WHERE dst.statusid IS NULL"
 
+    ' color: Text(255) -> nvarchar(50)
     Xfer "tblColors", "dbo_tblColors", "src.color = dst.color", "color", _
         "INSERT INTO dbo_tblColors ( color ) " & _
-        "SELECT src.color " & _
+        "SELECT Left(src.color,50) " & _
         "FROM tblColors AS src LEFT JOIN dbo_tblColors AS dst ON src.color = dst.color " & _
         "WHERE dst.color IS NULL"
 
@@ -86,17 +90,19 @@ Sub MigrateAll()
         "FROM tblSpecifications AS src LEFT JOIN dbo_tblSpecifications AS dst ON src.specificationName = dst.specificationName " & _
         "WHERE dst.specificationName IS NULL"
 
+    ' ComponentName_RUS 255->150, PointOfPart 255->50, Supplier 100->50
     Xfer "tblComponent", "dbo_tblComponent", "src.ComponentCode = dst.ComponentCode", "ComponentCode", _
         "INSERT INTO dbo_tblComponent ( ComponentCode, ComponentName, ComponentName_RUS, PointOfPart, StationID, StandardQty, IsMandatory, Supplier ) " & _
-        "SELECT src.ComponentCode, src.ComponentName, src.ComponentName_RUS, src.PointOfPart, src.StationID, src.StandardQty, src.IsMandatory, src.Supplier " & _
+        "SELECT src.ComponentCode, src.ComponentName, Left(src.ComponentName_RUS,150), Left(src.PointOfPart,50), src.StationID, src.StandardQty, src.IsMandatory, Left(src.Supplier,50) " & _
         "FROM tblComponent AS src LEFT JOIN dbo_tblComponent AS dst ON src.ComponentCode = dst.ComponentCode " & _
         "WHERE dst.ComponentCode IS NULL"
 
+    ' Кол-во соединений, Станция, Станция проверки: 255->50
     ' ПРОВЕРИТЬ ключ: Код_колмплектации может повторяться
     Xfer "tblConnections", "dbo_tblConnections", _
         "src.Код_колмплектации = dst.Код_колмплектации AND src.Станция = dst.Станция", "Код_колмплектации", _
         "INSERT INTO dbo_tblConnections ( [Критические соединения], [Кол-во соединений], Станция, Код_колмплектации, [Станция проверки] ) " & _
-        "SELECT src.[Критические соединения], src.[Кол-во соединений], src.Станция, src.Код_колмплектации, src.[Станция проверки] " & _
+        "SELECT src.[Критические соединения], Left(src.[Кол-во соединений],50), Left(src.Станция,50), src.Код_колмплектации, Left(src.[Станция проверки],50) " & _
         "FROM tblConnections AS src LEFT JOIN dbo_tblConnections AS dst " & _
         "ON src.Код_колмплектации = dst.Код_колмплектации AND src.Станция = dst.Станция " & _
         "WHERE dst.Код_колмплектации IS NULL"
@@ -107,9 +113,16 @@ Sub MigrateAll()
     Say "ЭТАП 3: ПРОИЗВОДСТВЕННЫЕ ДАННЫЕ"
     Say String(78, "-")
 
+    ' ModelName и ErrorMessage расширены на сервере - не режем
     Xfer "tblProductionPlan", "dbo_tblProductionPlan", "src.VIN = dst.VIN", "VIN", _
         "INSERT INTO dbo_tblProductionPlan ( ModelArticle, ModelName, VIN, EngineNumber, Color, PlannedShipmentDate, ValidationStatus, ErrorMessage, StartDate, CompleteDate, plannedstartdate, Status, Specification_id, SpecificationName, ColorID, SEQN, NEWSEQN, statusid, PrintDate, validationdate, shipmentdate, reworkdate, reworkcompletedate, rework_comments, shipment_comments ) " & _
-        "SELECT src.ModelArticle, src.ModelName, src.VIN, src.EngineNumber, src.Color, src.PlannedShipmentDate, src.ValidationStatus, src.ErrorMessage, src.StartDate, src.CompleteDate, src.plannedstartdate, src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, src.PrintDate, src.validationdate, src.shipmentdate, src.reworkdate, src.reworkcompletedate, src.rework_comments, src.shipment_comments " & _
+        "SELECT src.ModelArticle, src.ModelName, src.VIN, src.EngineNumber, src.Color, " & _
+        DT("src.PlannedShipmentDate") & ", src.ValidationStatus, src.ErrorMessage, " & _
+        DT("src.StartDate") & ", " & DT("src.CompleteDate") & ", " & DT("src.plannedstartdate") & ", " & _
+        "src.Status, src.Specification_id, src.SpecificationName, src.ColorID, src.SEQN, src.NEWSEQN, src.statusid, " & _
+        DT("src.PrintDate") & ", " & DT("src.validationdate") & ", " & DT("src.shipmentdate") & ", " & _
+        DT("src.reworkdate") & ", " & DT("src.reworkcompletedate") & ", " & _
+        "src.rework_comments, src.shipment_comments " & _
         "FROM tblProductionPlan AS src LEFT JOIN dbo_tblProductionPlan AS dst ON src.VIN = dst.VIN " & _
         "WHERE dst.VIN IS NULL"
 
@@ -121,7 +134,9 @@ Sub MigrateAll()
 
     Xfer "tblProductionOrder", "dbo_tblProductionOrder", "src.VIN = dst.VIN", "VIN", _
         "INSERT INTO dbo_tblProductionOrder ( PlanID, VIN, EngineNumber, ModelArticle, ModelName, Color, PlannedShipmentDate, OrderStatus, CurrentStation, AssemblyStartTime, AssemblyEndTime ) " & _
-        "SELECT src.PlanID, src.VIN, src.EngineNumber, src.ModelArticle, src.ModelName, src.Color, src.PlannedShipmentDate, src.OrderStatus, src.CurrentStation, src.AssemblyStartTime, src.AssemblyEndTime " & _
+        "SELECT src.PlanID, src.VIN, src.EngineNumber, src.ModelArticle, src.ModelName, src.Color, " & _
+        DT("src.PlannedShipmentDate") & ", src.OrderStatus, src.CurrentStation, " & _
+        DT("src.AssemblyStartTime") & ", " & DT("src.AssemblyEndTime") & " " & _
         "FROM tblProductionOrder AS src LEFT JOIN dbo_tblProductionOrder AS dst ON src.VIN = dst.VIN " & _
         "WHERE dst.VIN IS NULL"
 
@@ -134,7 +149,8 @@ Sub MigrateAll()
 
     Xfer "tblImportplan", "dbo_tblImportplan", "src.вин = dst.вин", "вин", _
         "INSERT INTO dbo_tblImportplan ( F1, арт, название, вин, [номер двс], [цвет согласованный], [готов к отгрузке], [Плановая дата готовности к отгрузке], [Дата отгрузки фактическая] ) " & _
-        "SELECT src.F1, src.арт, src.название, src.вин, src.[номер двс], src.[цвет согласованный], src.[готов к отгрузке], src.[Плановая дата готовности к отгрузке], src.[Дата отгрузки фактическая] " & _
+        "SELECT src.F1, src.арт, src.название, src.вин, src.[номер двс], src.[цвет согласованный], src.[готов к отгрузке], " & _
+        DT("src.[Плановая дата готовности к отгрузке]") & ", " & DT("src.[Дата отгрузки фактическая]") & " " & _
         "FROM tblImportplan AS src LEFT JOIN dbo_tblImportplan AS dst ON src.вин = dst.вин " & _
         "WHERE dst.вин IS NULL"
 
@@ -144,18 +160,24 @@ Sub MigrateAll()
     Say "ЭТАП 4: КОНТРОЛЬ КАЧЕСТВА"
     Say String(78, "-")
 
-    ' ПРОВЕРИТЬ ключ: если на один VIN бывает несколько NCP, приедет только одна
+    ' Comment 50, CreatedBy 50, ClosedBy 50
+    ' ПРОВЕРИТЬ ключ: если на один VIN бывает несколько NCP, приедет одна
     Xfer "tblNCP", "dbo_tblNCP", "src.VIN = dst.VIN", "VIN", _
         "INSERT INTO dbo_tblNCP ( StationID, ComponentID, VIN, Quantity, DiscrepancyTypeID, Comment, Status, CreatedBy, CreatedAt, ClosedBy, ClosedAt ) " & _
-        "SELECT src.StationID, src.ComponentID, src.VIN, src.Quantity, src.DiscrepancyTypeID, src.Comment, src.Status, src.CreatedBy, src.CreatedAt, src.ClosedBy, src.ClosedAt " & _
+        "SELECT src.StationID, src.ComponentID, src.VIN, src.Quantity, src.DiscrepancyTypeID, " & _
+        "Left(src.Comment,50), src.Status, Left(src.CreatedBy,50), " & DT("src.CreatedAt") & ", " & _
+        "Left(src.ClosedBy,50), " & DT("src.ClosedAt") & " " & _
         "FROM tblNCP AS src LEFT JOIN dbo_tblNCP AS dst ON src.VIN = dst.VIN " & _
         "WHERE dst.VIN IS NULL"
 
+    ' Comment 250, PhotoPath 50
     ' ПРОВЕРИТЬ ключ: NCP_Number может быть пустым
     Xfer "tblDiscrepancy", "dbo_tblDiscrepancy", _
         "src.NCP_Number = dst.NCP_Number AND src.DetectionTime = dst.DetectionTime", "NCP_Number", _
         "INSERT INTO dbo_tblDiscrepancy ( AssemblyEventID, ComponentID, DiscrepancyType, Comment, WasReplaced, DetectionTime, ResolutionTime, DiscrepancyStatus, NCP_Number, PhotoPath ) " & _
-        "SELECT src.AssemblyEventID, src.ComponentID, src.DiscrepancyType, src.Comment, src.WasReplaced, src.DetectionTime, src.ResolutionTime, src.DiscrepancyStatus, src.NCP_Number, src.PhotoPath " & _
+        "SELECT src.AssemblyEventID, src.ComponentID, src.DiscrepancyType, Left(src.Comment,250), src.WasReplaced, " & _
+        DT("src.DetectionTime") & ", " & DT("src.ResolutionTime") & ", " & _
+        "src.DiscrepancyStatus, src.NCP_Number, Left(src.PhotoPath,50) " & _
         "FROM tblDiscrepancy AS src LEFT JOIN dbo_tblDiscrepancy AS dst " & _
         "ON src.NCP_Number = dst.NCP_Number AND src.DetectionTime = dst.DetectionTime " & _
         "WHERE dst.NCP_Number IS NULL"
@@ -164,21 +186,23 @@ Sub MigrateAll()
     Xfer "tblCrippleRecord", "dbo_tblCrippleRecord", _
         "src.ComponentID = dst.ComponentID AND src.RegistrationDate = dst.RegistrationDate", "ComponentID", _
         "INSERT INTO dbo_tblCrippleRecord ( OrderID, DiscrepancyID, ComponentID, CrippleReason, RegistrationDate, ExpectedResolutionDate, StorageLocation ) " & _
-        "SELECT src.OrderID, src.DiscrepancyID, src.ComponentID, src.CrippleReason, src.RegistrationDate, src.ExpectedResolutionDate, src.StorageLocation " & _
+        "SELECT src.OrderID, src.DiscrepancyID, src.ComponentID, src.CrippleReason, " & _
+        DT("src.RegistrationDate") & ", " & DT("src.ExpectedResolutionDate") & ", src.StorageLocation " & _
         "FROM tblCrippleRecord AS src LEFT JOIN dbo_tblCrippleRecord AS dst " & _
         "ON src.ComponentID = dst.ComponentID AND src.RegistrationDate = dst.RegistrationDate " & _
         "WHERE dst.ComponentID IS NULL"
 
     Xfer "tblJobCard", "dbo_tblJobCard", "src.JobCardNumber = dst.JobCardNumber", "JobCardNumber", _
         "INSERT INTO dbo_tblJobCard ( OrderID, JobCardNumber, PrintDate, CardStatus, BarcodeData ) " & _
-        "SELECT src.OrderID, src.JobCardNumber, src.PrintDate, src.CardStatus, src.BarcodeData " & _
+        "SELECT src.OrderID, src.JobCardNumber, " & DT("src.PrintDate") & ", src.CardStatus, src.BarcodeData " & _
         "FROM tblJobCard AS src LEFT JOIN dbo_tblJobCard AS dst ON src.JobCardNumber = dst.JobCardNumber " & _
         "WHERE dst.JobCardNumber IS NULL"
 
+    ' FileName 255->50
     Xfer "tblImportLog", "dbo_tblImportLog", _
         "src.ImportBatchID = dst.ImportBatchID AND src.ImportDate = dst.ImportDate", "ImportBatchID", _
         "INSERT INTO dbo_tblImportLog ( ImportDate, FileName, ImportedBy, RowsImported, RowsFailed, ErrorDescription, ImportBatchID ) " & _
-        "SELECT src.ImportDate, src.FileName, src.ImportedBy, src.RowsImported, src.RowsFailed, src.ErrorDescription, src.ImportBatchID " & _
+        "SELECT " & DT("src.ImportDate") & ", Left(src.FileName,50), src.ImportedBy, src.RowsImported, src.RowsFailed, src.ErrorDescription, src.ImportBatchID " & _
         "FROM tblImportLog AS src LEFT JOIN dbo_tblImportLog AS dst " & _
         "ON src.ImportBatchID = dst.ImportBatchID AND src.ImportDate = dst.ImportDate " & _
         "WHERE dst.ImportBatchID IS NULL"
@@ -192,18 +216,8 @@ Sub MigrateAll()
     Say "Завершено: " & Format(Now(), "dd.mm.yyyy hh:nn:ss")
     Say String(78, "=")
     Say ""
-    Say "ВНИМАНИЕ: id выданы сервером заново. Поля-ссылки (PlanID, ComponentID,"
-    Say "OrderID, DiscrepancyID, Specification_id, ColorID) содержат старые"
-    Say "номера и указывают не на те строки. Их нужно пересчитать отдельно."
-
-    If mFailed > 0 Then
-        Say ""
-        Say "Разбор отказов:"
-        Say "  усечение строковых данных - колонка на сервере короче исходной;"
-        Say "  нарушение ключа - в источнике дубликаты по полю сверки;"
-        Say "  ожидалось 0 при непустом источнике - неверное поле сверки."
-        Say "  ошибка 3146 - смотрите блок Ответ сервера под ней."
-    End If
+    Say "id выданы сервером заново. Поля-ссылки (PlanID, ComponentID, OrderID,"
+    Say "DiscrepancyID, Specification_id, ColorID) содержат старые номера."
 
     WriteReport mReport
 
@@ -213,6 +227,13 @@ Sub MigrateAll()
            "Отчёт: MIGRATION_RESULT.txt", _
            IIf(mFailed > 0, vbExclamation, vbInformation), "Результат"
 End Sub
+
+' ============================================================================
+' Дата в диапазоне SQL Server: всё раньше 01.01.1753 уходит как Null
+' ============================================================================
+Private Function DT(col As String) As String
+    DT = "IIf(" & col & "<#1/1/1753#,Null," & col & ")"
+End Function
 
 ' ============================================================================
 ' Выполнить один INSERT с полным контролем результата
@@ -259,8 +280,8 @@ Failed:
     Say ""
 End Sub
 
-' Ошибка 3146 - это обёртка Access. Настоящее сообщение сервера (усечение,
-' NULL в NOT NULL, нарушение ключа, отказ IDENTITY) лежит в DBEngine.Errors.
+' Ошибка 3146 - обёртка Access. Настоящий ответ сервера с именем колонки и
+' значением лежит в DBEngine.Errors.
 Private Function OdbcDetail() As String
     Dim e As Object, s As String
 
