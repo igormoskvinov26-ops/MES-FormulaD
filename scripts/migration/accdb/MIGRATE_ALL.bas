@@ -202,6 +202,7 @@ Sub MigrateAll()
         Say "  усечение строковых данных - колонка на сервере короче исходной;"
         Say "  нарушение ключа - в источнике дубликаты по полю сверки;"
         Say "  ожидалось 0 при непустом источнике - неверное поле сверки."
+        Say "  ошибка 3146 - смотрите блок Ответ сервера под ней."
     End If
 
     WriteReport mReport
@@ -254,8 +255,23 @@ Failed:
     Say "    источник: " & srcN & "   на сервере: " & dstBefore
     Say "    ожидалось: " & expected & "   вставлено: 0"
     Say "    ОШИБКА " & Err.Number & ": " & Err.Description
+    Say OdbcDetail()
     Say ""
 End Sub
+
+' Ошибка 3146 - это обёртка Access. Настоящее сообщение сервера (усечение,
+' NULL в NOT NULL, нарушение ключа, отказ IDENTITY) лежит в DBEngine.Errors.
+Private Function OdbcDetail() As String
+    Dim e As Object, s As String
+
+    On Error Resume Next
+    For Each e In Application.DBEngine.Errors
+        s = s & "        [" & e.Number & "] " & e.Description & vbCrLf
+    Next
+    If Len(s) = 0 Then s = "        (детализация недоступна)" & vbCrLf
+
+    OdbcDetail = "    Ответ сервера:" & vbCrLf & s
+End Function
 
 Private Function Counter(sql As String) As Long
     On Error GoTo Failed
