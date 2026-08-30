@@ -263,7 +263,10 @@ Private Sub Xfer(srcTable As String, dstTable As String, _
     Say "    источник: " & srcN & "   на сервере: " & dstBefore & " -> " & dstAfter
     Say "    ожидалось: " & expected & "   вставлено: " & actual
 
-    If actual < expected Then
+    If expected < 0 Then
+        mFailed = mFailed + 1
+        Say "    ВНИМАНИЕ: счётчик сверки не сработал - проверьте условие сверки"
+    ElseIf actual < expected Then
         mFailed = mFailed + 1
         Say "    ВНИМАНИЕ: вставлено меньше ожидаемого"
     End If
