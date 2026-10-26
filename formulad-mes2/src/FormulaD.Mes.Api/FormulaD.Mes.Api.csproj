@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>formulad-mes2-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FormulaD.Mes.Api.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../fixtures/production-plan.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/production-plan.demo.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+  </ItemGroup>
+</Project>
