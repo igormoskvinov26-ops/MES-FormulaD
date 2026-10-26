@@ -4,12 +4,12 @@ using Microsoft.Extensions.Hosting;
 
 namespace FormulaD.Mes.Api.Tests;
 
-/// <summary>Проверяет fail-closed: DataSource != Demo не должен запускаться (и тем более искать SQL).</summary>
-public sealed class SqlAttemptFactory : WebApplicationFactory<Program>
+/// <summary>Проверяет fail-closed: неполная или неизвестная настройка источника не должна запускаться (и тем более открывать соединение).</summary>
+public sealed class SqlAttemptFactory(string dataSource = "Sql") : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Development);
-        builder.UseSetting("DataSource", "Sql");
+        builder.UseSetting("DataSource", dataSource);
     }
 }

@@ -8,19 +8,28 @@ using Microsoft.AspNetCore.Mvc;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Источник данных -------------------------------------------------------
-// Только Demo. Режим SQL в MVP 0.1 отсутствует: любая другая настройка —
-// контролируемая ошибка конфигурации (fail-closed), без fallback на PROD.
+// Demo по умолчанию. Sql допускается только к отдельному TEST-экземпляру с
+// read-only учётной записью (см. SqlOptions): любая неполная или похожая на PROD
+// настройка — контролируемая ошибка запуска, без fallback на Demo и без fallback на PROD.
 var dataSource = builder.Configuration["DataSource"] ?? "Demo";
-if (!string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
+switch (dataSource.ToLowerInvariant())
 {
-    throw new InvalidOperationException(
-        $"DataSource='{dataSource}' не поддерживается в MVP 0.1. Допустимо только 'Demo'. " +
-        "Подключение к SQL будет добавлено отдельной задачей и только для TEST-экземпляра с read-only учётной записью.");
-}
+    case "demo":
+        var fixturePath = builder.Configuration["Demo:FixturePath"]
+                          ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "production-plan.demo.json");
+        builder.Services.AddSingleton<IProductionPlanReader>(_ => new DemoProductionPlanReader(fixturePath));
+        break;
 
-var fixturePath = builder.Configuration["Demo:FixturePath"]
-                  ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "production-plan.demo.json");
-builder.Services.AddSingleton<IProductionPlanReader>(_ => new DemoProductionPlanReader(fixturePath));
+    case "sql":
+        var sqlOptions = SqlOptions.Create(builder.Configuration);
+        builder.Services.AddSingleton(sqlOptions);
+        builder.Services.AddSingleton<IProductionPlanReader>(sp => new SqlProductionPlanReader(sp.GetRequiredService<SqlOptions>()));
+        break;
+
+    default:
+        throw new InvalidOperationException(
+            $"DataSource='{dataSource}' не поддерживается. Допустимо 'Demo' или 'Sql' (только TEST-экземпляр).");
+}
 
 // --- Dev-аутентификация ----------------------------------------------------
 // Включается только явно, только в Development и только при заданном секрете
@@ -57,6 +66,9 @@ if (builder.Environment.IsDevelopment())
 }
 
 var app = builder.Build();
+
+// Имя источника безопасно: хост, база и учётка в логи не попадают.
+app.Logger.LogInformation("Источник данных: {DataSource}", dataSource);
 
 if (!devAuth.CanLogIn)
 {

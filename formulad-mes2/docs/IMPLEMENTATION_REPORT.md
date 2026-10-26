@@ -16,6 +16,7 @@
 | Типизированные DTO, валидация, ProblemDetails, pageSize 1..100 | сделано |
 | Демо-данные только из `fixtures/production-plan.demo.json` | сделано |
 | Тесты backend/frontend, `.gitignore`, `.env.example`, README | сделано |
+| `SqlProductionPlanReader` для TEST-экземпляра SQL Server (параметризованные SELECT, белый список колонок, OFFSET/FETCH, без NOLOCK) | сделано, **на живом SQL не проверено** |
 | Импорт Excel, старт/завершение, ФОК, NCP, packing lists, печать, реальные учётки | не делалось (вне объёма MVP) |
 
 ## 2. Архитектура
@@ -30,8 +31,11 @@
 
 ## 3. Безопасность (как реализовано)
 
-- `DataSource` по умолчанию `Demo`. Любое другое значение — исключение при старте (fail-closed), без fallback.
-  Проверено тестом `Sql_DataSource_Fails_Closed`.
+- `DataSource` по умолчанию `Demo`. Допустимо также `Sql`, но только при `Sql:IsTestEnvironment=true` и заданной
+  `Sql:ConnectionString` (user-secrets/env). Неизвестное значение и неполная SQL-настройка — исключение при старте
+  (fail-closed), без fallback на Demo и без попытки соединения.
+- SQL-режим отклоняет на старте хост `SQLACCESS`, базу `FormulaD` и логины `sa`/`sa1`; подключению принудительно
+  выставляется `ApplicationIntent=ReadOnly` и ограниченный таймаут. Это страховка, а не замена прав SQL-логина.
 - Маршрут `POST /api/v1/dev-auth/login` **регистрируется только** при `ASPNETCORE_ENVIRONMENT=Development`,
   `DevAuth:Enabled=true` и заданных логине/пароле. Иначе путь физически отсутствует (`404`), а не скрыт в UI.
 - Пароль сравнивается `CryptographicOperations.FixedTimeEquals`; в репозитории и в `appsettings.json` пароля нет.
@@ -45,11 +49,15 @@
 | Команда | Результат |
 |---|---|
 | `dotnet build` | Build succeeded, 0 warnings, 0 errors |
-| `dotnet test` | **Passed: 22, Failed: 0** |
+| `dotnet test` | **Passed: 35, Failed: 0** |
 | `npm run test` (vitest) | **8 passed** (2 файла) |
 | `npm run build` (tsc + vite) | успешно, `dist/` собран |
 | Ручной smoke через `curl` | health `200 {"status":"ok"}`; план без входа `401`; dev-login `200`; план `200`; `GET /production-plan/NOPE` `404`; `pageSize=101` `400`; `POST /production-plan` `405`; статусы `["FOK","complete","custom_unknown","in progress","planned",null]` |
 | E2E в Chromium (Playwright) | вход → таблица из 6 демо-записей → ввод `DEMO-VIN-00004` + Enter → карточка; скриншоты `docs/screenshots/` |
+
+Тесты SQL-режима выполняются **без** SQL Server: проверяют отказ без маркера TEST, отказ без строки подключения,
+отклонение PROD-хоста/базы/админских логинов, принудительный `ReadOnly`, параметризацию, `OFFSET/FETCH`,
+`[Status] IS NULL`, отсутствие `SELECT *` и `NOLOCK`, состав белого списка колонок и экранирование шаблонов `LIKE`.
 
 Покрытие тестами: авторизация (401 на всех бизнес-GET), отсутствие dev-login при выключенном режиме, неверный пароль,
 пагинация и сортировка по VIN, подстрочный поиск VIN, фильтр статуса, статусы с `null`, карточка и `404`,
@@ -68,10 +76,14 @@
 
 ## 6. Известные ограничения и открытые вопросы
 
-1. `SqlProductionPlanReader` не реализован — отдельная задача, только TEST-экземпляр и SELECT-учётка.
+1. `SqlProductionPlanReader` реализован, но **ни разу не выполнялся против настоящего SQL Server**: тестового
+   экземпляра в этой среде нет. Проверены только конфигурация (fail-closed) и тексты запросов. До использования
+   нужно: поднять TEST-базу, создать логин только с `SELECT` на `dbo.tblProductionPlan`, сверить вывод API
+   с Access на обезличенных примерах и проверить план запроса для поиска по подстроке VIN.
 2. Политика часовых поясов не согласована (см. `docs/API_CONTRACT.md`); перед PROD требуется решение.
 3. Dev-аутентификация — не модель ролей: роли, корпоративный identity-provider и аудит не реализованы.
-4. Поиск по подстроке VIN в демо-режиме идёт по памяти; в SQL-версии потребуется индекс/оценка плана запроса.
+4. Поиск по подстроке VIN в демо-режиме идёт по памяти; в SQL-версии это `LIKE '%...%'` — индекс по `VIN`
+   не используется, на больших объёмах потребуется отдельное решение (поиск по префиксу или полнотекстовый).
 5. HTTPS локально не настраивался (dev-сертификаты не выпускались); проверка шла по http на loopback.
 6. Печать, Excel-импорт, станции, ОТК, NCP/cripple, packing lists — не в объёме.
 7. Приёмка цехом не проводилась; MVP 0.1 по `docs/ACCEPTANCE.md` — программная основа, а не рабочая MES.

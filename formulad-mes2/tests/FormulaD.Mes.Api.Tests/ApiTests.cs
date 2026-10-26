@@ -168,10 +168,18 @@ public sealed class ApiTests
     }
 
     [Fact]
-    public void Sql_DataSource_Fails_Closed()
+    public void Sql_DataSource_Without_Test_Marker_Fails_Closed()
     {
         using var factory = new SqlAttemptFactory();
         var error = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
-        Assert.Contains("Demo", error.Message);
+        Assert.Contains("IsTestEnvironment", error.Message);
+    }
+
+    [Fact]
+    public void Unknown_DataSource_Fails_Closed()
+    {
+        using var factory = new SqlAttemptFactory("Oracle");
+        var error = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
+        Assert.Contains("Oracle", error.Message);
     }
 }
