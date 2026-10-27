@@ -26,10 +26,11 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader
 
         if (!string.IsNullOrWhiteSpace(query.Vin))
         {
-            // Поиск по началу ИЛИ концу VIN, без учёта регистра — то же поведение, что у SQL-ридера.
+            // Тот же выбор режима, что и у SQL-ридера: только цифры — по концу VIN, иначе — по началу.
             var needle = query.Vin.Trim();
-            q = q.Where(i => i.Vin.StartsWith(needle, StringComparison.OrdinalIgnoreCase)
-                             || i.Vin.EndsWith(needle, StringComparison.OrdinalIgnoreCase));
+            q = VinSearch.IsSuffixSearch(needle)
+                ? q.Where(i => i.Vin.EndsWith(needle, StringComparison.OrdinalIgnoreCase))
+                : q.Where(i => i.Vin.StartsWith(needle, StringComparison.OrdinalIgnoreCase));
         }
 
         if (query.Status is not null)

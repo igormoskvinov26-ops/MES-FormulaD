@@ -58,8 +58,7 @@ public sealed class ProductionPlanSqlTests
     {
         var sql = ProductionPlanSql.Page(filterByVin: true, filterByStatus: true, statusIsNull: false);
 
-        Assert.Contains("@vinPrefix", sql);
-        Assert.Contains("@vinSuffix", sql);
+        Assert.Contains("@vin", sql);
         Assert.Contains("@status", sql);
         Assert.Contains("OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY", sql);
         Assert.Contains("ORDER BY [VIN] ASC", sql);
@@ -95,6 +94,14 @@ public sealed class ProductionPlanSqlTests
         Assert.Contains("[VIN]", ProductionPlanSql.Columns);
         Assert.Contains("[FOK_date]", ProductionPlanSql.Columns);
     }
+
+    [Theory]
+    [InlineData("00123", true)]          // оператор набрал последние цифры руками
+    [InlineData("DEMO-VIN-00123", false)] // сканер отдал VIN целиком
+    [InlineData("DEMO", false)]           // начало VIN
+    [InlineData("", false)]
+    public void Digits_Only_Input_Means_Suffix_Search(string needle, bool expected)
+        => Assert.Equal(expected, VinSearch.IsSuffixSearch(needle));
 
     [Fact]
     public void Vin_Search_Covers_Prefix_And_Suffix_And_Escapes_Wildcards()

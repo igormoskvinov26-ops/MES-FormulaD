@@ -22,7 +22,7 @@ internal static class ProductionPlanSql
         SELECT {Columns}, COUNT(*) OVER() AS [TotalRows]
         FROM [dbo].[tblProductionPlan]
         WHERE 1 = 1
-        {(filterByVin ? "AND ([VIN] LIKE @vinPrefix ESCAPE '\\' OR [VIN] LIKE @vinSuffix ESCAPE '\\')" : string.Empty)}
+        {(filterByVin ? "AND [VIN] LIKE @vin ESCAPE '\\'" : string.Empty)}
         {StatusPredicate(filterByStatus, statusIsNull)}
         ORDER BY [VIN] ASC
         OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
@@ -53,8 +53,8 @@ internal static class ProductionPlanSql
     /// <summary>
     /// Шаблон поиска по концу VIN: '%00123'. Это путь оператора, который набирает последние
     /// цифры руками.
-    /// ponytail: такой LIKE индекс не использует — это скан таблицы. На плане в десятки тысяч
-    /// узких строк цена невелика, но она растёт линейно. Апгрейд, если станет медленно:
+    /// ponytail: такой LIKE индекс не использует — это скан таблицы, и это принятое решение:
+    /// ручной ввод редкий, требование по скорости относится к пути сканера. Апгрейд, если станет медленно:
     /// persisted computed column REVERSE(VIN) с индексом — поиск по хвосту станет префиксным
     /// по обратной строке. Это изменение схемы и отдельная согласованная миграция на TEST.
     /// </summary>

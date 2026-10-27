@@ -80,10 +80,15 @@ public sealed class ApiTests
         Assert.Equal(1, bySuffix.Total);
         Assert.Equal("DEMO-VIN-00003", bySuffix.Items[0].Vin);
 
-        // Середина VIN по-прежнему не ищется — это осознанное ограничение ради скорости.
+        // Середина VIN не ищется — осознанное ограничение ради скорости пути сканера.
         var byMiddle = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=VIN-0000");
         Assert.NotNull(byMiddle);
         Assert.Equal(0, byMiddle.Total);
+
+        // Ввод с буквами — всегда поиск по началу, по концу он не срабатывает.
+        var lettersAsSuffix = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=N-00003");
+        Assert.NotNull(lettersAsSuffix);
+        Assert.Equal(0, lettersAsSuffix.Total);
     }
 
     [Fact]

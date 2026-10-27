@@ -24,10 +24,13 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
 
         if (filterByVin)
         {
-            // Один проход по таблице отвечает на оба сценария: сканер (VIN целиком) и ручной ввод хвоста.
+            // Режим выбирается по виду ввода: сканер и начало VIN — быстрый поиск по индексу,
+            // только цифры — поиск по концу VIN сканом.
             var needle = query.Vin!.Trim();
-            command.Parameters.Add("@vinPrefix", SqlDbType.NVarChar, 101).Value = ProductionPlanSql.LikeStartsWith(needle);
-            command.Parameters.Add("@vinSuffix", SqlDbType.NVarChar, 101).Value = ProductionPlanSql.LikeEndsWith(needle);
+            var pattern = VinSearch.IsSuffixSearch(needle)
+                ? ProductionPlanSql.LikeEndsWith(needle)
+                : ProductionPlanSql.LikeStartsWith(needle);
+            command.Parameters.Add("@vin", SqlDbType.NVarChar, 101).Value = pattern;
         }
         if (filterByStatus && !statusIsNull)
         {
