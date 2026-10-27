@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
 
-export type Screen = 'plan' | 'ncp' | 'start';
+export type Screen = 'plan' | 'ncp' | 'start' | 'complete' | 'fok';
 
 /** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
 function Clock() {
@@ -24,6 +24,8 @@ function Clock() {
 const TABS: { key: Screen; label: string }[] = [
   { key: 'plan', label: 'Производственный план' },
   { key: 'start', label: 'Старт' },
+  { key: 'complete', label: 'Завершение' },
+  { key: 'fok', label: 'FOK' },
   { key: 'ncp', label: 'Несоответствия' },
 ];
 

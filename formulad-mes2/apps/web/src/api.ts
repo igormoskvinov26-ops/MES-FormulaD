@@ -97,9 +97,20 @@ export const api = {
   start: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/start`, { method: 'POST' }),
 
+  /** Завершение сборки (1 → 2). Существует только в демо-режиме сервера. */
+  complete: (vin: string) =>
+    request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/complete`, { method: 'POST' }),
+
+  /** Final OK (2 → 3). Блокируется незакрытой обязательной деталью — см. ncpMissingParts. */
+  fok: (vin: string) =>
+    request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/fok`, { method: 'POST' }),
+
   ncpTypes: () => request<string[]>('/api/v1/ncp/types'),
   ncpStations: () => request<string[]>('/api/v1/ncp/stations'),
   ncpComponents: () => request<ComponentItem[]>('/api/v1/ncp/components'),
+
+  /** NCP с неустановленной обязательной деталью по изделию — то, что блокирует допуск к FOK. */
+  ncpMissingParts: (vin: string) => request<NcpItem[]>(`/api/v1/ncp/missing-parts?vin=${encodeURIComponent(vin)}`),
 
   ncpList: (params: { vin?: string; status?: string | null; page: number; pageSize: number }) => {
     const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });

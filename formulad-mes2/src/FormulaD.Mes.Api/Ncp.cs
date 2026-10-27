@@ -52,6 +52,14 @@ public interface INcpReader
     Task<IReadOnlyList<string>> GetTypesAsync(CancellationToken ct);
     Task<IReadOnlyList<ComponentItem>> GetComponentsAsync(CancellationToken ct);
     Task<IReadOnlyList<string>> GetStationsAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Заявки, у которых обязательная деталь не установлена — раздел 16 спецификации:
+    /// именно это, а не статус заявки, блокирует допуск к FOK. Признак основан на факте
+    /// установки ([П], раздел 16: «не только на наличии записей NCP»), поэтому закрытая без
+    /// замены заявка тоже блокирует.
+    /// </summary>
+    Task<IReadOnlyList<NcpItem>> GetMissingRequiredPartsAsync(string vin, CancellationToken ct);
 }
 
 /// <summary>Запись несоответствий. Реализовано только для демо-источника.</summary>
@@ -141,6 +149,17 @@ public sealed class DemoNcpStore : INcpReader, INcpWriter
 
     public Task<IReadOnlyList<ComponentItem>> GetComponentsAsync(CancellationToken ct)
         => Task.FromResult<IReadOnlyList<ComponentItem>>(_components.Value);
+
+    public Task<IReadOnlyList<NcpItem>> GetMissingRequiredPartsAsync(string vin, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            IReadOnlyList<NcpItem> blocking = _items.Value
+                .Where(i => string.Equals(i.Vin, vin, StringComparison.OrdinalIgnoreCase) && !i.PartInstalled)
+                .ToList();
+            return Task.FromResult(blocking);
+        }
+    }
 
     public async Task<(CreateNcpOutcome, NcpItem?)> CreateAsync(CreateNcpRequest request, string author, CancellationToken ct)
     {

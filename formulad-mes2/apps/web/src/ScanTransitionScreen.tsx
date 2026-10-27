@@ -21,6 +21,7 @@ export function ScanTransitionScreen({
   confirmLabel,
   listTitle,
   onConfirm,
+  extraCheck,
 }: {
   screen: Screen;
   session: { userName: string | null; mode: string };
@@ -34,6 +35,12 @@ export function ScanTransitionScreen({
   confirmLabel: string;
   listTitle: string;
   onConfirm: (vin: string) => Promise<ProductionPlanItem>;
+  /**
+   * Дополнительная проверка сверх статуса — например, FOK проверяет незакрытую обязательную
+   * деталь (раздел 16). Возвращает причину блокировки или null, если можно подтверждать.
+   * Проверяется на этапе поиска, чтобы отказ был виден ДО попытки подтверждения (раздел 18, [П]).
+   */
+  extraCheck?: (item: ProductionPlanItem) => Promise<string | null>;
 }) {
   const [input, setInput] = useState('');
   const [found, setFound] = useState<ProductionPlanItem | null>(null);
@@ -43,7 +50,9 @@ export function ScanTransitionScreen({
   const inputRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
 
-  const eligible = found?.statusId === eligibleStatusId;
+  // Разрешено подтверждать только когда что-то найдено и ни одна проверка (статус, extraCheck)
+  // не оставила сообщение об ошибке — единая точка истины вместо двух раздельных флагов.
+  const eligible = found !== null && message === null;
 
   const reloadPending = useCallback(() => {
     api
@@ -65,14 +74,17 @@ export function ScanTransitionScreen({
       const item = await api.byVin(vin);
       if (id !== requestId.current) return;
       setFound(item);
-      setMessage(
-        item.statusId === eligibleStatusId
-          ? null
-          : {
-              kind: 'error',
-              text: `Статус «${statusCodeLabel(item.statusId)}», ожидался «${statusCodeLabel(eligibleStatusId)}» — перевести нельзя.`,
-            },
-      );
+
+      if (item.statusId !== eligibleStatusId) {
+        setMessage({
+          kind: 'error',
+          text: `Статус «${statusCodeLabel(item.statusId)}», ожидался «${statusCodeLabel(eligibleStatusId)}» — перевести нельзя.`,
+        });
+      } else {
+        const blockReason = extraCheck ? await extraCheck(item) : null;
+        if (id !== requestId.current) return;
+        setMessage(blockReason ? { kind: 'error', text: blockReason } : null);
+      }
     } catch (e) {
       if (id !== requestId.current) return;
       setFound(null);

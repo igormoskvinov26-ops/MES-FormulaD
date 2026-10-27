@@ -143,12 +143,14 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
     }
 
     /// <summary>
-    /// 0 → 1. Строковое поле Status обновляется тем же литералом, что использует реальный
-    /// Access-обработчик (R-03 аудита: `Status='in progress'`) — не придумываем новое значение,
-    /// копируем существующее. В отличие от AS-IS, статус проверяется ДО записи (строго 0),
-    /// поэтому повторный запуск невозможен.
+    /// Общий ход для всех переходов статуса: проверить VIN, проверить исходный статус,
+    /// применить изменение, записать в журнал. Строковое поле Status обновляется теми же
+    /// литералами, что использует реальный Access-обработчик (R-03/R-04/R-05 аудита:
+    /// 'in progress'/'complete'/'FOK') — не придумываем новые значения, копируем существующие.
+    /// В отличие от AS-IS, статус проверяется ДО записи, поэтому повторный переход невозможен.
     /// </summary>
-    public Task<(TransitionOutcome, ProductionPlanItem?)> StartAsync(string vin, string userName, CancellationToken ct)
+    private Task<(TransitionOutcome, ProductionPlanItem?)> Transition(
+        string vin, int fromStatusId, string action, string userName, Func<ProductionPlanItem, ProductionPlanItem> apply)
     {
         lock (_gate)
         {
@@ -159,15 +161,27 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
             }
 
             var current = _items.Value[index];
-            if (current.StatusId != 0)
+            if (current.StatusId != fromStatusId)
             {
                 return Task.FromResult<(TransitionOutcome, ProductionPlanItem?)>((TransitionOutcome.WrongStatus, current));
             }
 
-            var updated = current with { StatusId = 1, Status = "in progress", StartDate = DateTime.Now };
+            var updated = apply(current);
             _items.Value[index] = updated;
-            _eventLog.Record("ProductionPlan", vin, "Start", "0", "1", userName);
+            _eventLog.Record("ProductionPlan", vin, action, fromStatusId.ToString(), updated.StatusId.ToString(), userName);
             return Task.FromResult<(TransitionOutcome, ProductionPlanItem?)>((TransitionOutcome.Ok, updated));
         }
     }
+
+    public Task<(TransitionOutcome, ProductionPlanItem?)> StartAsync(string vin, string userName, CancellationToken ct)
+        => Transition(vin, fromStatusId: 0, "Start", userName,
+            c => c with { StatusId = 1, Status = "in progress", StartDate = DateTime.Now });
+
+    public Task<(TransitionOutcome, ProductionPlanItem?)> CompleteAsync(string vin, string userName, CancellationToken ct)
+        => Transition(vin, fromStatusId: 1, "Complete", userName,
+            c => c with { StatusId = 2, Status = "complete", CompleteDate = DateTime.Now });
+
+    public Task<(TransitionOutcome, ProductionPlanItem?)> FokAsync(string vin, string userName, CancellationToken ct)
+        => Transition(vin, fromStatusId: 2, "FOK", userName,
+            c => c with { StatusId = 3, Status = "FOK", FokDate = DateTime.Now });
 }
