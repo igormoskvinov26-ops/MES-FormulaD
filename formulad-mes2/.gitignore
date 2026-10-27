@@ -8,3 +8,6 @@ appsettings.Production.json
 appsettings.*.local.json
 *.user
 .DS_Store
+
+# Корневой .gitignore репозитория игнорирует все *.png — возвращаем скриншоты интерфейса.
+!docs/screenshots/*.png
