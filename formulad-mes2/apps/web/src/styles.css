@@ -694,3 +694,54 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 .rework-ncp-summary { margin: 0; font-size: 14px; color: var(--muted); }
 .rework-ncp-summary strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .rework-ncp .card { box-shadow: var(--shadow-sm); }
+
+/* --- Выбор строк для печати (раздел 8) --- */
+.select-cell { width: 1%; white-space: nowrap; }
+.select-cell input { width: 18px; height: 18px; cursor: pointer; }
+
+/* --- JobCard: бланк и печать (раздел 8) --- */
+.jobcard-modal { width: 520px; }
+.jobcard-modal-actions { margin-bottom: 16px; }
+
+.jobcard {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.jobcard + .jobcard { margin-top: 16px; }
+
+.jobcard-head { display: flex; align-items: baseline; justify-content: space-between; }
+.jobcard-head .logo { font-size: 20px; }
+.jobcard-title { font-family: var(--font-display); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+.jobcard-vin { margin: 10px 0 0; font-size: 26px; }
+
+.jobcard-body { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-top: 12px; }
+.jobcard-body dl { flex: 1; }
+
+.jobcard-foot { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+
+.qr-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 110px;
+  height: 110px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* Печать: видна только область JobCard, остальной интерфейс (боковое меню, фон модалки,
+   кнопки «Закрыть»/«Печать») скрыт — классический приём изоляции через visibility. */
+@media print {
+  body * { visibility: hidden; }
+  .jobcard-print-area, .jobcard-print-area * { visibility: visible; }
+  .jobcard-print-area { position: absolute; inset: 0; margin: 0; }
+  .jobcard { border-color: #000; page-break-after: always; }
+  .jobcard:last-child { page-break-after: auto; }
+  .no-print { display: none !important; }
+}

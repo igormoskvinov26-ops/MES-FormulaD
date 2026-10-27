@@ -1,8 +1,9 @@
 import type { ProductionPlanItem } from './api';
 import { dash, formatDate, statusBadge } from './format';
 
-/** Карточка изделия. Только чтение: кнопок изменения состояния нет и не будет в MVP 0.1. */
-export function ProductCard({ item }: { item: ProductionPlanItem }) {
+/** Карточка изделия. Только чтение: кнопок изменения состояния нет и не будет в MVP 0.1.
+    Печать JobCard — исключение (раздел 8), это не переход статуса, а печатный документ. */
+export function ProductCard({ item, onPrint }: { item: ProductionPlanItem; onPrint?: () => void }) {
   const badge = statusBadge(item.status);
   const rows: [string, string][] = [
     ['Порядок в плане', dash(item.seqn)],
@@ -38,6 +39,11 @@ export function ProductCard({ item }: { item: ProductionPlanItem }) {
           </div>
         ))}
       </dl>
+      {onPrint && (
+        <button type="button" onClick={onPrint}>
+          Печать JobCard
+        </button>
+      )}
       <p className="muted">Данные только для чтения (демо).</p>
     </article>
   );

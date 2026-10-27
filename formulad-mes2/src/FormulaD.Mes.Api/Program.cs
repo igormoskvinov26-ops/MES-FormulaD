@@ -28,6 +28,7 @@ switch (dataSource.ToLowerInvariant())
         // Правка порядка и переходы по статусам существуют только у демо-источника.
         builder.Services.AddSingleton<IPlanOrderEditor>(demoReader);
         builder.Services.AddSingleton<IPlanTransitions>(demoReader);
+        builder.Services.AddSingleton<IJobCardPrinter>(demoReader);
 
         // NCP — тоже только демо: точная схема dbo.tblNCP не обследована (см. Ncp.cs).
         var ncpPath = builder.Configuration["Demo:NcpFixturePath"]
@@ -316,6 +317,24 @@ if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
                 "Нельзя завершить Rework",
                 $"Изделие в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(4)}»."),
         };
+    });
+
+    // Печать JobCard (раздел 8): отмечает PrintDate, допустимо в любом статусе, не меняет
+    // статус изделия. QR генерируется в браузере (DEVELOPMENT_PLAN.md, Этап 7) и кодирует VIN
+    // (мой ответ по умолчанию на В-12) — сервер про QR ничего не знает.
+    plan.MapPost("/{vin}/print", async (
+        string vin, IJobCardPrinter printer, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        if (vin.Length is 0 or > 50)
+        {
+            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+        }
+
+        var item = await printer.MarkPrintedAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
+        return item is null
+            ? Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+                statusCode: StatusCodes.Status404NotFound)
+            : Results.Ok(item);
     });
 
     // NCP — операции чтения и записи только для демо-источника (см. Ncp.cs).

@@ -82,9 +82,10 @@ describe('App', () => {
 
     expect(await screen.findByLabelText('Карточка изделия DEMO-VIN-00001')).toBeInTheDocument();
     expect(screen.getAllByText('DEMO-ENGINE-01').length).toBeGreaterThan(0);
-    // В карточке изделия нет ни одной кнопки: менять производственные данные нельзя.
+    // В карточке изделия нет кнопок изменения состояния — только печать JobCard (раздел 8),
+    // которая не переход статуса, а печатный документ.
     const card = screen.getByLabelText('Карточка изделия DEMO-VIN-00001');
-    expect(within(card).queryAllByRole('button')).toHaveLength(0);
+    expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual(['Печать JobCard']);
   });
 
   it('сообщает «не найден» для отсутствующего VIN', async () => {

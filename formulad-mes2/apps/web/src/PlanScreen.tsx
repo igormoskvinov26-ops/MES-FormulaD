@@ -10,6 +10,9 @@ import { rowState, statusCodeLabel } from './format';
 import { ProductCard } from './ProductCard';
 import { useColumnPrefs } from './useColumnPrefs';
 import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } from './StatIcons';
+import { JobCardDialog } from './JobCardDialog';
+
+const FIRST_BATCH_SIZE = 12;
 
 /** Плашки под шапкой: статус → цвет (уже использован для бейджей и легенды строк) + значок. */
 const COUNT_TILES: { statusId: 0 | 1 | 2 | 3; toneClass: string; Icon: typeof IconBolt }[] = [
@@ -52,6 +55,9 @@ export function PlanScreen({
   const [movedVin, setMovedVin] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<ProductionPlanItem | null>(null);
   const [moveError, setMoveError] = useState('');
+  const [printSelection, setPrintSelection] = useState<Set<string>>(new Set());
+  const [printError, setPrintError] = useState('');
+  const [jobCardItems, setJobCardItems] = useState<ProductionPlanItem[] | null>(null);
 
   const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
   const { data, state, error, reload } = usePlan(vin.trim(), statusFilter, page, PAGE_SIZE);
@@ -104,6 +110,43 @@ export function PlanScreen({
     } catch {
       setSelected(null);
       setCardError(`VIN ${value} не найден`);
+    }
+  }
+
+  function togglePrintSelection(itemVin: string) {
+    setPrintSelection((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemVin)) next.delete(itemVin);
+      else next.add(itemVin);
+      return next;
+    });
+  }
+
+  // Раздел 8: «первые 12 строк актуальной очереди» — очередь целиком, не только текущая
+  // страница/фильтр, поэтому запрашиваем первую страницу плана заново, без фильтров.
+  async function selectFirstBatch() {
+    setPrintError('');
+    try {
+      const page1 = await api.plan({ page: 1, pageSize: FIRST_BATCH_SIZE });
+      setPrintSelection(new Set(page1.items.map((item) => item.vin)));
+    } catch {
+      setPrintError('Не удалось получить очередь для выбора');
+    }
+  }
+
+  async function printSelected() {
+    setPrintError('');
+    const vins = (data?.items ?? []).filter((item) => printSelection.has(item.vin));
+    if (vins.length === printSelection.size) {
+      setJobCardItems(vins);
+      return;
+    }
+    // Часть выбранных VIN не на текущей странице/фильтре — подгружаем карточки по отдельности.
+    try {
+      const items = await Promise.all([...printSelection].map((v) => api.byVin(v)));
+      setJobCardItems(items);
+    } catch {
+      setPrintError('Не удалось загрузить данные выбранных изделий');
     }
   }
 
@@ -212,6 +255,12 @@ export function PlanScreen({
           >
             {editOrder ? 'Готово' : 'Изменить порядок'}
           </button>
+          <button type="button" onClick={() => void selectFirstBatch()}>
+            Выбрать первые {FIRST_BATCH_SIZE}
+          </button>
+          <button type="button" disabled={printSelection.size === 0} onClick={() => void printSelected()}>
+            Печать выбранных{printSelection.size > 0 ? ` (${printSelection.size})` : ''}
+          </button>
         </form>
 
         <div className="meta">
@@ -226,6 +275,12 @@ export function PlanScreen({
           </ul>
         </div>
       </section>
+
+      {printError && (
+        <p role="alert" className="error" style={{ margin: '12px 18px 0' }}>
+          {printError}
+        </p>
+      )}
 
       {/* Боковая панель появляется только когда есть что показать: иначе таблица занимает всю ширину. */}
       {editOrder && (
@@ -250,6 +305,9 @@ export function PlanScreen({
               <caption className="sr-only">Производственный план (демо-данные), сортировка по порядку запуска</caption>
               <thead>
                 <tr>
+                  <th scope="col">
+                    <span className="sr-only">Выбор для печати</span>
+                  </th>
                   {editOrder && <th scope="col">Перемещение</th>}
                   <th scope="col">Состояние</th>
                   {columns.map((column) => (
@@ -279,10 +337,20 @@ export function PlanScreen({
                         setActiveVin(item.vin);
                         void openByVin(item.vin);
                       }}
+                      onDoubleClick={() => setJobCardItems([item])}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') void openByVin(item.vin);
                       }}
                     >
+                      <td className="select-cell">
+                        <input
+                          type="checkbox"
+                          aria-label={`Выбрать ${item.vin} для печати`}
+                          checked={printSelection.has(item.vin)}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={() => togglePrintSelection(item.vin)}
+                        />
+                      </td>
                       {editOrder && (
                         <td className="order-cell">
                           <button
@@ -371,7 +439,7 @@ export function PlanScreen({
                 {cardError}
               </p>
             )}
-            {selected && <ProductCard item={selected} />}
+            {selected && <ProductCard item={selected} onPrint={() => setJobCardItems([selected])} />}
           </aside>
         )}
       </main>
@@ -383,6 +451,7 @@ export function PlanScreen({
           onClose={() => setMoveTarget(null)}
         />
       )}
+      {jobCardItems && <JobCardDialog items={jobCardItems} onClose={() => setJobCardItems(null)} />}
     </div>
   );
 }

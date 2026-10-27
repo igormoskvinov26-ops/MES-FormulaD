@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace FormulaD.Mes.Api;
 
 /// <summary>Читает синтетические записи из fixtures/production-plan.demo.json. Никакого SQL.</summary>
-public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrderEditor, IPlanTransitions
+public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrderEditor, IPlanTransitions, IJobCardPrinter
 {
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
@@ -195,4 +195,23 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
     public Task<(TransitionOutcome, ProductionPlanItem?)> FinishReworkAsync(string vin, string userName, CancellationToken ct)
         => Transition(vin, fromStatusId: 4, "FinishRework", userName,
             c => c with { StatusId = 2, Status = "complete" });
+
+    // Печать разрешена в любом статусе — JobCard нужна и до запуска, и повторно на линии.
+    public Task<ProductionPlanItem?> MarkPrintedAsync(string vin, string userName, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            var index = _items.Value.FindIndex(i => string.Equals(i.Vin, vin, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+            {
+                return Task.FromResult<ProductionPlanItem?>(null);
+            }
+
+            var current = _items.Value[index];
+            var updated = current with { PrintDate = DateTime.Now };
+            _items.Value[index] = updated;
+            _eventLog.Record("ProductionPlan", vin, "Print", current.PrintDate?.ToString("O"), updated.PrintDate?.ToString("O"), userName);
+            return Task.FromResult<ProductionPlanItem?>(updated);
+        }
+    }
 }
