@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Screen } from './AppHeader';
 import { ApiError, api, type Paged, type ProductionPlanItem } from './api';
 import { PlanScreen } from './PlanScreen';
+import { NcpScreen } from './NcpScreen';
 import { LoginScreen } from './LoginScreen';
 
 type Session = { userName: string | null; mode: string } | null;
@@ -8,6 +10,7 @@ type Session = { userName: string | null; mode: string } | null;
 export function App() {
   const [session, setSession] = useState<Session>(null);
   const [checking, setChecking] = useState(true);
+  const [screen, setScreen] = useState<Screen>('plan');
 
   useEffect(() => {
     api
@@ -21,10 +24,14 @@ export function App() {
     return <p className="center muted">Загрузка…</p>;
   }
 
-  return session ? (
-    <PlanScreen session={session} onLogout={() => setSession(null)} />
+  if (!session) {
+    return <LoginScreen onLoggedIn={(userName) => setSession({ userName, mode: 'dev' })} />;
+  }
+
+  return screen === 'plan' ? (
+    <PlanScreen session={session} onNavigate={setScreen} onLogout={() => setSession(null)} />
   ) : (
-    <LoginScreen onLoggedIn={(userName) => setSession({ userName, mode: 'dev' })} />
+    <NcpScreen session={session} onNavigate={setScreen} onLogout={() => setSession(null)} />
   );
 }
 

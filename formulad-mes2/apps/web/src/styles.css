@@ -102,9 +102,21 @@ button.link {
   transform: skewX(-18deg);
 }
 
-.breadcrumbs { color: #9aa2b1; font-size: 15px; }
-.breadcrumbs b { color: #f2f3f6; font-weight: 600; }
 .topbar-clock { color: #9aa2b1; font-size: 14px; font-variant-numeric: tabular-nums; }
+
+/* Навигация: простые вкладки вместо бокового меню, пока разделов всего два. */
+.topnav { display: flex; gap: 4px; }
+
+.topnav-tab {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #9aa2b1;
+  font-weight: 500;
+}
+.topnav-tab:hover { background: var(--graphite-soft); color: #f2f3f6; }
+.topnav-tab.active { background: var(--graphite-soft); color: #fff; font-weight: 600; }
 
 .logo {
   font-weight: 900;
@@ -175,6 +187,8 @@ button.link {
 }
 
 .card { padding: 14px; }
+.card label { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; font-size: 14px; color: var(--muted); }
+.card textarea { font: inherit; color: var(--text); padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 4px; resize: vertical; }
 
 table { width: 100%; border-collapse: collapse; font-size: 15px; }
 
@@ -368,3 +382,21 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 
 .logo-suffix { margin-left: 6px; font-weight: 800; font-style: normal; letter-spacing: 0; }
+
+.modal textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 4px; resize: vertical; }
+
+/* --- NCP: статус заявки и установка детали — разные бейджи, разные смыслы. --- */
+.ncp-flags { display: flex; gap: 8px; margin: 4px 0 14px; }
+
+.ncp-missing {
+  background: color-mix(in srgb, var(--f7-red) 12%, white);
+  color: var(--f7-red-dark);
+  border-color: color-mix(in srgb, var(--f7-red) 28%, white);
+  font-weight: 700;
+}
+
+.ncp-comment { margin: 14px 0 0; }
+.ncp-comment-label { display: block; color: var(--muted); font-size: 14px; margin-bottom: 4px; }
+.ncp-comment p { margin: 0; }
+
+.ncp-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }

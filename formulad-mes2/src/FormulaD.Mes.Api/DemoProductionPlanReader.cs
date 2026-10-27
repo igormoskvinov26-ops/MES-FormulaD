@@ -9,13 +9,17 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
         new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
 
     private readonly Lazy<List<ProductionPlanItem>> _items;
+    private readonly IEventLog _eventLog;
 
     // ponytail: одна блокировка на весь список. Демо-данные живут в памяти одного процесса,
     // и их объём — десятки строк; делить блокировку не на чем.
     private readonly Lock _gate = new();
 
-    public DemoProductionPlanReader(string fixturePath)
-        => _items = new(() => Load(fixturePath));
+    public DemoProductionPlanReader(string fixturePath, IEventLog eventLog)
+    {
+        _items = new(() => Load(fixturePath));
+        _eventLog = eventLog;
+    }
 
     private static List<ProductionPlanItem> Load(string path)
     {
@@ -67,7 +71,7 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
     /// меняется только то, какому изделию какой номер достался. Поэтому нумерация остаётся
     /// ровно такой же сплошной (или такой же дырявой), какой была до перестановки.
     /// </summary>
-    public Task<MoveOutcome> MoveAsync(string vin, int toPosition, CancellationToken ct)
+    public Task<MoveOutcome> MoveAsync(string vin, int toPosition, string userName, CancellationToken ct)
     {
         lock (_gate)
         {
@@ -81,7 +85,8 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
             {
                 return Task.FromResult(MoveOutcome.VinNotFound);
             }
-            if (moved.Seqn is null)
+            var fromPosition = moved.Seqn;
+            if (fromPosition is null)
             {
                 return Task.FromResult(MoveOutcome.NoPosition);
             }
@@ -108,6 +113,7 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
                 }
             }
 
+            _eventLog.Record("ProductionPlan", vin, "Move", fromPosition.ToString(), toPosition.ToString(), userName);
             return Task.FromResult(MoveOutcome.Ok);
         }
     }

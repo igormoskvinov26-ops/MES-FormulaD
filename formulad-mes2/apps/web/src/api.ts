@@ -18,6 +18,27 @@ export type ProductionPlanItem = {
   fokDate: string | null;
 };
 
+export type NcpItem = {
+  id: number;
+  number: string;
+  vin: string;
+  station: string;
+  componentCode: string;
+  componentName: string;
+  quantity: number;
+  type: string;
+  operatorComment: string | null;
+  engineerComment: string | null;
+  status: string;
+  partInstalled: boolean;
+  createdAt: string;
+  createdBy: string;
+  closedAt: string | null;
+  closedBy: string | null;
+};
+
+export type ComponentItem = { code: string; name: string; station: string | null };
+
 export type Paged<T> = { items: T[]; page: number; pageSize: number; total: number };
 
 /** Ошибка API с кодом — UI различает 401 (нет доступа) и 404 (не найдено). */
@@ -70,4 +91,44 @@ export const api = {
     }),
 
   byVin: (vin: string) => request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}`),
+
+  ncpTypes: () => request<string[]>('/api/v1/ncp/types'),
+  ncpStations: () => request<string[]>('/api/v1/ncp/stations'),
+  ncpComponents: () => request<ComponentItem[]>('/api/v1/ncp/components'),
+
+  ncpList: (params: { vin?: string; status?: string | null; page: number; pageSize: number }) => {
+    const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });
+    if (params.vin) query.set('vin', params.vin);
+    if (params.status) query.set('status', params.status);
+    return request<Paged<NcpItem>>(`/api/v1/ncp?${query}`);
+  },
+
+  /** Регистрация несоответствия. Существует только в демо-режиме сервера. */
+  ncpCreate: (data: {
+    vin: string;
+    station: string;
+    componentCode: string;
+    quantity: number;
+    type: string;
+    operatorComment: string | null;
+  }) =>
+    request<NcpItem>('/api/v1/ncp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
+
+  ncpSetPartInstalled: (id: number, installed: boolean) =>
+    request<NcpItem>(`/api/v1/ncp/${id}/part-installed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ installed }),
+    }),
+
+  ncpClose: (id: number, engineerComment: string | null) =>
+    request<NcpItem>(`/api/v1/ncp/${id}/close`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engineerComment }),
+    }),
 };

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePlan } from './App';
+import type { Screen } from './AppHeader';
+import { AppHeader } from './AppHeader';
 import { api, type ProductionPlanItem } from './api';
 import { MoveDialog } from './MoveDialog';
 import { COLUMNS } from './columns';
@@ -12,24 +14,6 @@ const PAGE_SIZE = 25;
 const ALL = '__all__';
 const NO_STATUS = '__null__';
 
-/** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
-function Clock() {
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const date = now.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
-  const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  return (
-    <span className="topbar-clock">
-      {date} · {time}
-    </span>
-  );
-}
-
 const LEGEND = [
   { key: 'waiting', label: 'В ожидании' },
   { key: 'in-work', label: 'В производстве' },
@@ -39,9 +23,11 @@ const LEGEND = [
 
 export function PlanScreen({
   session,
+  onNavigate,
   onLogout,
 }: {
   session: { userName: string | null; mode: string };
+  onNavigate: (screen: Screen) => void;
   onLogout: () => void;
 }) {
   const [vin, setVin] = useState('');
@@ -142,32 +128,7 @@ export function PlanScreen({
 
   return (
     <div className="app">
-      <header className="topbar">
-        <span className="logo" aria-label="F7 MES">
-          F<span className="logo-mark">7</span>
-          <span className="logo-suffix">MES</span>
-        </span>
-        <span className="slash" aria-hidden="true" />
-        <span className="breadcrumbs">
-          Производство <span aria-hidden="true">›</span> <b>Производственный план</b>
-        </span>
-        <span className="badge badge-demo" title="Синтетические данные, не производственные">
-          DEMO
-        </span>
-        <span className="spacer" />
-        <Clock />
-        <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
-        <button
-          type="button"
-          className="ghost"
-          onClick={async () => {
-            await api.logout().catch(() => undefined);
-            onLogout();
-          }}
-        >
-          Выход
-        </button>
-      </header>
+      <AppHeader screen="plan" onNavigate={onNavigate} session={session} onLogout={onLogout} />
 
       <section className="toolbar">
         <form

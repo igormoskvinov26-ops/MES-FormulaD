@@ -18,5 +18,5 @@ public enum MoveOutcome
 /// </summary>
 public interface IPlanOrderEditor
 {
-    Task<MoveOutcome> MoveAsync(string vin, int toPosition, CancellationToken ct);
+    Task<MoveOutcome> MoveAsync(string vin, int toPosition, string userName, CancellationToken ct);
 }
