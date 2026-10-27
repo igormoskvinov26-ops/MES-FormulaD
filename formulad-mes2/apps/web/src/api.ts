@@ -66,6 +66,79 @@ export type ImportSession = {
 
 export type ComponentCheck = { componentCode: string; checked: boolean; checkedBy: string | null; checkedAt: string | null };
 
+export type SupplierRef = { code: string; name: string; isParentPlant: boolean };
+
+export type PackingListRawRow = {
+  packageNumber: string | null;
+  article: string | null;
+  componentName: string | null;
+  quantity: string | null;
+  netWeight: string | null;
+  grossWeight: string | null;
+  batch: string | null;
+};
+
+export type PackingListRowResult = {
+  rowNumber: number;
+  row: PackingListRawRow;
+  errors: string[];
+  previewRequiredQuantity: number | null;
+};
+
+export type PackingListSession = {
+  id: string;
+  deliveryId: string;
+  createdAt: string;
+  createdBy: string;
+  rows: PackingListRowResult[];
+  totalCount: number;
+  errorCount: number;
+};
+
+export type PackingListRow = {
+  id: number;
+  componentCode: string;
+  componentName: string;
+  plannedQuantity: number;
+  netWeight: number | null;
+  grossWeight: number | null;
+  batch: string | null;
+  requiredQuantity: number;
+  okQuantity: number;
+  defectQuantity: number;
+  mismatchQuantity: number;
+  shortageQuantity: number;
+  discrepancyReason: string | null;
+  checkedQuantity: number;
+  isComplete: boolean;
+  hasIssues: boolean;
+};
+
+export type DeliveryPackage = {
+  id: number;
+  deliveryId: string;
+  huNumber: string;
+  status: 'Open' | 'Closed';
+  closedAt: string | null;
+  closedBy: string | null;
+  rows: PackingListRow[];
+  isComplete: boolean;
+  hasIssues: boolean;
+};
+
+export type Delivery = {
+  id: string;
+  supplierCode: string;
+  supplierName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  accompanyingDocument: string | null;
+  createdAt: string;
+  createdBy: string;
+  packages: DeliveryPackage[];
+  status: 'Open' | 'Verified' | 'VerifiedWithIssues';
+};
+
 export type Paged<T> = { items: T[]; page: number; pageSize: number; total: number };
 
 /** Ошибка API с кодом — UI различает 401 (нет доступа) и 404 (не найдено). */
@@ -220,5 +293,77 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ engineerComment }),
+    }),
+
+  // --- Входной контроль (Этап 9, разделы 19-24) -----------------------------
+
+  suppliers: () => request<SupplierRef[]>('/api/v1/incoming-inspection/suppliers'),
+
+  incomingComponents: () => request<ComponentItem[]>('/api/v1/incoming-inspection/components'),
+
+  /** Добавление неизвестного артикула в справочник (раздел 19, [С]) — прямо из строки с ошибкой. */
+  addComponent: (code: string, name: string) =>
+    request<void>('/api/v1/incoming-inspection/components', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, name }),
+    }),
+
+  deliveries: (page = 1, pageSize = 25) =>
+    request<Paged<Delivery>>(`/api/v1/incoming-inspection/deliveries?page=${page}&pageSize=${pageSize}`),
+
+  delivery: (id: string) => request<Delivery>(`/api/v1/incoming-inspection/deliveries/${encodeURIComponent(id)}`),
+
+  createDelivery: (supplierCode: string, invoiceNumber: string, invoiceDate: string, accompanyingDocument: string | null) =>
+    request<Delivery>('/api/v1/incoming-inspection/deliveries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ supplierCode, invoiceNumber, invoiceDate, accompanyingDocument }),
+    }),
+
+  packageByHu: (deliveryId: string, hu: string) =>
+    request<DeliveryPackage>(`/api/v1/incoming-inspection/deliveries/${encodeURIComponent(deliveryId)}/packages/by-hu/${encodeURIComponent(hu)}`),
+
+  /** Вставка Packing List во временную область — тот же паттерн, что импорт плана (Этап 8). */
+  stagePackingList: (deliveryId: string, rows: PackingListRawRow[]) =>
+    request<PackingListSession>(`/api/v1/incoming-inspection/deliveries/${encodeURIComponent(deliveryId)}/packing-list/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows }),
+    }),
+
+  replacePackingListRow: (sessionId: string, rowNumber: number, row: PackingListRawRow) =>
+    request<PackingListSession>(`/api/v1/incoming-inspection/packing-list/sessions/${encodeURIComponent(sessionId)}/rows/${rowNumber}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(row),
+    }),
+
+  confirmPackingList: (sessionId: string) =>
+    request<Delivery>(`/api/v1/incoming-inspection/packing-list/sessions/${encodeURIComponent(sessionId)}/confirm`, { method: 'POST' }),
+
+  /** Результат проверки строки: OK (скан/подтверждение) либо Брак/Пересорт/Недостача с причиной. */
+  recordRowResult: (packageId: number, rowId: number, outcome: string, quantity: number, reason: string | null) =>
+    request<DeliveryPackage>(`/api/v1/incoming-inspection/packages/${packageId}/rows/${rowId}/result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ outcome, quantity, reason }),
+    }),
+
+  increaseQuota: (packageId: number, rowId: number, newRequiredQuantity: number, comment: string) =>
+    request<DeliveryPackage>(`/api/v1/incoming-inspection/packages/${packageId}/rows/${rowId}/quota`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newRequiredQuantity, comment }),
+    }),
+
+  closePackage: (packageId: number) =>
+    request<DeliveryPackage>(`/api/v1/incoming-inspection/packages/${packageId}/close`, { method: 'POST' }),
+
+  reopenPackage: (packageId: number, comment: string) =>
+    request<DeliveryPackage>(`/api/v1/incoming-inspection/packages/${packageId}/reopen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment }),
     }),
 };

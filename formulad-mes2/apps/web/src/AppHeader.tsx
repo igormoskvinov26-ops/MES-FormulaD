@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from './api';
 import { QuadMark } from './QuadMark';
 
-export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import';
+export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming';
 
 /** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
 function Clock() {
@@ -31,6 +31,7 @@ const TABS: { key: Screen; label: string }[] = [
   { key: 'fok', label: 'FOK' },
   { key: 'rework', label: 'Rework' },
   { key: 'ncp', label: 'Несоответствия' },
+  { key: 'incoming', label: 'Входной контроль' },
 ];
 
 /** Общая навигация всех экранов: боковое меню (фиксированное, только для рабочего места на ПК)

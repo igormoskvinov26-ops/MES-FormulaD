@@ -9,6 +9,7 @@ import { CompleteScreen } from './CompleteScreen';
 import { FokScreen } from './FokScreen';
 import { ReworkScreen } from './ReworkScreen';
 import { ImportScreen } from './ImportScreen';
+import { IncomingInspectionScreen } from './IncomingInspectionScreen';
 import { LoginScreen } from './LoginScreen';
 
 type Session = { userName: string | null; mode: string } | null;
@@ -53,6 +54,8 @@ export function App() {
       return <ReworkScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'ncp':
       return <NcpScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'incoming':
+      return <IncomingInspectionScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
   }
 }
 

@@ -19,6 +19,11 @@ public sealed class ApiFactory(bool devAuthEnabled) : WebApplicationFactory<Prog
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Development);
+        // ponytail: каждый тест поднимает свой WebApplicationFactory — без этого каждый из них
+        // заводит FileSystemWatcher на appsettings.json (reloadOnChange по умолчанию), и при
+        // десятках тестов это упирается в лимит inotify-инстансов песочницы (128). Конфигурация
+        // в тестах не меняется на лету, следить за файлом незачем.
+        builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
         builder.UseSetting("Demo:FixturePath", FixturePath);
         builder.UseSetting("DevAuth:Enabled", devAuthEnabled ? "true" : "false");
         if (devAuthEnabled)

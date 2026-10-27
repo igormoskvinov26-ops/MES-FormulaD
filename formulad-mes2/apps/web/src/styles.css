@@ -754,3 +754,13 @@ tbody tr.import-row-error:hover { background: color-mix(in srgb, var(--f7-red) 1
 .import-errors li { padding: 1px 0; }
 
 td input, td select { width: 100%; min-width: 120px; }
+
+/* --- Входной контроль (разделы 19-24, Этап 9) --- */
+.badge-ok { background: #e7f0e9; color: var(--state-in-work); border-color: color-mix(in srgb, var(--state-in-work) 30%, white); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); border-color: #d9b864; }
+
+.pkg-modal { max-width: 960px; width: 100%; }
+.pkg-row-controls { margin-top: 6px; }
+.pkg-row-action { display: flex; gap: 6px; margin-top: 4px; align-items: center; flex-wrap: wrap; }
+.pkg-row-action input, .pkg-row-action select { width: auto; min-width: 70px; }
+.pkg-row-error { font-size: 13px; margin: 4px 0 0; }
