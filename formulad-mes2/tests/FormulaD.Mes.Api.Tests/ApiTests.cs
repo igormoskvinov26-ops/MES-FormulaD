@@ -63,16 +63,21 @@ public sealed class ApiTests
     }
 
     [Fact]
-    public async Task Vin_Filter_Is_Substring_Search()
+    public async Task Vin_Filter_Is_Prefix_Search()
     {
         using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
-        var page = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=00003");
+        var byPrefix = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=demo-vin-00003");
 
-        Assert.NotNull(page);
-        Assert.Equal(1, page.Total);
-        Assert.Equal("DEMO-VIN-00003", page.Items[0].Vin);
+        Assert.NotNull(byPrefix);
+        Assert.Equal(1, byPrefix.Total);
+        Assert.Equal("DEMO-VIN-00003", byPrefix.Items[0].Vin);
+
+        // Хвост VIN больше не находится: поиск только по началу.
+        var bySuffix = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=00003");
+        Assert.NotNull(bySuffix);
+        Assert.Equal(0, bySuffix.Total);
     }
 
     [Fact]

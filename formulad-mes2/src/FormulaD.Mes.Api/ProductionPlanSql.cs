@@ -44,7 +44,11 @@ internal static class ProductionPlanSql
         ? statusIsNull ? "AND [Status] IS NULL" : "AND [Status] = @status"
         : string.Empty;
 
-    /// <summary>Экранирует спецсимволы LIKE, чтобы '%' из ввода не превращался в маску.</summary>
-    internal static string LikeContains(string value)
-        => "%" + value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[") + "%";
+    /// <summary>
+    /// Шаблон поиска по началу VIN: 'DEMO-VIN%'. Префиксный LIKE — sargable, то есть
+    /// использует кластерный индекс PK по VIN; поиск по подстроке ('%...%') давал бы скан таблицы.
+    /// Спецсимволы LIKE экранируются, чтобы '%' из ввода не превращался в маску.
+    /// </summary>
+    internal static string LikeStartsWith(string value)
+        => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[") + "%";
 }

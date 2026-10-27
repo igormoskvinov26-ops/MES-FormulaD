@@ -96,9 +96,10 @@ public sealed class ProductionPlanSqlTests
     }
 
     [Fact]
-    public void Like_Wildcards_From_User_Input_Are_Escaped()
+    public void Vin_Search_Is_Prefix_Only_And_Escapes_Wildcards()
     {
-        Assert.Equal(@"%100\%\_test%", ProductionPlanSql.LikeContains("100%_test"));
-        Assert.Equal(@"%DEMO-VIN%", ProductionPlanSql.LikeContains("DEMO-VIN"));
+        // Без ведущего '%': префиксный LIKE попадает в индекс по VIN.
+        Assert.Equal(@"DEMO-VIN%", ProductionPlanSql.LikeStartsWith("DEMO-VIN"));
+        Assert.Equal(@"100\%\_test%", ProductionPlanSql.LikeStartsWith("100%_test"));
     }
 }

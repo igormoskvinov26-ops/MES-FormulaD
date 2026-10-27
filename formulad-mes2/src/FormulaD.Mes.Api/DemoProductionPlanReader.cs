@@ -26,9 +26,9 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader
 
         if (!string.IsNullOrWhiteSpace(query.Vin))
         {
-            // Поиск по подстроке VIN, без учёта регистра (документировано в API_CONTRACT.md).
-            var needle = query.Vin.Trim();
-            q = q.Where(i => i.Vin.Contains(needle, StringComparison.OrdinalIgnoreCase));
+            // Поиск по началу VIN, без учёта регистра — то же поведение, что у SQL-ридера.
+            var prefix = query.Vin.Trim();
+            q = q.Where(i => i.Vin.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
         }
 
         if (query.Status is not null)

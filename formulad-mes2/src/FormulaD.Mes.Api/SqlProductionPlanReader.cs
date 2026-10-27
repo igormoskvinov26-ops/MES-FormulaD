@@ -24,7 +24,7 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
 
         if (filterByVin)
         {
-            command.Parameters.Add("@vin", SqlDbType.NVarChar, 102).Value = ProductionPlanSql.LikeContains(query.Vin!.Trim());
+            command.Parameters.Add("@vin", SqlDbType.NVarChar, 101).Value = ProductionPlanSql.LikeStartsWith(query.Vin!.Trim());
         }
         if (filterByStatus && !statusIsNull)
         {
