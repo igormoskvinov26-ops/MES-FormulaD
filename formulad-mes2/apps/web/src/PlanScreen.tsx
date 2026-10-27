@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePlan } from './App';
 import { api, type ProductionPlanItem } from './api';
-import { dash, formatDate, statusBadge } from './format';
+import { COLUMNS } from './columns';
+import { ColumnPicker } from './ColumnPicker';
+import { rowState } from './format';
 import { ProductCard } from './ProductCard';
+import { useColumnPrefs } from './useColumnPrefs';
 
 const PAGE_SIZE = 25;
 const ALL = '__all__';
 const NO_STATUS = '__null__';
+
+const LEGEND = [
+  { key: 'waiting', label: 'В ожидании' },
+  { key: 'in-work', label: 'В производстве' },
+  { key: 'complete', label: 'Собрано' },
+  { key: 'fok', label: 'ФОК пройден' },
+];
 
 export function PlanScreen({
   session,
@@ -22,9 +32,11 @@ export function PlanScreen({
   const [selected, setSelected] = useState<ProductionPlanItem | null>(null);
   const [cardError, setCardError] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
+  const { visible, toggle, reset } = useColumnPrefs();
 
   const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
   const { data, state, error } = usePlan(vin.trim(), statusFilter, page, PAGE_SIZE);
+  const columns = COLUMNS.filter((c) => c.locked || visible.includes(c.key));
 
   useEffect(() => {
     api.statuses().then(setStatuses).catch(() => setStatuses([]));
@@ -57,14 +69,18 @@ export function PlanScreen({
   return (
     <div className="app">
       <header className="topbar">
-        <strong>FormulaD MES 2.0</strong>
+        <span className="logo" aria-label="FormulaD">
+          F<span className="logo-mark">7</span>
+        </span>
+        <span className="topbar-title">Производственный план</span>
         <span className="badge badge-demo" title="Синтетические данные, не производственные">
-          DEV • DEMO
+          DEMO
         </span>
         <span className="spacer" />
-        <span className="muted">{session.userName ?? 'неизвестно'}</span>
+        <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
         <button
           type="button"
+          className="ghost"
           onClick={async () => {
             await api.logout().catch(() => undefined);
             onLogout();
@@ -75,12 +91,6 @@ export function PlanScreen({
       </header>
 
       <section className="toolbar">
-        <div>
-          <h1>Производственный план</h1>
-          <p className="muted">
-            {state === 'ready' && data ? `Всего: ${data.total} (демо)` : 'Всего: —'} · поиск по началу или последним цифрам VIN, Enter при полном VIN открывает карточку
-          </p>
-        </div>
         <form
           className="controls"
           onSubmit={(event) => {
@@ -91,8 +101,9 @@ export function PlanScreen({
         >
           <input
             ref={searchRef}
+            className="search"
             aria-label="Поиск VIN или сканирование"
-            placeholder="VIN целиком, начало или последние цифры"
+            placeholder="Сканируйте VIN или введите начало / последние цифры"
             value={vin}
             maxLength={50}
             autoFocus
@@ -101,11 +112,7 @@ export function PlanScreen({
               setPage(1);
             }}
           />
-          <label className="sr-only" htmlFor="status">
-            Статус
-          </label>
           <select
-            id="status"
             aria-label="Статус"
             value={statusChoice}
             onChange={(event) => {
@@ -120,10 +127,24 @@ export function PlanScreen({
               </option>
             ))}
           </select>
+          <ColumnPicker visible={visible} onToggle={toggle} onReset={reset} />
         </form>
+
+        <div className="meta">
+          <strong>{state === 'ready' && data ? `Позиций: ${data.total}` : 'Позиций: —'}</strong>
+          <ul className="legend">
+            {LEGEND.map((entry) => (
+              <li key={entry.key}>
+                <i className={`swatch state-${entry.key}`} aria-hidden="true" />
+                {entry.label}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
-      <main className="content">
+      {/* Боковая панель появляется только когда есть что показать: иначе таблица занимает всю ширину. */}
+      <main className={selected || cardError ? 'content' : 'content content-wide'}>
         <div className="table-wrap">
           {state === 'loading' && <p className="muted">Загрузка…</p>}
           {state === 'error' && (
@@ -137,37 +158,45 @@ export function PlanScreen({
               <caption className="sr-only">Производственный план (демо-данные), сортировка по VIN</caption>
               <thead>
                 <tr>
-                  <th scope="col">VIN</th>
-                  <th scope="col">Модель</th>
-                  <th scope="col">Цвет</th>
-                  <th scope="col">Статус</th>
-                  <th scope="col">Начало сборки</th>
-                  <th scope="col">Плановая отгрузка</th>
+                  <th scope="col">Состояние</th>
+                  {columns.map((column) => (
+                    <th key={column.key} scope="col">
+                      {column.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {data.items.map((item) => {
-                  const badge = statusBadge(item.status);
+                  const row = rowState(item);
                   return (
                     <tr
                       key={item.vin}
                       tabIndex={0}
+                      className={selected?.vin === item.vin ? 'selected' : undefined}
                       aria-label={`Изделие ${item.vin}`}
                       onClick={() => void openByVin(item.vin)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') void openByVin(item.vin);
                       }}
                     >
-                      <td className="mono">{item.vin}</td>
-                      <td>{dash(item.modelName)}</td>
-                      <td>{dash(item.color)}</td>
-                      <td>
-                        <span className={`badge status-${badge.tone}`} title={badge.title}>
-                          {badge.label}
-                        </span>
+                      <td className="state-cell">
+                        <i className={`swatch state-${row.key}`} aria-hidden="true" />
+                        {row.label}
                       </td>
-                      <td>{formatDate(item.startDate)}</td>
-                      <td>{formatDate(item.plannedShipmentDate)}</td>
+                      {columns.map((column) => {
+                        const value = column.value(item);
+                        return (
+                          <td
+                            key={column.key}
+                            className={column.key === 'vin' ? 'mono vin' : undefined}
+                            // Длинная «Комплектация» обрезается многоточием, полный текст — в подсказке и в карточке.
+                            title={value}
+                          >
+                            {value}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
@@ -190,14 +219,16 @@ export function PlanScreen({
           )}
         </div>
 
-        <aside className="side">
-          {cardError && (
-            <p role="alert" className="error">
-              {cardError}
-            </p>
-          )}
-          {selected ? <ProductCard item={selected} /> : <p className="muted">Выберите изделие в таблице</p>}
-        </aside>
+        {(selected || cardError) && (
+          <aside className="side">
+            {cardError && (
+              <p role="alert" className="error">
+                {cardError}
+              </p>
+            )}
+            {selected && <ProductCard item={selected} />}
+          </aside>
+        )}
       </main>
     </div>
   );

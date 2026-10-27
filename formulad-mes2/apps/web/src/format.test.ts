@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dash, formatDate, statusBadge } from './format';
+import { dash, formatDate, rowState, statusBadge } from './format';
 
 describe('format', () => {
   it('показывает пустые даты как «—», без 01.01.1970', () => {
@@ -17,5 +17,13 @@ describe('format', () => {
     const unknown = statusBadge('custom_unknown');
     expect(unknown.label).toContain('custom_unknown');
     expect(statusBadge(null).label).toBe('Без статуса');
+  });
+
+  it('определяет состояние строки по фактическим датам', () => {
+    const empty = { startDate: null, completeDate: null, fokDate: null };
+    expect(rowState(empty).label).toBe('В ожидании');
+    expect(rowState({ ...empty, startDate: '2026-10-20T09:00:00' }).label).toBe('В производстве');
+    expect(rowState({ startDate: 'x', completeDate: 'y', fokDate: null }).label).toBe('Собрано');
+    expect(rowState({ startDate: 'x', completeDate: 'y', fokDate: 'z' }).label).toBe('ФОК пройден');
   });
 });

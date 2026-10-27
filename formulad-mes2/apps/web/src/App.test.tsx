@@ -7,6 +7,11 @@ const ITEMS = [
   {
     vin: 'DEMO-VIN-00001',
     id: 1001,
+    seqn: 23,
+    specificationName: 'Pathcross 1000 LTD · ДЕМО',
+    printDate: '2026-10-12T00:00:00',
+    plannedStartDate: '2026-10-12T00:00:00',
+    plannedCompleteDate: '2026-10-13T00:00:00',
     modelArticle: 'DEMO-800',
     modelName: 'Квадроцикл 800 · ДЕМО',
     engineNumber: 'DEMO-ENGINE-01',
@@ -54,9 +59,10 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByText('DEMO-VIN-00001')).toBeInTheDocument();
-    expect(screen.getByText('DEV • DEMO')).toBeInTheDocument();
-    expect(screen.getByText(/Всего: 1 \(демо\)/)).toBeInTheDocument();
-    expect(screen.getByText('В сборке')).toBeInTheDocument();
+    expect(screen.getByText('DEMO')).toBeInTheDocument();
+    expect(screen.getByText('Позиций: 1')).toBeInTheDocument();
+    // Состояние строки подписано словом, а не только цветом.
+    expect(screen.getAllByText('В производстве').length).toBeGreaterThan(0);
   });
 
   it('по Enter с полным VIN открывает read-only карточку', async () => {
@@ -75,7 +81,7 @@ describe('App', () => {
     await userEvent.type(search, 'DEMO-VIN-00001{Enter}');
 
     expect(await screen.findByLabelText('Карточка изделия DEMO-VIN-00001')).toBeInTheDocument();
-    expect(screen.getByText('DEMO-ENGINE-01')).toBeInTheDocument();
+    expect(screen.getAllByText('DEMO-ENGINE-01').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /запустить|изменить|удалить/i })).not.toBeInTheDocument();
   });
 

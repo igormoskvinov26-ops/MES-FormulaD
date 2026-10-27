@@ -30,3 +30,24 @@ export function formatDate(value: string | null): string {
 export function dash(value: string | number | null): string {
   return value === null || value === '' ? '—' : String(value);
 }
+
+export type RowState = {
+  key: 'waiting' | 'in-work' | 'complete' | 'fok';
+  label: string;
+};
+
+/**
+ * Состояние изделия для подсветки строки. В Access это кодировалось только цветом
+ * (зелёный фон — запущено, фиолетовый VIN — в ожидании), поэтому здесь состояние
+ * всегда дублируется словом в отдельной колонке и подписано в легенде.
+ */
+export function rowState(item: {
+  startDate: string | null;
+  completeDate: string | null;
+  fokDate: string | null;
+}): RowState {
+  if (item.fokDate) return { key: 'fok', label: 'ФОК пройден' };
+  if (item.completeDate) return { key: 'complete', label: 'Собрано' };
+  if (item.startDate) return { key: 'in-work', label: 'В производстве' };
+  return { key: 'waiting', label: 'В ожидании' };
+}

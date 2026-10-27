@@ -93,6 +93,11 @@ public sealed class ProductionPlanSqlTests
         Assert.DoesNotContain("ErrorMessage", ProductionPlanSql.Columns);
         Assert.Contains("[VIN]", ProductionPlanSql.Columns);
         Assert.Contains("[FOK_date]", ProductionPlanSql.Columns);
+        // Колонки реального экрана плана: порядок, комплектация, печать, плановый старт.
+        Assert.Contains("[SEQN]", ProductionPlanSql.Columns);
+        Assert.Contains("[SpecificationName]", ProductionPlanSql.Columns);
+        Assert.Contains("[PrintDate]", ProductionPlanSql.Columns);
+        Assert.Contains("[plannedstartdate]", ProductionPlanSql.Columns);
     }
 
     [Theory]

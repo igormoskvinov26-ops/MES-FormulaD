@@ -5,15 +5,20 @@ import { dash, formatDate, statusBadge } from './format';
 export function ProductCard({ item }: { item: ProductionPlanItem }) {
   const badge = statusBadge(item.status);
   const rows: [string, string][] = [
-    ['Модель', dash(item.modelName)],
-    ['Артикул', dash(item.modelArticle)],
+    ['Порядок в плане', dash(item.seqn)],
+    ['Модель', dash(item.modelArticle)],
+    ['Наименование', dash(item.modelName)],
+    ['Комплектация', dash(item.specificationName)],
     ['Номер двигателя', dash(item.engineNumber)],
     ['Цвет', dash(item.color)],
     ['statusid', dash(item.statusId)],
     ['ID (справочно)', String(item.id)],
+    ['Напечатано', formatDate(item.printDate)],
+    ['Старт · план', formatDate(item.plannedStartDate)],
+    ['Завершение · план', formatDate(item.plannedCompleteDate)],
     ['Плановая отгрузка', formatDate(item.plannedShipmentDate)],
-    ['Начало сборки', formatDate(item.startDate)],
-    ['Завершение сборки', formatDate(item.completeDate)],
+    ['Старт · факт', formatDate(item.startDate)],
+    ['Завершение · факт', formatDate(item.completeDate)],
     ['ФОК', formatDate(item.fokDate)],
   ];
 

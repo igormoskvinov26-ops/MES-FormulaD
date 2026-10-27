@@ -1,12 +1,17 @@
 export type ProductionPlanItem = {
   vin: string;
   id: number;
+  seqn: number | null;
   modelArticle: string | null;
   modelName: string | null;
   engineNumber: string | null;
   color: string | null;
+  specificationName: string | null;
   status: string | null;
   statusId: number | null;
+  printDate: string | null;
+  plannedStartDate: string | null;
+  plannedCompleteDate: string | null;
   plannedShipmentDate: string | null;
   startDate: string | null;
   completeDate: string | null;

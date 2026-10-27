@@ -92,12 +92,19 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
     private static ProductionPlanItem Map(SqlDataReader reader) => new(
         Vin: reader.GetString(reader.GetOrdinal("VIN")),
         Id: reader.GetInt32(reader.GetOrdinal("ID")),
+        Seqn: GetNullableInt(reader, "SEQN"),
         ModelArticle: GetNullableString(reader, "ModelArticle"),
         ModelName: GetNullableString(reader, "ModelName"),
         EngineNumber: GetNullableString(reader, "EngineNumber"),
         Color: GetNullableString(reader, "Color"),
+        SpecificationName: GetNullableString(reader, "SpecificationName"),
         Status: GetNullableString(reader, "Status"),
         StatusId: GetNullableInt(reader, "statusid"),
+        PrintDate: GetNullableDate(reader, "PrintDate"),
+        PlannedStartDate: GetNullableDate(reader, "plannedstartdate"),
+        // ponytail: «Дата завершения План» на экране Access — допущение, что это PlannedShipmentDate.
+        // Сверить на TEST-базе перед включением SQL-режима (см. docs/OPEN_QUESTIONS.md).
+        PlannedCompleteDate: GetNullableDate(reader, "PlannedShipmentDate"),
         // datetime без зоны отдаём как есть: политика часовых поясов не согласована.
         PlannedShipmentDate: GetNullableDate(reader, "PlannedShipmentDate"),
         StartDate: GetNullableDate(reader, "StartDate"),

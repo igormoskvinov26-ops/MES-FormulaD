@@ -10,8 +10,9 @@ internal static class ProductionPlanSql
 {
     /// <summary>Белый список колонок. Менять только вместе с DTO и docs/DB_CONTRACT.md.</summary>
     internal const string Columns = """
-        [VIN], [ID], [ModelArticle], [ModelName], [EngineNumber], [Color],
-        [Status], [statusid], [PlannedShipmentDate], [StartDate], [CompleteDate], [FOK_date]
+        [VIN], [ID], [SEQN], [ModelArticle], [ModelName], [EngineNumber], [Color],
+        [SpecificationName], [Status], [statusid], [PrintDate], [plannedstartdate],
+        [PlannedShipmentDate], [StartDate], [CompleteDate], [FOK_date]
         """;
 
     /// <summary>
