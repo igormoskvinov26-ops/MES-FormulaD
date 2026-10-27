@@ -4,6 +4,7 @@ import { ApiError, api, type Paged, type ProductionPlanItem } from './api';
 import { PlanScreen } from './PlanScreen';
 import { NcpScreen } from './NcpScreen';
 import { StartScreen } from './StartScreen';
+import { StationScreen } from './StationScreen';
 import { CompleteScreen } from './CompleteScreen';
 import { FokScreen } from './FokScreen';
 import { LoginScreen } from './LoginScreen';
@@ -38,6 +39,8 @@ export function App() {
       return <PlanScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'start':
       return <StartScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'stations':
+      return <StationScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'complete':
       return <CompleteScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'fok':

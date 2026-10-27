@@ -39,6 +39,8 @@ export type NcpItem = {
 
 export type ComponentItem = { code: string; name: string; station: string | null };
 
+export type ComponentCheck = { componentCode: string; checked: boolean; checkedBy: string | null; checkedAt: string | null };
+
 export type Paged<T> = { items: T[]; page: number; pageSize: number; total: number };
 
 /** Ошибка API с кодом — UI различает 401 (нет доступа) и 404 (не найдено). */
@@ -132,6 +134,17 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+    }),
+
+  /** Отметки проверки компонентов по изделию (Этап 5), ключ — код компонента. */
+  stationChecks: (vin: string) => request<Record<string, ComponentCheck>>(`/api/v1/stations/${encodeURIComponent(vin)}/checks`),
+
+  /** Отметить/снять проверку компонента. Существует только в демо-режиме сервера. */
+  setStationCheck: (vin: string, componentCode: string, checked: boolean) =>
+    request<ComponentCheck>(`/api/v1/stations/${encodeURIComponent(vin)}/components/${encodeURIComponent(componentCode)}/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checked }),
     }),
 
   ncpSetPartInstalled: (id: number, installed: boolean) =>

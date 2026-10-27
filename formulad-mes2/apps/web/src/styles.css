@@ -27,6 +27,16 @@
   --warn-bg: #fff7e6;
   --warn: #92650a;
 
+  /* Раздел 11.1: своя цветовая схема станций (серый/синий/зелёный/жёлтый/красный) —
+     отдельная семантика от --st-*, который красит бейджи состояния изделия на плане.
+     Переиспользование одной палитры для двух разных смыслов намеренно не делаем
+     (docs/DESIGN_DIRECTION.md, Этап 5). */
+  --stn-grey: #9aa2b1;
+  --stn-blue: #2563eb;
+  --stn-green: #16a34a;
+  --stn-yellow: #eab308;
+  --stn-red: #dc2626;
+
   font-family: Inter, system-ui, "Segoe UI", Roboto, sans-serif;
   /* Rajdhani — технический, «моторный» шрифт для заголовков и логотипа; тело текста остаётся Inter. */
   --font-display: Rajdhani, Inter, system-ui, sans-serif;
@@ -555,3 +565,48 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
   text-align: left;
   padding: 8px 10px;
 }
+
+/* --- Станции: визуальная линия (раздел 11) --- */
+.station-line { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; padding: 18px; margin: 0; }
+
+.station-btn {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: transform .1s ease, box-shadow .15s ease;
+}
+.station-btn:hover { transform: translateY(-2px); }
+.station-btn[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--graphite); }
+
+.station-grey { background: var(--stn-grey); }
+.station-blue { background: var(--stn-blue); }
+.station-green { background: var(--stn-green); }
+.station-yellow { background: var(--stn-yellow); color: #3a2e00; }
+.station-red { background: var(--stn-red); }
+
+.station-legend { padding: 0 18px 14px; }
+.station-legend .swatch { border-radius: 3px; }
+
+.station-detail { margin: 0 18px 24px; }
+.station-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.station-detail-head h2 { margin: 0; }
+
+.station-components { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.station-components li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.station-component { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.station-component input { width: 18px; height: 18px; }

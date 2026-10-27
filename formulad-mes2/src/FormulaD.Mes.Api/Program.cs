@@ -37,6 +37,9 @@ switch (dataSource.ToLowerInvariant())
         var ncpStore = new DemoNcpStore(ncpPath, componentsPath, demoReader, eventLog);
         builder.Services.AddSingleton<INcpReader>(ncpStore);
         builder.Services.AddSingleton<INcpWriter>(ncpStore);
+
+        // Отметки проверки компонентов по станциям (Этап 5) — тоже только демо.
+        builder.Services.AddSingleton<IStationChecks>(new DemoStationChecks(demoReader, ncpStore, eventLog));
         break;
 
     case "sql":
@@ -340,6 +343,39 @@ if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
             NcpActionOutcome.Ok => Results.Ok(closed),
             NcpActionOutcome.AlreadyClosed => Problem("Уже закрыто", "Эта заявка уже закрыта."),
             _ => Results.Problem(title: "Заявка не найдена", statusCode: StatusCodes.Status404NotFound),
+        };
+    });
+
+    // Станции (Этап 5): отметки проверки компонентов. Остальное (список станций, каталог
+    // компонентов, NCP по VIN) экран собирает из уже существующих эндпоинтов /ncp/* —
+    // дублировать их здесь незачем.
+    var stations = api.MapGroup("/stations").RequireAuthorization();
+
+    stations.MapGet("/{vin}/checks", async (string vin, IStationChecks checks, IProductionPlanReader reader, CancellationToken ct) =>
+    {
+        if (vin.Length is 0 or > 50)
+        {
+            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+        }
+        if (await reader.GetByVinAsync(vin, ct) is null)
+        {
+            return Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+                statusCode: StatusCodes.Status404NotFound);
+        }
+        return Results.Ok(await checks.GetForVinAsync(vin, ct));
+    });
+
+    stations.MapPost("/{vin}/components/{code}/check", async (
+        string vin, string code, SetCheckRequest request, IStationChecks checks, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        var (outcome, updated) = await checks.SetCheckedAsync(vin, code, request.Checked, user.Identity?.Name ?? "неизвестно", ct);
+        return outcome switch
+        {
+            SetCheckOutcome.Ok => Results.Ok(updated),
+            SetCheckOutcome.VinNotFound => Results.Problem(
+                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+                statusCode: StatusCodes.Status404NotFound),
+            _ => Problem("Компонент не найден", "Такого артикула нет в справочнике компонентов."),
         };
     });
 }

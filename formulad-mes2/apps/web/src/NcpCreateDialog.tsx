@@ -8,6 +8,8 @@ export function NcpCreateDialog({
   stations,
   components,
   defaultVin,
+  defaultStation,
+  defaultComponentCode,
   onCreate,
   onClose,
 }: {
@@ -15,6 +17,10 @@ export function NcpCreateDialog({
   stations: string[];
   components: ComponentItem[];
   defaultVin: string;
+  /** Контекст станции — экран «Станции» открывает форму уже с нужной станцией/компонентом
+      («Зафиксировать расхождение», раздел 11.2: VIN и привязка к станции не теряются). */
+  defaultStation?: string;
+  defaultComponentCode?: string;
   onCreate: (data: {
     vin: string;
     station: string;
@@ -26,8 +32,8 @@ export function NcpCreateDialog({
   onClose: () => void;
 }) {
   const [vin, setVin] = useState(defaultVin);
-  const [station, setStation] = useState(stations[0] ?? '');
-  const [componentCode, setComponentCode] = useState('');
+  const [station, setStation] = useState(defaultStation ?? stations[0] ?? '');
+  const [componentCode, setComponentCode] = useState(defaultComponentCode ?? '');
   const [quantity, setQuantity] = useState('1');
   const [type, setType] = useState(types[0] ?? '');
   const [comment, setComment] = useState('');

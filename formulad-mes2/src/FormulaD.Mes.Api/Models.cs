@@ -49,3 +49,6 @@ public sealed record DevAuthOptions(bool Enabled, string? Username, string? Pass
 
 /// <summary>Запрос на перемещение изделия в плане. Только для демо-источника.</summary>
 public sealed record MoveRequest(int ToPosition);
+
+/// <summary>Запрос отметки/снятия проверки компонента на станции (Этап 5). Только для демо-источника.</summary>
+public sealed record SetCheckRequest(bool Checked);
