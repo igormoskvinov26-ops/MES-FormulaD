@@ -58,7 +58,8 @@ public sealed class ProductionPlanSqlTests
     {
         var sql = ProductionPlanSql.Page(filterByVin: true, filterByStatus: true, statusIsNull: false);
 
-        Assert.Contains("@vin", sql);
+        Assert.Contains("@vinPrefix", sql);
+        Assert.Contains("@vinSuffix", sql);
         Assert.Contains("@status", sql);
         Assert.Contains("OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY", sql);
         Assert.Contains("ORDER BY [VIN] ASC", sql);
@@ -96,10 +97,14 @@ public sealed class ProductionPlanSqlTests
     }
 
     [Fact]
-    public void Vin_Search_Is_Prefix_Only_And_Escapes_Wildcards()
+    public void Vin_Search_Covers_Prefix_And_Suffix_And_Escapes_Wildcards()
     {
-        // Без ведущего '%': префиксный LIKE попадает в индекс по VIN.
+        // Путь сканера: без ведущего '%', префиксный LIKE попадает в индекс по VIN.
         Assert.Equal(@"DEMO-VIN%", ProductionPlanSql.LikeStartsWith("DEMO-VIN"));
+        // Путь ручного ввода последних цифр.
+        Assert.Equal(@"%00123", ProductionPlanSql.LikeEndsWith("00123"));
+
         Assert.Equal(@"100\%\_test%", ProductionPlanSql.LikeStartsWith("100%_test"));
+        Assert.Equal(@"%100\%\_test", ProductionPlanSql.LikeEndsWith("100%_test"));
     }
 }

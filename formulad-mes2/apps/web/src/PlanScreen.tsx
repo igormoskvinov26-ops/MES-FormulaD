@@ -78,7 +78,7 @@ export function PlanScreen({
         <div>
           <h1>Производственный план</h1>
           <p className="muted">
-            {state === 'ready' && data ? `Всего: ${data.total} (демо)` : 'Всего: —'} · поиск по началу VIN, Enter при полном VIN открывает карточку
+            {state === 'ready' && data ? `Всего: ${data.total} (демо)` : 'Всего: —'} · поиск по началу или последним цифрам VIN, Enter при полном VIN открывает карточку
           </p>
         </div>
         <form
@@ -92,7 +92,7 @@ export function PlanScreen({
           <input
             ref={searchRef}
             aria-label="Поиск VIN или сканирование"
-            placeholder="Поиск по началу VIN / сканирование"
+            placeholder="VIN целиком, начало или последние цифры"
             value={vin}
             maxLength={50}
             autoFocus

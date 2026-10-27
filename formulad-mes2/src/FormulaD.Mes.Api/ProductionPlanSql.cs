@@ -22,7 +22,7 @@ internal static class ProductionPlanSql
         SELECT {Columns}, COUNT(*) OVER() AS [TotalRows]
         FROM [dbo].[tblProductionPlan]
         WHERE 1 = 1
-        {(filterByVin ? "AND [VIN] LIKE @vin ESCAPE '\\'" : string.Empty)}
+        {(filterByVin ? "AND ([VIN] LIKE @vinPrefix ESCAPE '\\' OR [VIN] LIKE @vinSuffix ESCAPE '\\')" : string.Empty)}
         {StatusPredicate(filterByStatus, statusIsNull)}
         ORDER BY [VIN] ASC
         OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
@@ -45,10 +45,22 @@ internal static class ProductionPlanSql
         : string.Empty;
 
     /// <summary>
-    /// Шаблон поиска по началу VIN: 'DEMO-VIN%'. Префиксный LIKE — sargable, то есть
-    /// использует кластерный индекс PK по VIN; поиск по подстроке ('%...%') давал бы скан таблицы.
-    /// Спецсимволы LIKE экранируются, чтобы '%' из ввода не превращался в маску.
+    /// Шаблон поиска по началу VIN: 'DEMO-VIN%'. Префиксный LIKE — sargable: использует
+    /// кластерный индекс PK по VIN. Это путь сканера, который отдаёт VIN целиком.
     /// </summary>
-    internal static string LikeStartsWith(string value)
-        => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[") + "%";
+    internal static string LikeStartsWith(string value) => Escape(value) + "%";
+
+    /// <summary>
+    /// Шаблон поиска по концу VIN: '%00123'. Это путь оператора, который набирает последние
+    /// цифры руками.
+    /// ponytail: такой LIKE индекс не использует — это скан таблицы. На плане в десятки тысяч
+    /// узких строк цена невелика, но она растёт линейно. Апгрейд, если станет медленно:
+    /// persisted computed column REVERSE(VIN) с индексом — поиск по хвосту станет префиксным
+    /// по обратной строке. Это изменение схемы и отдельная согласованная миграция на TEST.
+    /// </summary>
+    internal static string LikeEndsWith(string value) => "%" + Escape(value);
+
+    /// <summary>Экранирует спецсимволы LIKE, чтобы '%' из ввода не превращался в маску.</summary>
+    private static string Escape(string value)
+        => value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_").Replace("[", "\\[");
 }

@@ -24,7 +24,10 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
 
         if (filterByVin)
         {
-            command.Parameters.Add("@vin", SqlDbType.NVarChar, 101).Value = ProductionPlanSql.LikeStartsWith(query.Vin!.Trim());
+            // Один проход по таблице отвечает на оба сценария: сканер (VIN целиком) и ручной ввод хвоста.
+            var needle = query.Vin!.Trim();
+            command.Parameters.Add("@vinPrefix", SqlDbType.NVarChar, 101).Value = ProductionPlanSql.LikeStartsWith(needle);
+            command.Parameters.Add("@vinSuffix", SqlDbType.NVarChar, 101).Value = ProductionPlanSql.LikeEndsWith(needle);
         }
         if (filterByStatus && !statusIsNull)
         {

@@ -26,9 +26,10 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader
 
         if (!string.IsNullOrWhiteSpace(query.Vin))
         {
-            // Поиск по началу VIN, без учёта регистра — то же поведение, что у SQL-ридера.
-            var prefix = query.Vin.Trim();
-            q = q.Where(i => i.Vin.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            // Поиск по началу ИЛИ концу VIN, без учёта регистра — то же поведение, что у SQL-ридера.
+            var needle = query.Vin.Trim();
+            q = q.Where(i => i.Vin.StartsWith(needle, StringComparison.OrdinalIgnoreCase)
+                             || i.Vin.EndsWith(needle, StringComparison.OrdinalIgnoreCase));
         }
 
         if (query.Status is not null)

@@ -63,7 +63,7 @@ public sealed class ApiTests
     }
 
     [Fact]
-    public async Task Vin_Filter_Is_Prefix_Search()
+    public async Task Vin_Filter_Matches_Prefix_And_Suffix()
     {
         using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
@@ -74,10 +74,16 @@ public sealed class ApiTests
         Assert.Equal(1, byPrefix.Total);
         Assert.Equal("DEMO-VIN-00003", byPrefix.Items[0].Vin);
 
-        // Хвост VIN больше не находится: поиск только по началу.
+        // Оператор набирает руками последние цифры VIN.
         var bySuffix = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=00003");
         Assert.NotNull(bySuffix);
-        Assert.Equal(0, bySuffix.Total);
+        Assert.Equal(1, bySuffix.Total);
+        Assert.Equal("DEMO-VIN-00003", bySuffix.Items[0].Vin);
+
+        // Середина VIN по-прежнему не ищется — это осознанное ограничение ради скорости.
+        var byMiddle = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=VIN-0000");
+        Assert.NotNull(byMiddle);
+        Assert.Equal(0, byMiddle.Total);
     }
 
     [Fact]
