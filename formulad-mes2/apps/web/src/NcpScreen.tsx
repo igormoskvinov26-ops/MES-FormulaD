@@ -4,6 +4,7 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ComponentItem, type NcpItem, type Paged } from './api';
 import { NcpCreateDialog } from './NcpCreateDialog';
 import { NcpDetails } from './NcpDetails';
+import { NcpPrintDialog } from './NcpPrintDialog';
 import { formatDate } from './format';
 
 const PAGE_SIZE = 25;
@@ -52,6 +53,7 @@ export function NcpScreen({
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<NcpItem | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [printItem, setPrintItem] = useState<NcpItem | null>(null);
   const [actionError, setActionError] = useState('');
 
   const [types, setTypes] = useState<string[]>([]);
@@ -240,6 +242,7 @@ export function NcpScreen({
               item={selected}
               onSetPartInstalled={(installed) => void setPartInstalled(selected.id, installed)}
               onClose={(comment) => void closeNcp(selected.id, comment)}
+              onPrint={() => setPrintItem(selected)}
             />
           </aside>
         )}
@@ -255,6 +258,8 @@ export function NcpScreen({
           onClose={() => setShowCreate(false)}
         />
       )}
+
+      {printItem && <NcpPrintDialog mode="individual" item={printItem} onClose={() => setPrintItem(null)} />}
     </div>
   );
 }

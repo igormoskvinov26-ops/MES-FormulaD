@@ -25,7 +25,7 @@ export function JobCardDialog({ items, onClose }: { items: ProductionPlanItem[];
     }
   }
 
-  // no-print НЕ ставим на сам backdrop: это предок .jobcard-print-area, а display:none
+  // no-print НЕ ставим на сам backdrop: это предок .print-area, а display:none
   // убирает весь поддерево безусловно — никакой visibility:visible внутри его не спасёт.
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
@@ -50,7 +50,7 @@ export function JobCardDialog({ items, onClose }: { items: ProductionPlanItem[];
           </p>
         )}
 
-        <div className="jobcard-print-area">
+        <div className="print-area">
           {items.map((item) => (
             <JobCard key={item.vin} item={item} formedAt={formedAt} />
           ))}

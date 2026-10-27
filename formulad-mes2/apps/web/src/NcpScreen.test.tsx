@@ -139,4 +139,25 @@ describe('NcpScreen', () => {
 
     await waitFor(() => expect(created).toMatchObject({ vin: 'DEMO-VIN-00002', componentCode: 'DEMO-CMP-014' }));
   });
+
+  it('печать NCP-листа подгружает модель по VIN и показывает бланк для Red Table', async () => {
+    mockFetch((url) => {
+      if (url.includes('/ncp/types')) return { body: TYPES };
+      if (url.includes('/ncp/stations')) return { body: STATIONS };
+      if (url.includes('/ncp/components')) return { body: COMPONENTS };
+      if (url.includes('/api/v1/ncp?')) return { body: { items: NCP_ITEMS, page: 1, pageSize: 25, total: 1 } };
+      if (url.endsWith('/production-plan/DEMO-VIN-00001')) {
+        return { body: { vin: 'DEMO-VIN-00001', id: 1001, modelName: 'Квадроцикл 800 · ДЕМО' } };
+      }
+      return undefined;
+    });
+
+    render(<NcpScreen session={session} onNavigate={noop} onLogout={noop} />);
+    await userEvent.click(await screen.findByText('NC-2026-0001'));
+    await userEvent.click(screen.getByRole('button', { name: 'Печать NCP-листа (Red Table)' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'NCP-лист NC-2026-0001' });
+    expect(await within(dialog).findByText('Квадроцикл 800 · ДЕМО')).toBeInTheDocument();
+    expect(within(dialog).getByText('Брак')).toBeInTheDocument();
+  });
 });

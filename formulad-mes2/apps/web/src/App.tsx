@@ -11,6 +11,7 @@ import { ReworkScreen } from './ReworkScreen';
 import { ImportScreen } from './ImportScreen';
 import { IncomingInspectionScreen } from './IncomingInspectionScreen';
 import { LoginScreen } from './LoginScreen';
+import { ReportsScreen } from './ReportsScreen';
 
 type Session = { userName: string | null; mode: string } | null;
 
@@ -56,6 +57,8 @@ export function App() {
       return <NcpScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'incoming':
       return <IncomingInspectionScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'reports':
+      return <ReportsScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
   }
 }
 

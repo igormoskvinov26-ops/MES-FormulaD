@@ -722,6 +722,23 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 
 .jobcard-foot { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
 
+/* --- Отчётность (раздел 26, Этап 10) --- */
+.reports-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.reports-grid h3 { margin: 14px 0 4px; font-size: 14px; color: var(--muted); }
+
+/* --- NCP-лист: индивидуальный (Red Table) и сводный по VIN (раздел 15, Этап 10) --- */
+.ncp-sheet-modal { width: 640px; max-width: 90vw; }
+
+.ncp-sheet {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.ncp-sheet + .ncp-sheet { margin-top: 16px; }
+.ncp-sheet table { margin-top: 12px; }
+.ncp-sheet-comment { margin-top: 12px; }
+
 .qr-error {
   display: flex;
   align-items: center;
@@ -735,14 +752,16 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
   flex-shrink: 0;
 }
 
-/* Печать: видна только область JobCard, остальной интерфейс (боковое меню, фон модалки,
-   кнопки «Закрыть»/«Печать») скрыт — классический приём изоляции через visibility. */
+/* Печать: видна только печатная область (JobCard, Этап 7; NCP-лист, Этап 10), остальной
+   интерфейс (боковое меню, фон модалки, кнопки «Закрыть»/«Печать») скрыт — классический приём
+   изоляции через visibility. Общий класс `.print-area`, а не отдельный на каждый бланк —
+   изоляция одна и та же, только содержимое разное. */
 @media print {
   body * { visibility: hidden; }
-  .jobcard-print-area, .jobcard-print-area * { visibility: visible; }
-  .jobcard-print-area { position: absolute; inset: 0; margin: 0; }
-  .jobcard { border-color: #000; page-break-after: always; }
-  .jobcard:last-child { page-break-after: auto; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; inset: 0; margin: 0; }
+  .jobcard, .ncp-sheet { border-color: #000; page-break-after: always; }
+  .jobcard:last-child, .ncp-sheet:last-child { page-break-after: auto; }
   .no-print { display: none !important; }
 }
 

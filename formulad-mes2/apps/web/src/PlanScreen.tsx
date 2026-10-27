@@ -11,6 +11,7 @@ import { ProductCard } from './ProductCard';
 import { useColumnPrefs } from './useColumnPrefs';
 import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } from './StatIcons';
 import { JobCardDialog } from './JobCardDialog';
+import { NcpPrintDialog } from './NcpPrintDialog';
 
 const FIRST_BATCH_SIZE = 12;
 
@@ -58,6 +59,7 @@ export function PlanScreen({
   const [printSelection, setPrintSelection] = useState<Set<string>>(new Set());
   const [printError, setPrintError] = useState('');
   const [jobCardItems, setJobCardItems] = useState<ProductionPlanItem[] | null>(null);
+  const [ncpSummaryVin, setNcpSummaryVin] = useState<string | null>(null);
 
   const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
   const { data, state, error, reload } = usePlan(vin.trim(), statusFilter, page, PAGE_SIZE);
@@ -439,7 +441,13 @@ export function PlanScreen({
                 {cardError}
               </p>
             )}
-            {selected && <ProductCard item={selected} onPrint={() => setJobCardItems([selected])} />}
+            {selected && (
+              <ProductCard
+                item={selected}
+                onPrint={() => setJobCardItems([selected])}
+                onPrintNcpSummary={() => setNcpSummaryVin(selected.vin)}
+              />
+            )}
           </aside>
         )}
       </main>
@@ -452,6 +460,7 @@ export function PlanScreen({
         />
       )}
       {jobCardItems && <JobCardDialog items={jobCardItems} onClose={() => setJobCardItems(null)} />}
+      {ncpSummaryVin && <NcpPrintDialog mode="summary" vin={ncpSummaryVin} onClose={() => setNcpSummaryVin(null)} />}
     </div>
   );
 }

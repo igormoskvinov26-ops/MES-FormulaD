@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlanScreen } from './PlanScreen';
@@ -108,5 +108,35 @@ describe('PlanScreen — печать JobCard', () => {
 
     await waitFor(() => expect(requestedPageSize).toContain('pageSize=12'));
     expect(await screen.findByRole('button', { name: 'Печать выбранных (2)' })).toBeInTheDocument();
+  });
+
+  it('карточка изделия открывает печать сводного NCP-листа по VIN', async () => {
+    mockFetch((url) => {
+      if (url.endsWith('/production-plan/DEMO-VIN-00001')) return { body: ITEMS[0] };
+      if (url.includes('/api/v1/ncp?')) {
+        return {
+          body: {
+            items: [
+              {
+                id: 1, number: 'NC-2026-0001', vin: 'DEMO-VIN-00001', station: '3',
+                componentCode: 'DEMO-CMP-014', componentName: 'Рычаг подвески передний · ДЕМО',
+                quantity: 1, type: 'Брак', operatorComment: null, engineerComment: null,
+                status: 'Открыто', partInstalled: false, createdAt: '2026-10-20T11:15:00',
+                createdBy: 'demo-operator', closedAt: null, closedBy: null,
+              },
+            ],
+            page: 1, pageSize: 100, total: 1,
+          },
+        };
+      }
+      return baseRoutes()(url, 'GET');
+    });
+
+    render(<PlanScreen session={session} onNavigate={noop} onLogout={noop} />);
+    await userEvent.type(screen.getByLabelText('Поиск VIN или сканирование'), 'DEMO-VIN-00001{Enter}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Печать сводного NCP-листа' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Сводный NCP-лист DEMO-VIN-00001' });
+    expect(await within(dialog).findByText('NC-2026-0001')).toBeInTheDocument();
   });
 });
