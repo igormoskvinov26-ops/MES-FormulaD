@@ -18,6 +18,7 @@
 | Демо-данные только из `fixtures/production-plan.demo.json` | сделано |
 | Тесты backend/frontend, `.gitignore`, `.env.example`, README | сделано |
 | `SqlProductionPlanReader` для TEST-экземпляра SQL Server (параметризованные SELECT, белый список колонок, OFFSET/FETCH, без NOLOCK) | сделано, **на живом SQL не проверено** |
+| Изменение порядка запуска: режим правки, стрелки ↑↓, `Alt+↑/↓`, попап переноса на позицию с предпросмотром | сделано **только для демо-данных в памяти**; в SQL-режиме маршрута нет |
 | Импорт Excel, старт/завершение, ФОК, NCP, packing lists, печать, реальные учётки | не делалось (вне объёма MVP) |
 
 ## 2. Архитектура
@@ -42,7 +43,10 @@
 - Пароль сравнивается `CryptographicOperations.FixedTimeEquals`; в репозитории и в `appsettings.json` пароля нет.
 - Вход разрешён только с loopback-адреса и с loopback-Origin. Cookie: `HttpOnly`, `SameSite=Strict`,
   `Secure` вне Development.
-- В API нет ни одного обработчика `POST/PUT/PATCH/DELETE` по производственным данным (есть только `logout`).
+- Единственная операция записи в API — `POST /api/v1/production-plan/{vin}/move` (изменение порядка),
+  и она создаётся **только** при `DataSource=Demo`: в SQL-режиме `IPlanOrderEditor` не зарегистрирован,
+  маршрута не существует. Изменения идут в список в памяти процесса и пропадают при перезапуске.
+  Производственная база не затрагивается ничем.
 - `/api/v1/health/live` возвращает ровно `{"status":"ok"}`.
 
 ## 4. Чем проверено (фактические команды и результат)
@@ -50,11 +54,11 @@
 | Команда | Результат |
 |---|---|
 | `dotnet build` | Build succeeded, 0 warnings, 0 errors |
-| `dotnet test` | **Passed: 35, Failed: 0** |
-| `npm run test` (vitest) | **8 passed** (2 файла) |
+| `dotnet test` | **Passed: 46, Failed: 0** |
+| `npm run test` (vitest) | **9 passed** (2 файла) |
 | `npm run build` (tsc + vite) | успешно, `dist/` собран |
 | Ручной smoke через `curl` | health `200 {"status":"ok"}`; план без входа `401`; dev-login `200`; план `200`; `GET /production-plan/NOPE` `404`; `pageSize=101` `400`; `POST /production-plan` `405`; статусы `["FOK","complete","custom_unknown","in progress","planned",null]` |
-| E2E в Chromium (Playwright) | вход → таблица из 6 демо-записей → ввод `DEMO-VIN-00004` + Enter → карточка; скриншоты `docs/screenshots/` |
+| E2E в Chromium (Playwright) | вход → таблица из 6 демо-записей → ввод `DEMO-VIN-00004` + Enter → карточка; режим правки порядка: стрелка вверх, `Alt+↓`, перенос через `F2` на позицию 23 — порядок менялся как ожидалось, предпросмотр совпал с результатом; скриншоты `docs/screenshots/` |
 
 Тесты SQL-режима выполняются **без** SQL Server: проверяют отказ без маркера TEST, отказ без строки подключения,
 отклонение PROD-хоста/базы/админских логинов, принудительный `ReadOnly`, параметризацию, `OFFSET/FETCH`,

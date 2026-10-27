@@ -206,3 +206,73 @@ public sealed class ApiTests
         Assert.Contains("Oracle", error.Message);
     }
 }
+
+/// <summary>Перестановка порядка — только на демо-данных. В SQL-режиме маршрута нет.</summary>
+public sealed class MoveTests
+{
+    private static async Task<List<(string Vin, int? Seqn)>> OrderAsync(HttpClient client)
+    {
+        var page = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?pageSize=100");
+        return page!.Items.Select(i => (i.Vin, i.Seqn)).ToList();
+    }
+
+    [Fact]
+    public async Task Move_Up_Swaps_With_Neighbour_And_Keeps_Numbering()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: true);
+        var client = await factory.CreateAuthenticatedClientAsync();
+
+        var before = await OrderAsync(client);
+        Assert.Equal(["DEMO-VIN-00001", "DEMO-VIN-00002", "DEMO-VIN-00003"], before.Take(3).Select(x => x.Vin));
+
+        // Третье изделие (позиция 25) поднимаем на позицию 24.
+        var response = await client.PostAsJsonAsync("/api/v1/production-plan/DEMO-VIN-00003/move", new { toPosition = 24 });
+        response.EnsureSuccessStatusCode();
+
+        var after = await OrderAsync(client);
+        Assert.Equal(["DEMO-VIN-00001", "DEMO-VIN-00003", "DEMO-VIN-00002"], after.Take(3).Select(x => x.Vin));
+        // Набор номеров позиций не изменился — ни дыр, ни дублей не появилось.
+        Assert.Equal(before.Select(x => x.Seqn), after.Select(x => x.Seqn));
+    }
+
+    [Fact]
+    public async Task Move_Far_Shifts_Whole_Range()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: true);
+        var client = await factory.CreateAuthenticatedClientAsync();
+
+        // Изделие с позиции 28 переносим в начало плана, на позицию 23.
+        var response = await client.PostAsJsonAsync("/api/v1/production-plan/DEMO-VIN-00006/move", new { toPosition = 23 });
+        response.EnsureSuccessStatusCode();
+
+        var after = await OrderAsync(client);
+        Assert.Equal(
+            ["DEMO-VIN-00006", "DEMO-VIN-00001", "DEMO-VIN-00002", "DEMO-VIN-00003", "DEMO-VIN-00004"],
+            after.Take(5).Select(x => x.Vin));
+        Assert.Equal([23, 24, 25, 26, 28], after.Take(5).Select(x => x.Seqn));
+    }
+
+    [Fact]
+    public async Task Move_Requires_Authentication()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: true);
+        var response = await factory.CreateClient()
+            .PostAsJsonAsync("/api/v1/production-plan/DEMO-VIN-00003/move", new { toPosition = 24 });
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("DEMO-VIN-99999", 24, HttpStatusCode.NotFound)]
+    [InlineData("DEMO-VIN-00005", 24, HttpStatusCode.BadRequest)] // у изделия нет позиции
+    [InlineData("DEMO-VIN-00003", 999, HttpStatusCode.BadRequest)] // такой позиции в плане нет
+    [InlineData("DEMO-VIN-00003", 0, HttpStatusCode.BadRequest)]
+    public async Task Move_Rejects_Bad_Input(string vin, int toPosition, HttpStatusCode expected)
+    {
+        using var factory = new ApiFactory(devAuthEnabled: true);
+        var client = await factory.CreateAuthenticatedClientAsync();
+
+        var response = await client.PostAsJsonAsync($"/api/v1/production-plan/{vin}/move", new { toPosition });
+
+        Assert.Equal(expected, response.StatusCode);
+    }
+}

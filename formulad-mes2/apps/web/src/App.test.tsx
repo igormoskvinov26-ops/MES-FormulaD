@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -82,7 +82,9 @@ describe('App', () => {
 
     expect(await screen.findByLabelText('Карточка изделия DEMO-VIN-00001')).toBeInTheDocument();
     expect(screen.getAllByText('DEMO-ENGINE-01').length).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: /запустить|изменить|удалить/i })).not.toBeInTheDocument();
+    // В карточке изделия нет ни одной кнопки: менять производственные данные нельзя.
+    const card = screen.getByLabelText('Карточка изделия DEMO-VIN-00001');
+    expect(within(card).queryAllByRole('button')).toHaveLength(0);
   });
 
   it('сообщает «не найден» для отсутствующего VIN', async () => {

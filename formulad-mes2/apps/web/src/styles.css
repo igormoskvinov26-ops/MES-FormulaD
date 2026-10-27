@@ -184,8 +184,10 @@ tbody tr { cursor: pointer; }
 tbody tr:hover { background: #eef1f7; }
 tbody tr.selected { background: #e3e9f6; }
 
-/* Состояние: цвет + слово, цвет один смысла не несёт. */
-.state-cell { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+/* Состояние: цвет + слово, цвет один смысла не несёт.
+   Внутри ячейки только inline-элементы: display:flex на td ломает табличную раскладку. */
+.state-cell { font-weight: 600; }
+.state-cell .swatch { margin-right: 8px; vertical-align: -1px; }
 
 /* VIN — главное в строке, остальное тише. */
 td.vin { font-weight: 700; font-size: 16px; }
@@ -253,3 +255,81 @@ dd { margin: 0; text-align: right; font-weight: 500; }
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* --- Режим изменения порядка --- */
+.edit-banner {
+  margin: 0;
+  padding: 10px 18px;
+  background: var(--warn-bg);
+  border-bottom: 1px solid #d9b864;
+  color: #5c4100;
+}
+
+.edit-banner kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  margin: 0 2px;
+  border: 1px solid #c9a95c;
+  border-radius: 3px;
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.order-cell { white-space: nowrap; }
+.order-cell button { padding: 2px 9px; line-height: 1.4; margin-right: 4px; }
+
+button.primary {
+  background: var(--graphite);
+  border-color: var(--graphite);
+  color: #f2f3f6;
+}
+button.primary:hover:not([disabled]) { background: var(--graphite-soft); }
+
+/* Перемещённая строка подсвечивается и гаснет сама. */
+tbody tr.moved { animation: moved-flash 2.5s ease-out; }
+
+@keyframes moved-flash {
+  0%, 40% { background: #fff0c2; }
+  100% { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  tbody tr.moved { animation: none; background: #fff0c2; }
+}
+
+/* --- Диалог переноса --- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 24, 29, .45);
+}
+
+.modal {
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .3);
+}
+
+.modal h2 { margin: 0 0 14px; font-size: 19px; }
+.modal label { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
+.modal input { font-size: 18px; }
+
+.preview {
+  margin: 12px 0 0;
+  padding: 9px 11px;
+  border-radius: 4px;
+  background: #e7f0e9;
+  color: var(--state-in-work);
+}
+
+.preview-bad { background: #f3e5e5; color: var(--f7-red); }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }

@@ -17,7 +17,10 @@ switch (dataSource.ToLowerInvariant())
     case "demo":
         var fixturePath = builder.Configuration["Demo:FixturePath"]
                           ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "production-plan.demo.json");
-        builder.Services.AddSingleton<IProductionPlanReader>(_ => new DemoProductionPlanReader(fixturePath));
+        var demoReader = new DemoProductionPlanReader(fixturePath);
+        builder.Services.AddSingleton<IProductionPlanReader>(demoReader);
+        // Правка порядка существует только у демо-источника (см. IPlanOrderEditor).
+        builder.Services.AddSingleton<IPlanOrderEditor>(demoReader);
         break;
 
     case "sql":
@@ -133,6 +136,40 @@ plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, Cancellat
         ? Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound)
         : Results.Ok(item);
 });
+
+// Единственная операция записи во всём API и только над демо-данными в памяти:
+// в SQL-режиме IPlanOrderEditor не зарегистрирован, поэтому маршрут не создаётся.
+if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
+{
+    plan.MapPost("/{vin}/move", async (
+        string vin,
+        MoveRequest request,
+        IPlanOrderEditor editor,
+        IProductionPlanReader reader,
+        CancellationToken ct) =>
+    {
+        if (vin.Length is 0 or > 50)
+        {
+            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+        }
+        if (request.ToPosition < 1)
+        {
+            return Problem("Некорректная позиция", "Номер позиции должен быть положительным.");
+        }
+
+        var outcome = await editor.MoveAsync(vin, request.ToPosition, ct);
+        return outcome switch
+        {
+            MoveOutcome.Ok => Results.Ok(await reader.GetByVinAsync(vin, ct)),
+            MoveOutcome.VinNotFound => Results.Problem(
+                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+                statusCode: StatusCodes.Status404NotFound),
+            MoveOutcome.NoPosition => Problem(
+                "Нет позиции в плане", "У изделия не задан порядок запуска, перемещать нечего."),
+            _ => Problem("Позиция не найдена", "В плане нет позиции с таким номером."),
+        };
+    });
+}
 
 api.MapGet("/auth/me", (ClaimsPrincipal user, DevAuthOptions opts) => Results.Ok(new
 {

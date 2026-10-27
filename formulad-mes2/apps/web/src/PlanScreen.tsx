@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePlan } from './App';
 import { api, type ProductionPlanItem } from './api';
+import { MoveDialog } from './MoveDialog';
 import { COLUMNS } from './columns';
 import { ColumnPicker } from './ColumnPicker';
 import { rowState } from './format';
@@ -33,9 +34,14 @@ export function PlanScreen({
   const [cardError, setCardError] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
   const { visible, toggle, reset } = useColumnPrefs();
+  const [editOrder, setEditOrder] = useState(false);
+  const [activeVin, setActiveVin] = useState<string | null>(null);
+  const [movedVin, setMovedVin] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState<ProductionPlanItem | null>(null);
+  const [moveError, setMoveError] = useState('');
 
   const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
-  const { data, state, error } = usePlan(vin.trim(), statusFilter, page, PAGE_SIZE);
+  const { data, state, error, reload } = usePlan(vin.trim(), statusFilter, page, PAGE_SIZE);
   const columns = COLUMNS.filter((c) => c.locked || visible.includes(c.key));
 
   useEffect(() => {
@@ -54,6 +60,29 @@ export function PlanScreen({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  /** Перемещение на позицию соседней строки: шаг вверх или вниз. */
+  async function step(item: ProductionPlanItem, direction: -1 | 1) {
+    const rows = data?.items ?? [];
+    const index = rows.findIndex((i) => i.vin === item.vin);
+    const neighbour = rows[index + direction];
+    if (!neighbour || neighbour.seqn === null || item.seqn === null) return;
+    await move(item.vin, neighbour.seqn);
+  }
+
+  async function move(vinToMove: string, toPosition: number) {
+    setMoveError('');
+    try {
+      await api.move(vinToMove, toPosition);
+      setMoveTarget(null);
+      // Выделение остаётся на перемещённом изделии, чтобы можно было нажать стрелку ещё раз.
+      setActiveVin(vinToMove);
+      setMovedVin(vinToMove);
+      reload();
+    } catch {
+      setMoveError('Не удалось переместить изделие');
+    }
+  }
+
   async function openByVin(value: string) {
     setCardError('');
     try {
@@ -63,6 +92,33 @@ export function PlanScreen({
       setCardError(`VIN ${value} не найден`);
     }
   }
+
+  // Подсветка перемещённой строки гаснет сама.
+  useEffect(() => {
+    if (!movedVin) return;
+    const timer = setTimeout(() => setMovedVin(null), 2500);
+    return () => clearTimeout(timer);
+  }, [movedVin]);
+
+  // Alt+стрелки двигают выделенное изделие, F2 открывает перенос на позицию.
+  useEffect(() => {
+    if (!editOrder) return;
+    function onKey(event: KeyboardEvent) {
+      const rows = data?.items ?? [];
+      const current = rows.find((i) => i.vin === activeVin);
+      if (!current) return;
+      if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        event.preventDefault();
+        void step(current, event.key === 'ArrowUp' ? -1 : 1);
+      }
+      if (event.key === 'F2') {
+        event.preventDefault();
+        setMoveTarget(current);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
@@ -128,6 +184,17 @@ export function PlanScreen({
             ))}
           </select>
           <ColumnPicker visible={visible} onToggle={toggle} onReset={reset} />
+          <button
+            type="button"
+            className={editOrder ? 'primary' : undefined}
+            aria-pressed={editOrder}
+            onClick={() => {
+              setEditOrder((v) => !v);
+              setMoveError('');
+            }}
+          >
+            {editOrder ? 'Готово' : 'Изменить порядок'}
+          </button>
         </form>
 
         <div className="meta">
@@ -144,6 +211,14 @@ export function PlanScreen({
       </section>
 
       {/* Боковая панель появляется только когда есть что показать: иначе таблица занимает всю ширину. */}
+      {editOrder && (
+        <p className="edit-banner" role="status">
+          Режим изменения порядка: стрелки ↑ ↓ в строке или <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>,
+          <kbd>F2</kbd> — перенос на позицию. Каждое перемещение сохраняется сразу.
+          {moveError && <strong className="error"> {moveError}</strong>}
+        </p>
+      )}
+
       <main className={selected || cardError ? 'content' : 'content content-wide'}>
         <div className="table-wrap">
           {state === 'loading' && <p className="muted">Загрузка…</p>}
@@ -158,6 +233,7 @@ export function PlanScreen({
               <caption className="sr-only">Производственный план (демо-данные), сортировка по порядку запуска</caption>
               <thead>
                 <tr>
+                  {editOrder && <th scope="col">Перемещение</th>}
                   <th scope="col">Состояние</th>
                   {columns.map((column) => (
                     <th key={column.key} scope="col">
@@ -167,19 +243,69 @@ export function PlanScreen({
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((item) => {
+                {data.items.map((item, index) => {
                   const row = rowState(item);
                   return (
                     <tr
                       key={item.vin}
                       tabIndex={0}
-                      className={selected?.vin === item.vin ? 'selected' : undefined}
+                      className={
+                        [
+                          activeVin === item.vin || selected?.vin === item.vin ? 'selected' : '',
+                          movedVin === item.vin ? 'moved' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ') || undefined
+                      }
                       aria-label={`Изделие ${item.vin}`}
-                      onClick={() => void openByVin(item.vin)}
+                      onClick={() => {
+                        setActiveVin(item.vin);
+                        void openByVin(item.vin);
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') void openByVin(item.vin);
                       }}
                     >
+                      {editOrder && (
+                        <td className="order-cell">
+                          <button
+                            type="button"
+                            aria-label={`Переместить ${item.vin} вверх`}
+                            disabled={item.seqn === null || index === 0}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveVin(item.vin);
+                              void step(item, -1);
+                            }}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Переместить ${item.vin} вниз`}
+                            disabled={item.seqn === null || index === (data?.items.length ?? 0) - 1}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveVin(item.vin);
+                              void step(item, 1);
+                            }}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Перенести ${item.vin} на позицию`}
+                            disabled={item.seqn === null}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveVin(item.vin);
+                              setMoveTarget(item);
+                            }}
+                          >
+                            №
+                          </button>
+                        </td>
+                      )}
                       <td className="state-cell">
                         <i className={`swatch state-${row.key}`} aria-hidden="true" />
                         {row.label}
@@ -230,6 +356,14 @@ export function PlanScreen({
           </aside>
         )}
       </main>
+      {moveTarget && (
+        <MoveDialog
+          item={moveTarget}
+          items={data?.items ?? []}
+          onMove={(toPosition) => void move(moveTarget.vin, toPosition)}
+          onClose={() => setMoveTarget(null)}
+        />
+      )}
     </div>
   );
 }

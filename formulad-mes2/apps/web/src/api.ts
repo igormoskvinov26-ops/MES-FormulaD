@@ -61,5 +61,13 @@ export const api = {
     return request<Paged<ProductionPlanItem>>(`/api/v1/production-plan?${query}`);
   },
 
+  /** Перестановка порядка. Существует только в демо-режиме сервера. */
+  move: (vin: string, toPosition: number) =>
+    request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toPosition }),
+    }),
+
   byVin: (vin: string) => request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}`),
 };

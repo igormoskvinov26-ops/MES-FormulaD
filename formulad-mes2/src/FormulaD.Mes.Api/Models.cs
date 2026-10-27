@@ -41,3 +41,6 @@ public sealed record DevAuthOptions(bool Enabled, string? Username, string? Pass
                System.Text.Encoding.UTF8.GetBytes(password ?? string.Empty),
                System.Text.Encoding.UTF8.GetBytes(Password!));
 }
+
+/// <summary>Запрос на перемещение изделия в плане. Только для демо-источника.</summary>
+public sealed record MoveRequest(int ToPosition);
