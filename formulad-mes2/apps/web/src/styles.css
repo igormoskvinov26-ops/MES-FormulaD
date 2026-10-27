@@ -28,6 +28,8 @@
   --warn: #92650a;
 
   font-family: Inter, system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Rajdhani — технический, «моторный» шрифт для заголовков и логотипа; тело текста остаётся Inter. */
+  --font-display: Rajdhani, Inter, system-ui, sans-serif;
   /* Шкала концепта: H1 32 / H2 24 / H3 18 / Body 16 / Small 14 / Caption 12. */
   font-size: 16px;
   color-scheme: light;
@@ -63,9 +65,11 @@ button {
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .08s ease;
 }
 
 button:hover:not([disabled]) { background: #e8eaf0; }
+button:active:not([disabled]) { transform: translateY(1px); }
 button[disabled] { opacity: .45; cursor: default; }
 
 button.ghost {
@@ -104,6 +108,8 @@ button.link {
 
 .topbar-clock { color: #9aa2b1; font-size: 14px; font-variant-numeric: tabular-nums; }
 
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
+
 /* Навигация: простые вкладки вместо бокового меню, пока разделов всего два. */
 .topnav { display: flex; gap: 4px; }
 
@@ -114,20 +120,25 @@ button.link {
   background: transparent;
   color: #9aa2b1;
   font-weight: 500;
+  transition: background-color .15s ease, color .15s ease;
 }
 .topnav-tab:hover { background: var(--graphite-soft); color: #f2f3f6; }
 .topnav-tab.active { background: var(--graphite-soft); color: #fff; font-weight: 600; }
 
 .logo {
-  font-weight: 900;
-  font-size: 26px;
-  letter-spacing: -1px;
-  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 27px;
+  letter-spacing: -0.5px;
 }
 .logo-mark { color: var(--f7-red); }
+.logo-icon { width: 27px; height: 15px; color: var(--f7-red); }
 
 .topbar-title { font-size: 18px; font-weight: 600; }
-.topbar-user { color: #c7ccd8; }
+.topbar-user { color: #c7ccd8; font-variant-numeric: tabular-nums; }
 .spacer { flex: 1; }
 
 /* --- Панель управления --- */
@@ -236,7 +247,7 @@ tbody tr.selected { background: #e3e9f6; }
 .state-badge .swatch { margin-right: 7px; vertical-align: -1px; border-radius: 50%; }
 
 /* VIN — главное в строке, остальное тише. */
-td.vin { font-weight: 700; font-size: 16px; }
+td.vin { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
 
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .muted { color: var(--muted); }
@@ -289,10 +300,82 @@ dl > div { display: flex; justify-content: space-between; gap: 14px; padding: 6p
 dt { color: var(--muted); }
 dd { margin: 0; text-align: right; font-weight: 500; }
 
-.login { display: flex; justify-content: center; padding: 64px 16px; }
-.login .card { width: 400px; display: flex; flex-direction: column; gap: 12px; }
-.login label { display: flex; flex-direction: column; gap: 4px; }
-.login h1 { margin: 0; font-size: 24px; }
+/* --- Вход: витрина бренда слева, форма справа. --- */
+.login {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 420px);
+  background: var(--surface);
+}
+
+@media (max-width: 860px) {
+  .login { grid-template-columns: 1fr; }
+  .login-hero { min-height: 220px; }
+}
+
+.login-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--graphite);
+  color: #f2f3f6;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Штрихи-«след скорости» — отсылка к квадроциклу, не декорация поверх контента. */
+.login-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(-24deg, transparent 0 46px, color-mix(in srgb, var(--f7-red) 14%, transparent) 46px 49px, transparent 49px 120px);
+  mask-image: linear-gradient(115deg, black 0%, transparent 55%);
+}
+
+.login-hero-icon { width: 120px; height: 68px; color: var(--f7-red); position: relative; }
+
+.login-hero-brand { position: relative; }
+.login-hero-brand .logo { font-size: 40px; color: #fff; }
+.login-hero-tagline {
+  margin: 14px 0 0;
+  max-width: 34ch;
+  color: #c7ccd8;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.login-hero-foot {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.login-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card .card {
+  width: 100%;
+  max-width: 340px;
+  border: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-card label { display: flex; flex-direction: column; gap: 4px; }
+.login-card h1 { margin: 0; font-size: 24px; }
+.login-card input { padding: 10px 12px; }
+.login-card button[type='submit'] { margin-top: 4px; }
 
 .sr-only {
   position: absolute;

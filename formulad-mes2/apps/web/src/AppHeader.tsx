@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
+import { QuadMark } from './QuadMark';
 
 export type Screen = 'plan' | 'ncp' | 'start' | 'complete' | 'fok';
 
@@ -45,6 +46,7 @@ export function AppHeader({
   return (
     <header className="topbar">
       <span className="logo" aria-label="F7 MES">
+        <QuadMark className="logo-icon" />
         F<span className="logo-mark">7</span>
         <span className="logo-suffix">MES</span>
       </span>
