@@ -75,3 +75,34 @@ export function usePlan(vin: string, status: string | null, page: number, pageSi
 
   return { data, state, error, reload };
 }
+
+export type PlanCounts = { all: number; 0: number; 1: number; 2: number; 3: number } | null;
+
+/** Счётчики для плашек на экране плана — отдельные лёгкие запросы (pageSize=1, нужен только `total`),
+    без изменений на сервере: statusId уже поддержан фильтром `/production-plan`. */
+export function usePlanCounts(): PlanCounts {
+  const [counts, setCounts] = useState<PlanCounts>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      api.plan({ page: 1, pageSize: 1 }),
+      api.plan({ statusId: 0, page: 1, pageSize: 1 }),
+      api.plan({ statusId: 1, page: 1, pageSize: 1 }),
+      api.plan({ statusId: 2, page: 1, pageSize: 1 }),
+      api.plan({ statusId: 3, page: 1, pageSize: 1 }),
+    ])
+      .then(([all, planned, inWork, done, fok]) => {
+        if (!active) return;
+        setCounts({ all: all.total, 0: planned.total, 1: inWork.total, 2: done.total, 3: fok.total });
+      })
+      .catch(() => {
+        if (active) setCounts(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return counts;
+}

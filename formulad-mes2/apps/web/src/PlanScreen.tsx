@@ -1,14 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { usePlan } from './App';
+import { usePlan, usePlanCounts } from './App';
 import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
 import { api, type ProductionPlanItem } from './api';
 import { MoveDialog } from './MoveDialog';
 import { COLUMNS } from './columns';
 import { ColumnPicker } from './ColumnPicker';
-import { rowState } from './format';
+import { rowState, statusCodeLabel } from './format';
 import { ProductCard } from './ProductCard';
 import { useColumnPrefs } from './useColumnPrefs';
+
+/** Плашки под шапкой: статус → цвет, уже использованный для бейджей и легенды строк. */
+const COUNT_TILES: { statusId: 0 | 1 | 2 | 3; toneClass: string }[] = [
+  { statusId: 0, toneClass: 'state-waiting' },
+  { statusId: 1, toneClass: 'state-in-work' },
+  { statusId: 2, toneClass: 'state-complete' },
+  { statusId: 3, toneClass: 'state-fok' },
+];
 
 const PAGE_SIZE = 25;
 const ALL = '__all__';
@@ -47,6 +55,7 @@ export function PlanScreen({
   const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
   const { data, state, error, reload } = usePlan(vin.trim(), statusFilter, page, PAGE_SIZE);
   const columns = COLUMNS.filter((c) => c.locked || visible.includes(c.key));
+  const counts = usePlanCounts();
 
   useEffect(() => {
     api.statuses().then(setStatuses).catch(() => setStatuses([]));
@@ -129,6 +138,19 @@ export function PlanScreen({
   return (
     <div className="app">
       <AppHeader screen="plan" onNavigate={onNavigate} session={session} onLogout={onLogout} />
+
+      <section className="stat-tiles" aria-label="Сводка по статусам">
+        <div className="stat-tile">
+          <strong>{counts ? counts.all : '—'}</strong>
+          <span>Всего в плане</span>
+        </div>
+        {COUNT_TILES.map((tile) => (
+          <div key={tile.statusId} className="stat-tile">
+            <strong className={tile.toneClass}>{counts ? counts[tile.statusId] : '—'}</strong>
+            <span>{statusCodeLabel(tile.statusId)}</span>
+          </div>
+        ))}
+      </section>
 
       <section className="toolbar">
         <form

@@ -87,34 +87,32 @@ button.link {
   text-decoration: underline;
 }
 
-/* --- Шапка --- */
-.topbar {
+/* --- Макет: боковое меню (фикс.) + тонкая верхняя полоса. Экраны (.app) отступают на ширину
+   бокового меню — сами экраны про это ничего не знают, их разметка не меняется. --- */
+:root { --sidebar-w: 216px; }
+
+.app { margin-left: var(--sidebar-w); min-height: 100dvh; }
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-w);
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 20px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 14px;
   background: var(--graphite);
   color: #f2f3f6;
-  border-bottom: 3px solid var(--f7-red);
+  border-right: 3px solid var(--f7-red);
+  overflow-y: auto;
 }
 
-/* Разделитель-«слэш» из логотипа концепта. */
-.topbar .slash {
-  width: 2px;
-  height: 26px;
-  background: var(--f7-red);
-  transform: skewX(-18deg);
-}
+.sidebar-nav { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
 
-.topbar-clock { color: #9aa2b1; font-size: 14px; font-variant-numeric: tabular-nums; }
-
-h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
-
-/* Навигация: простые вкладки вместо бокового меню, пока разделов всего два. */
-.topnav { display: flex; gap: 4px; }
-
-.topnav-tab {
-  padding: 7px 14px;
+.sidebar-link {
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -122,8 +120,10 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
   font-weight: 500;
   transition: background-color .15s ease, color .15s ease;
 }
-.topnav-tab:hover { background: var(--graphite-soft); color: #f2f3f6; }
-.topnav-tab.active { background: var(--graphite-soft); color: #fff; font-weight: 600; }
+.sidebar-link:hover { background: var(--graphite-soft); color: #f2f3f6; }
+.sidebar-link.active { background: var(--f7-red); color: #fff; font-weight: 600; }
+
+.sidebar .badge-demo { align-self: flex-start; }
 
 .logo {
   display: inline-flex;
@@ -131,15 +131,53 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
   gap: 8px;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 27px;
+  font-size: 23px;
   letter-spacing: -0.5px;
 }
 .logo-mark { color: var(--f7-red); }
-.logo-icon { width: 27px; height: 15px; color: var(--f7-red); }
+.logo-icon { width: 27px; height: 15px; color: var(--f7-red); flex-shrink: 0; }
 
-.topbar-title { font-size: 18px; font-weight: 600; }
-.topbar-user { color: #c7ccd8; font-variant-numeric: tabular-nums; }
+/* Тонкая верхняя полоса: текущий раздел, часы, пользователь, выход. */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-clock { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
+
+.topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+.topbar-user { color: var(--muted); font-variant-numeric: tabular-nums; }
 .spacer { flex: 1; }
+
+/* --- Сводка по статусам: плашки под шапкой, цвета — те же, что у бейджей состояния строк. --- */
+.stat-tiles {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 18px;
+  background: var(--surface);
+}
+
+.stat-tile strong { font-family: var(--font-display); font-size: 28px; font-variant-numeric: tabular-nums; color: var(--text); }
+.stat-tile strong.state-waiting { color: var(--st-wait); }
+.stat-tile strong.state-in-work { color: var(--st-work); }
+.stat-tile strong.state-complete { color: var(--st-plan); }
+.stat-tile strong.state-fok { color: var(--st-control); }
+.stat-tile span { font-size: 13px; color: var(--muted); }
 
 /* --- Панель управления --- */
 .toolbar {

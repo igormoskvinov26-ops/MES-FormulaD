@@ -30,8 +30,11 @@ const TABS: { key: Screen; label: string }[] = [
   { key: 'ncp', label: 'Несоответствия' },
 ];
 
-/** Общая шапка всех экранов. Навигация — простые вкладки, не боковое меню: пунктов пока два,
-    полноценный sidebar из концепта откладывается до тех пор, пока их не станет больше. */
+/** Общая навигация всех экранов: боковое меню (фиксированное, только для рабочего места на ПК)
+    плюс тонкая верхняя полоса с текущим разделом, часами и выходом. Раньше это были вкладки
+    в один ряд — оправдано было, пока раздел всего два; сейчас их пять, и боковое меню читается
+    быстрее. Боковая панель позиционирована фиксированно, `.app` компенсирует отступом в CSS —
+    экраны (PlanScreen/NcpScreen/ScanTransitionScreen) не меняются. */
 export function AppHeader({
   screen,
   onNavigate,
@@ -43,43 +46,49 @@ export function AppHeader({
   session: { userName: string | null; mode: string };
   onLogout: () => void;
 }) {
+  const current = TABS.find((tab) => tab.key === screen);
   return (
-    <header className="topbar">
-      <span className="logo" aria-label="F7 MES">
-        <QuadMark className="logo-icon" />
-        F<span className="logo-mark">7</span>
-        <span className="logo-suffix">MES</span>
-      </span>
-      <span className="slash" aria-hidden="true" />
-      <nav className="topnav" aria-label="Разделы">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            className={tab.key === screen ? 'topnav-tab active' : 'topnav-tab'}
-            aria-current={tab.key === screen ? 'page' : undefined}
-            onClick={() => onNavigate(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <>
+      <nav className="sidebar" aria-label="Разделы">
+        <span className="logo" aria-label="F7 MES">
+          <QuadMark className="logo-icon" />
+          F<span className="logo-mark">7</span>
+          <span className="logo-suffix">MES</span>
+        </span>
+        <ul className="sidebar-nav">
+          {TABS.map((tab) => (
+            <li key={tab.key}>
+              <button
+                type="button"
+                className={tab.key === screen ? 'sidebar-link active' : 'sidebar-link'}
+                aria-current={tab.key === screen ? 'page' : undefined}
+                onClick={() => onNavigate(tab.key)}
+              >
+                {tab.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <span className="badge badge-demo" title="Синтетические данные, не производственные">
+          DEMO
+        </span>
       </nav>
-      <span className="badge badge-demo" title="Синтетические данные, не производственные">
-        DEMO
-      </span>
-      <span className="spacer" />
-      <Clock />
-      <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
-      <button
-        type="button"
-        className="ghost"
-        onClick={async () => {
-          await api.logout().catch(() => undefined);
-          onLogout();
-        }}
-      >
-        Выход
-      </button>
-    </header>
+      <header className="topbar">
+        <span className="topbar-title">{current?.label}</span>
+        <span className="spacer" />
+        <Clock />
+        <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
+        <button
+          type="button"
+          className="ghost"
+          onClick={async () => {
+            await api.logout().catch(() => undefined);
+            onLogout();
+          }}
+        >
+          Выход
+        </button>
+      </header>
+    </>
   );
 }
