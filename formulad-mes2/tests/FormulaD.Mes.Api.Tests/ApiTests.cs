@@ -49,7 +49,7 @@ public sealed class ApiTests
     }
 
     [Fact]
-    public async Task Plan_Is_Paged_And_Sorted_By_Vin()
+    public async Task Plan_Is_Paged_And_Sorted_By_Seqn()
     {
         using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
@@ -60,6 +60,13 @@ public sealed class ApiTests
         Assert.Equal(6, page.Total);
         Assert.Equal(2, page.Items.Count);
         Assert.Equal(["DEMO-VIN-00001", "DEMO-VIN-00002"], page.Items.Select(i => i.Vin));
+        Assert.Equal([23, 24], page.Items.Select(i => i.Seqn));
+
+        // Изделие без порядка (SEQN IS NULL) уходит в конец плана, а не в начало.
+        var all = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?pageSize=100");
+        Assert.NotNull(all);
+        Assert.Null(all.Items[^1].Seqn);
+        Assert.Equal("DEMO-VIN-00005", all.Items[^1].Vin);
     }
 
     [Fact]

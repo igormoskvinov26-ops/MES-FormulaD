@@ -155,7 +155,7 @@ export function PlanScreen({
           {state === 'ready' && data && data.items.length === 0 && <p className="muted">Ничего не найдено</p>}
           {state === 'ready' && data && data.items.length > 0 && (
             <table>
-              <caption className="sr-only">Производственный план (демо-данные), сортировка по VIN</caption>
+              <caption className="sr-only">Производственный план (демо-данные), сортировка по порядку запуска</caption>
               <thead>
                 <tr>
                   <th scope="col">Состояние</th>

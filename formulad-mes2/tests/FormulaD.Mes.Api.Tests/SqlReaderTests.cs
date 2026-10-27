@@ -61,7 +61,8 @@ public sealed class ProductionPlanSqlTests
         Assert.Contains("@vin", sql);
         Assert.Contains("@status", sql);
         Assert.Contains("OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY", sql);
-        Assert.Contains("ORDER BY [VIN] ASC", sql);
+        // План сортируется по SEQN (порядок задаёт оператор), пустые — в конец.
+        Assert.Contains("ORDER BY CASE WHEN [SEQN] IS NULL THEN 1 ELSE 0 END, [SEQN] ASC, [VIN] ASC", sql);
     }
 
     [Fact]

@@ -40,7 +40,12 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader
             q = q.Where(i => string.Equals(i.Status, status, StringComparison.Ordinal));
         }
 
-        var ordered = q.OrderBy(i => i.Vin, StringComparer.Ordinal).ToList();
+        // Тот же порядок, что в SQL: по SEQN, изделия без порядка — в конец, затем VIN.
+        var ordered = q
+            .OrderBy(i => i.Seqn is null ? 1 : 0)
+            .ThenBy(i => i.Seqn ?? int.MaxValue)
+            .ThenBy(i => i.Vin, StringComparer.Ordinal)
+            .ToList();
         var page = ordered.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToList();
         return Task.FromResult(new PagedResult<ProductionPlanItem>(page, query.Page, query.PageSize, ordered.Count));
     }

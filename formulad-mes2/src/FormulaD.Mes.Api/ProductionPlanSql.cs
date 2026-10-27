@@ -25,9 +25,17 @@ internal static class ProductionPlanSql
         WHERE 1 = 1
         {(filterByVin ? "AND [VIN] LIKE @vin ESCAPE '\\'" : string.Empty)}
         {StatusPredicate(filterByStatus, statusIsNull)}
-        ORDER BY [VIN] ASC
+        ORDER BY {OrderBy}
         OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
         """;
+
+    /// <summary>
+    /// Порядок плана: по SEQN, который оператор задаёт сам. Изделия без порядка уходят в конец,
+    /// VIN — устойчивый разрыв ничьей, чтобы страницы не «прыгали» при равных SEQN.
+    /// ponytail: SEQN в PROD-схеме без индекса, поэтому это сортировка выборки, а не чтение по индексу.
+    /// На TEST стоит проверить план запроса и при необходимости попросить индекс по SEQN.
+    /// </summary>
+    internal const string OrderBy = "CASE WHEN [SEQN] IS NULL THEN 1 ELSE 0 END, [SEQN] ASC, [VIN] ASC";
 
     internal static string ByVin() => $"""
         SELECT {Columns}

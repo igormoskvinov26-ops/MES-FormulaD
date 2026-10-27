@@ -78,7 +78,7 @@
   {
     "vin": "DEMO-VIN-00005",
     "id": 1005,
-    "seqn": 27,
+    "seqn": null,
     "modelArticle": "DEMO-700",
     "modelName": "Квадроцикл 700 · ДЕМО",
     "engineNumber": "DEMO-ENGINE-05",
