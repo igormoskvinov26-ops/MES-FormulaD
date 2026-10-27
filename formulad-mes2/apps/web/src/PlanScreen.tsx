@@ -9,13 +9,14 @@ import { ColumnPicker } from './ColumnPicker';
 import { rowState, statusCodeLabel } from './format';
 import { ProductCard } from './ProductCard';
 import { useColumnPrefs } from './useColumnPrefs';
+import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } from './StatIcons';
 
-/** Плашки под шапкой: статус → цвет, уже использованный для бейджей и легенды строк. */
-const COUNT_TILES: { statusId: 0 | 1 | 2 | 3; toneClass: string }[] = [
-  { statusId: 0, toneClass: 'state-waiting' },
-  { statusId: 1, toneClass: 'state-in-work' },
-  { statusId: 2, toneClass: 'state-complete' },
-  { statusId: 3, toneClass: 'state-fok' },
+/** Плашки под шапкой: статус → цвет (уже использован для бейджей и легенды строк) + значок. */
+const COUNT_TILES: { statusId: 0 | 1 | 2 | 3; toneClass: string; Icon: typeof IconBolt }[] = [
+  { statusId: 0, toneClass: 'state-waiting', Icon: IconHourglass },
+  { statusId: 1, toneClass: 'state-in-work', Icon: IconBolt },
+  { statusId: 2, toneClass: 'state-complete', Icon: IconCheckBox },
+  { statusId: 3, toneClass: 'state-fok', Icon: IconShieldCheck },
 ];
 
 const PAGE_SIZE = 25;
@@ -141,13 +142,23 @@ export function PlanScreen({
 
       <section className="stat-tiles" aria-label="Сводка по статусам">
         <div className="stat-tile">
-          <strong>{counts ? counts.all : '—'}</strong>
-          <span>Всего в плане</span>
+          <span className="stat-tile-icon">
+            <IconLayers />
+          </span>
+          <div className="stat-tile-text">
+            <strong>{counts ? counts.all : '—'}</strong>
+            <span>Всего в плане</span>
+          </div>
         </div>
         {COUNT_TILES.map((tile) => (
           <div key={tile.statusId} className="stat-tile">
-            <strong className={tile.toneClass}>{counts ? counts[tile.statusId] : '—'}</strong>
-            <span>{statusCodeLabel(tile.statusId)}</span>
+            <span className={`stat-tile-icon ${tile.toneClass}`}>
+              <tile.Icon />
+            </span>
+            <div className="stat-tile-text">
+              <strong>{counts ? counts[tile.statusId] : '—'}</strong>
+              <span>{statusCodeLabel(tile.statusId)}</span>
+            </div>
           </div>
         ))}
       </section>

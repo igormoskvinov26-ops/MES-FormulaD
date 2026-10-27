@@ -37,6 +37,14 @@
   --stn-yellow: #eab308;
   --stn-red: #dc2626;
 
+  /* Глубина: скругления и мягкие тени — вместо плоских заливок и прямых углов. */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --shadow-sm: 0 1px 2px rgba(16, 18, 22, .05);
+  --shadow-md: 0 1px 2px rgba(16, 18, 22, .04), 0 12px 28px -10px rgba(16, 18, 22, .16);
+  --shadow-lg: 0 20px 48px -16px rgba(16, 18, 22, .28);
+
   font-family: Inter, system-ui, "Segoe UI", Roboto, sans-serif;
   /* Rajdhani — технический, «моторный» шрифт для заголовков и логотипа; тело текста остаётся Inter. */
   --font-display: Rajdhani, Inter, system-ui, sans-serif;
@@ -49,16 +57,19 @@
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
+  /* Лёгкое тёплое свечение в углу вместо плоской заливки — тот же приём, что в шапке входа. */
+  background:
+    radial-gradient(ellipse 900px 500px at 10% -10%, color-mix(in srgb, var(--f7-red) 7%, transparent), transparent 60%),
+    var(--bg);
 }
 
 button, input, select { font: inherit; }
 
 input, select {
-  padding: 9px 11px;
+  padding: 10px 13px;
   border: 1px solid var(--border-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
 }
@@ -71,15 +82,19 @@ input:focus-visible, select:focus-visible, button:focus-visible, tr:focus-visibl
 button {
   padding: 9px 16px;
   border: 1px solid var(--border-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
-  transition: background-color .15s ease, border-color .15s ease, transform .08s ease;
+  box-shadow: var(--shadow-sm);
+  transition: background-color .15s ease, border-color .15s ease, transform .08s ease, box-shadow .15s ease;
 }
 
-button:hover:not([disabled]) { background: #e8eaf0; }
-button:active:not([disabled]) { transform: translateY(1px); }
+/* :where() keeps the type selector from out-ranking single-class component buttons
+   (.sidebar-link, .station-btn, .primary, …) defined later in this file — otherwise this
+   generic hover would flatten their own background on every hover. */
+:where(button):hover:not([disabled]) { background: #e8eaf0; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+:where(button):active:not([disabled]) { transform: translateY(1px); box-shadow: var(--shadow-sm); }
 button[disabled] { opacity: .45; cursor: default; }
 
 button.ghost {
@@ -111,27 +126,35 @@ button.link {
   flex-direction: column;
   gap: 4px;
   padding: 18px 14px;
-  background: var(--graphite);
+  background: linear-gradient(190deg, #181b21 0%, var(--graphite) 55%, #0b0c0f 100%);
   color: #f2f3f6;
   border-right: 3px solid var(--f7-red);
+  box-shadow: 8px 0 32px -16px rgba(0, 0, 0, .5);
   overflow-y: auto;
+  z-index: 5;
 }
 
-.sidebar-nav { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.sidebar-nav { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; flex: 1; }
 
 .sidebar-link {
   width: 100%;
   text-align: left;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: #9aa2b1;
   font-weight: 500;
-  transition: background-color .15s ease, color .15s ease;
+  box-shadow: none;
+  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .1s ease;
 }
-.sidebar-link:hover { background: var(--graphite-soft); color: #f2f3f6; }
-.sidebar-link.active { background: var(--f7-red); color: #fff; font-weight: 600; }
+.sidebar-link:hover { background: rgba(255, 255, 255, .1); color: #f2f3f6; transform: translateX(2px); }
+.sidebar-link.active {
+  background: linear-gradient(135deg, #ff3b3f, var(--f7-red-dark));
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 8px 20px -8px rgba(227, 30, 36, .65);
+}
 
 .sidebar .badge-demo { align-self: flex-start; }
 
@@ -152,9 +175,11 @@ button.link {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 20px;
+  padding: 14px 24px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 var(--border), 0 6px 16px -10px rgba(16, 18, 22, .15);
+  position: relative;
+  z-index: 4;
 }
 
 .topbar-clock { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
@@ -165,29 +190,50 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
 .topbar-user { color: var(--muted); font-variant-numeric: tabular-nums; }
 .spacer { flex: 1; }
 
-/* --- Сводка по статусам: плашки под шапкой, цвета — те же, что у бейджей состояния строк. --- */
+/* --- Сводка по статусам: отдельные приподнятые плашки с цветным значком, как в референсе. --- */
 .stat-tiles {
-  display: flex;
-  gap: 1px;
-  background: var(--border);
-  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+@media (max-width: 1100px) {
+  .stat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .stat-tile {
-  flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 14px 18px;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
   background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: transform .15s ease, box-shadow .15s ease;
 }
+.stat-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 
-.stat-tile strong { font-family: var(--font-display); font-size: 28px; font-variant-numeric: tabular-nums; color: var(--text); }
-.stat-tile strong.state-waiting { color: var(--st-wait); }
-.stat-tile strong.state-in-work { color: var(--st-work); }
-.stat-tile strong.state-complete { color: var(--st-plan); }
-.stat-tile strong.state-fok { color: var(--st-control); }
-.stat-tile span { font-size: 13px; color: var(--muted); }
+.stat-tile-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--graphite);
+  background: color-mix(in srgb, currentColor 14%, white);
+}
+.stat-tile-icon svg { width: 24px; height: 24px; }
+.stat-tile-icon.state-waiting { color: var(--st-wait); }
+.stat-tile-icon.state-in-work { color: var(--st-work); }
+.stat-tile-icon.state-complete { color: var(--st-plan); }
+.stat-tile-icon.state-fok { color: var(--st-control); }
+
+.stat-tile-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat-tile-text strong { font-family: var(--font-display); font-size: 26px; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1; }
+.stat-tile-text span { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* --- Панель управления --- */
 .toolbar {
@@ -239,15 +285,16 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
 
 .table-wrap, .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   padding: 0;
   overflow-x: auto;
 }
 
-.card { padding: 14px; }
+.card { padding: 20px; }
 .card label { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; font-size: 14px; color: var(--muted); }
-.card textarea { font: inherit; color: var(--text); padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 4px; resize: vertical; }
+.card textarea { font: inherit; color: var(--text); padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); resize: vertical; }
 
 table { width: 100%; border-collapse: collapse; font-size: 15px; }
 
@@ -265,7 +312,7 @@ th, td {
 th {
   position: sticky;
   top: 0;
-  background: #e4e7ee;
+  background: linear-gradient(180deg, #eef0f5, #e4e7ee);
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: .03em;
@@ -283,13 +330,14 @@ tbody tr.selected { background: #e3e9f6; }
 
 .state-badge {
   display: inline-block;
-  padding: 3px 11px 3px 9px;
+  padding: 4px 12px 4px 10px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
-  background: color-mix(in srgb, currentColor 12%, white);
-  border: 1px solid color-mix(in srgb, currentColor 28%, white);
+  background: color-mix(in srgb, currentColor 14%, white);
+  border: 1px solid color-mix(in srgb, currentColor 30%, white);
+  box-shadow: 0 1px 3px color-mix(in srgb, currentColor 18%, transparent);
 }
 
 .state-badge .swatch { margin-right: 7px; vertical-align: -1px; border-radius: 50%; }
@@ -304,8 +352,8 @@ td.vin { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; 
 
 .badge {
   display: inline-block;
-  padding: 2px 9px;
-  border-radius: 3px;
+  padding: 3px 10px;
+  border-radius: 999px;
   font-size: 13px;
   border: 1px solid transparent;
 }
@@ -325,16 +373,16 @@ td.vin { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; 
 .picker-menu {
   position: absolute;
   z-index: 10;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
   width: 280px;
   max-height: 60vh;
   overflow-y: auto;
-  padding: 12px;
+  padding: 14px;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(22, 24, 29, .18);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
 }
 
 .picker-menu .link { white-space: normal; line-height: 1.3; text-align: left; padding-bottom: 4px; }
@@ -414,7 +462,8 @@ dd { margin: 0; text-align: right; font-weight: 500; }
   width: 100%;
   max-width: 340px;
   border: 0;
-  box-shadow: none;
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -422,8 +471,22 @@ dd { margin: 0; text-align: right; font-weight: 500; }
 
 .login-card label { display: flex; flex-direction: column; gap: 4px; }
 .login-card h1 { margin: 0; font-size: 24px; }
-.login-card input { padding: 10px 12px; }
+.login-card input { padding: 11px 13px; }
 .login-card button[type='submit'] { margin-top: 4px; }
+
+/* Мягкое красное свечение за значком — витрина, не рабочий экран, украшение уместно. */
+.login-hero-brand { position: relative; z-index: 1; }
+.login-hero-brand::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--f7-red) 45%, transparent), transparent 70%);
+  filter: blur(6px);
+  z-index: -1;
+}
 
 .sr-only {
   position: absolute;
@@ -456,13 +519,14 @@ dd { margin: 0; text-align: right; font-weight: 500; }
 .order-cell { white-space: nowrap; }
 .order-cell button { padding: 2px 9px; line-height: 1.4; margin-right: 4px; }
 
-button.primary {
-  background: var(--f7-red);
-  border-color: var(--f7-red);
+button.primary, button.primary:hover:not([disabled]) {
+  background: linear-gradient(135deg, #ff3b3f, var(--f7-red-dark));
+  border-color: transparent;
   color: #fff;
   font-weight: 600;
+  box-shadow: 0 10px 24px -10px rgba(227, 30, 36, .6);
 }
-button.primary:hover:not([disabled]) { background: var(--f7-red-dark); border-color: var(--f7-red-dark); }
+button.primary:hover:not([disabled]) { box-shadow: 0 14px 28px -10px rgba(227, 30, 36, .7); }
 
 /* Перемещённая строка подсвечивается и гаснет сама. */
 tbody tr.moved { animation: moved-flash 2.5s ease-out; }
@@ -490,10 +554,10 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 .modal {
   width: 440px;
   max-width: calc(100vw - 32px);
-  padding: 20px;
+  padding: 26px;
   background: var(--surface);
-  border-radius: 8px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, .3);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), 0 2px 0 rgba(0, 0, 0, .04);
 }
 
 .modal h2 { margin: 0 0 14px; font-size: 18px; }
@@ -502,8 +566,8 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 
 .preview {
   margin: 12px 0 0;
-  padding: 9px 11px;
-  border-radius: 4px;
+  padding: 10px 13px;
+  border-radius: var(--radius-sm);
   background: #e7f0e9;
   color: var(--state-in-work);
 }
@@ -514,7 +578,7 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 
 .logo-suffix { margin-left: 6px; font-weight: 800; font-style: normal; letter-spacing: 0; }
 
-.modal textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 4px; resize: vertical; }
+.modal textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); resize: vertical; }
 
 /* --- NCP: статус заявки и установка детали — разные бейджи, разные смыслы. --- */
 .ncp-flags { display: flex; gap: 8px; margin: 4px 0 14px; }
@@ -537,16 +601,17 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 
 .scan-panel {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 28px;
   min-height: 320px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.scan-banner { margin: 0; padding: 12px 16px; border-radius: 4px; font-weight: 600; font-size: 16px; }
+.scan-banner { margin: 0; padding: 12px 18px; border-radius: var(--radius-sm); font-weight: 600; font-size: 16px; }
 .scan-ok { background: #e7f0e9; color: var(--state-in-work); }
 .scan-bad { background: #f3e5e5; color: var(--f7-red-dark); }
 
@@ -570,25 +635,26 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 .station-line { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; padding: 18px; margin: 0; }
 
 .station-btn {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   color: #fff;
   cursor: pointer;
-  transition: transform .1s ease, box-shadow .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
-.station-btn:hover { transform: translateY(-2px); }
-.station-btn[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--graphite); }
+.station-btn:hover:not([disabled]) { transform: translateY(-3px); }
+.station-btn[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--graphite); }
 
-.station-grey { background: var(--stn-grey); }
-.station-blue { background: var(--stn-blue); }
-.station-green { background: var(--stn-green); }
-.station-yellow { background: var(--stn-yellow); color: #3a2e00; }
-.station-red { background: var(--stn-red); }
+/* Своя пара "hover = тот же фон", чтобы градиент не затирался общим :where(button):hover. */
+.station-grey, .station-grey:hover { background: linear-gradient(145deg, #b7bcc6, var(--stn-grey)); box-shadow: var(--shadow-sm); }
+.station-blue, .station-blue:hover { background: linear-gradient(145deg, #4d8dff, var(--stn-blue)); box-shadow: 0 10px 22px -8px rgba(37, 99, 235, .55); }
+.station-green, .station-green:hover { background: linear-gradient(145deg, #22c55e, var(--stn-green)); box-shadow: 0 10px 22px -8px rgba(22, 163, 74, .5); }
+.station-yellow, .station-yellow:hover { background: linear-gradient(145deg, #fbbf24, var(--stn-yellow)); color: #3a2e00; box-shadow: 0 10px 22px -8px rgba(234, 179, 8, .5); }
+.station-red, .station-red:hover { background: linear-gradient(145deg, #ef4444, var(--stn-red)); box-shadow: 0 10px 22px -8px rgba(220, 38, 38, .55); }
 
 .station-legend { padding: 0 18px 14px; }
 .station-legend .swatch { border-radius: 3px; }
@@ -603,9 +669,11 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
 }
 
 .station-component { display: flex; align-items: center; gap: 10px; cursor: pointer; }
