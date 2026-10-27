@@ -184,4 +184,15 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
     public Task<(TransitionOutcome, ProductionPlanItem?)> FokAsync(string vin, string userName, CancellationToken ct)
         => Transition(vin, fromStatusId: 2, "FOK", userName,
             c => c with { StatusId = 3, Status = "FOK", FokDate = DateTime.Now });
+
+    // Литерал 'rework' для Status не подтверждён аудитом (в отличие от 'in progress'/'complete'/
+    // 'FOK') — сверить при переходе на TEST. CompleteDate не трогаем: сборка уже была завершена
+    // раньше, Rework устраняет отклонения, а не повторяет сборку.
+    public Task<(TransitionOutcome, ProductionPlanItem?)> SendToReworkAsync(string vin, string userName, CancellationToken ct)
+        => Transition(vin, fromStatusId: 2, "SendToRework", userName,
+            c => c with { StatusId = 4, Status = "rework" });
+
+    public Task<(TransitionOutcome, ProductionPlanItem?)> FinishReworkAsync(string vin, string userName, CancellationToken ct)
+        => Transition(vin, fromStatusId: 4, "FinishRework", userName,
+            c => c with { StatusId = 2, Status = "complete" });
 }

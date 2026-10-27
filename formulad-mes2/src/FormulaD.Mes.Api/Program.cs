@@ -266,6 +266,58 @@ if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
         };
     });
 
+    // Rework (раздел 17): 2 → 4 по явному действию. Строим только этот переход —
+    // прямой 1 → 4 не согласован (В-07, см. IPlanTransitions.SendToReworkAsync).
+    plan.MapPost("/{vin}/rework", async (
+        string vin, IPlanTransitions transitions, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        if (vin.Length is 0 or > 50)
+        {
+            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+        }
+
+        var (outcome, item) = await transitions.SendToReworkAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
+        return outcome switch
+        {
+            TransitionOutcome.Ok => Results.Ok(item),
+            TransitionOutcome.VinNotFound => Results.Problem(
+                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+                statusCode: StatusCodes.Status404NotFound),
+            _ => Problem(
+                "Нельзя отправить в Rework",
+                $"Изделие в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(2)}»."),
+        };
+    });
+
+    // Завершение Rework: 4 → 2 (раздел 277, [П]) — та же проверка обязательной детали, что у FOK.
+    plan.MapPost("/{vin}/rework/finish", async (
+        string vin, IPlanTransitions transitions, INcpReader ncp, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        if (vin.Length is 0 or > 50)
+        {
+            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+        }
+
+        var missing = await ncp.GetMissingRequiredPartsAsync(vin, ct);
+        if (missing.Count > 0)
+        {
+            var numbers = string.Join(", ", missing.Select(m => m.Number));
+            return Problem("Rework не завершён", $"Есть незакрытая обязательная деталь: {numbers}.");
+        }
+
+        var (outcome, item) = await transitions.FinishReworkAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
+        return outcome switch
+        {
+            TransitionOutcome.Ok => Results.Ok(item),
+            TransitionOutcome.VinNotFound => Results.Problem(
+                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+                statusCode: StatusCodes.Status404NotFound),
+            _ => Problem(
+                "Нельзя завершить Rework",
+                $"Изделие в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(4)}»."),
+        };
+    });
+
     // NCP — операции чтения и записи только для демо-источника (см. Ncp.cs).
     var ncp = api.MapGroup("/ncp").RequireAuthorization();
 

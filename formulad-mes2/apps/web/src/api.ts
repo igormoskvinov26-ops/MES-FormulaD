@@ -107,6 +107,14 @@ export const api = {
   fok: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/fok`, { method: 'POST' }),
 
+  /** Отправка в Rework (2 → 4). Существует только в демо-режиме сервера. */
+  sendToRework: (vin: string) =>
+    request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/rework`, { method: 'POST' }),
+
+  /** Завершение Rework (4 → 2). Блокируется незакрытой обязательной деталью — как FOK. */
+  finishRework: (vin: string) =>
+    request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/rework/finish`, { method: 'POST' }),
+
   ncpTypes: () => request<string[]>('/api/v1/ncp/types'),
   ncpStations: () => request<string[]>('/api/v1/ncp/stations'),
   ncpComponents: () => request<ComponentItem[]>('/api/v1/ncp/components'),

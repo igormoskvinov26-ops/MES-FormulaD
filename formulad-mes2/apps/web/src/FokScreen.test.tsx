@@ -126,4 +126,42 @@ describe('FokScreen', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Подтвердить FOK' })).toBeEnabled());
   });
+
+  it('заблокированное изделие можно отправить в Rework прямо с экрана FOK', async () => {
+    let reworkCalled = false;
+    mockFetch((url, method) => {
+      if (url.includes('statusId=2')) return { body: { items: [BLOCKED], page: 1, pageSize: 25, total: 1 } };
+      if (url.endsWith('/production-plan/DEMO-VIN-00001')) return { body: BLOCKED };
+      if (url.includes('/ncp/missing-parts')) return { body: [NCP] };
+      if (url.endsWith('/rework') && method === 'POST') {
+        reworkCalled = true;
+        return { body: { ...BLOCKED, statusId: 4 } };
+      }
+      return undefined;
+    });
+
+    render(<FokScreen session={session} onNavigate={noop} onLogout={noop} />);
+    await userEvent.type(screen.getByLabelText('Сканирование VIN'), 'DEMO-VIN-00001{Enter}');
+    await screen.findByRole('status');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Отправить в Rework' }));
+
+    expect(reworkCalled).toBe(true);
+    expect(await screen.findByRole('status')).toHaveTextContent('Rework');
+  });
+
+  it('кнопка «Отправить в Rework» не показывается при простом несовпадении статуса', async () => {
+    const WRONG_STATUS = { ...CLEAN, vin: 'DEMO-VIN-00009', statusId: 1 };
+    mockFetch((url) => {
+      if (url.includes('statusId=2')) return { body: { items: [], page: 1, pageSize: 25, total: 0 } };
+      if (url.endsWith('/production-plan/DEMO-VIN-00009')) return { body: WRONG_STATUS };
+      return undefined;
+    });
+
+    render(<FokScreen session={session} onNavigate={noop} onLogout={noop} />);
+    await userEvent.type(screen.getByLabelText('Сканирование VIN'), 'DEMO-VIN-00009{Enter}');
+    await screen.findByRole('status');
+
+    expect(screen.queryByRole('button', { name: 'Отправить в Rework' })).not.toBeInTheDocument();
+  });
 });

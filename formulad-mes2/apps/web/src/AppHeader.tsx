@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from './api';
 import { QuadMark } from './QuadMark';
 
-export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok';
+export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework';
 
 /** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
 function Clock() {
@@ -28,6 +28,7 @@ const TABS: { key: Screen; label: string }[] = [
   { key: 'stations', label: 'Станции' },
   { key: 'complete', label: 'Завершение' },
   { key: 'fok', label: 'FOK' },
+  { key: 'rework', label: 'Rework' },
   { key: 'ncp', label: 'Несоответствия' },
 ];
 

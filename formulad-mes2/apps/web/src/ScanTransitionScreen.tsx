@@ -22,6 +22,10 @@ export function ScanTransitionScreen({
   listTitle,
   onConfirm,
   extraCheck,
+  extraContent,
+  secondaryActionLabel,
+  secondaryAfterStatusId,
+  onSecondaryAction,
 }: {
   screen: Screen;
   session: { userName: string | null; mode: string };
@@ -41,10 +45,26 @@ export function ScanTransitionScreen({
    * Проверяется на этапе поиска, чтобы отказ был виден ДО попытки подтверждения (раздел 18, [П]).
    */
   extraCheck?: (item: ProductionPlanItem) => Promise<string | null>;
+  /**
+   * Произвольный блок внутри карточки найденного изделия — например, Rework показывает здесь
+   * список открытых NCP с действиями прямо в этом окне (раздел 17, [С]). `refresh` заново
+   * прогоняет поиск/extraCheck для того же VIN — нужно вызвать после изменения NCP, чтобы кнопка
+   * подтверждения обновилась без повторного скана.
+   */
+  extraContent?: (item: ProductionPlanItem, refresh: () => void) => React.ReactNode;
+  /**
+   * Альтернативное действие, доступное ТОЛЬКО когда статус подошёл, но extraCheck заблокировал
+   * переход — например, «Отправить в Rework» на экране FOK (раздел 225: изделие с незакрытой
+   * проблемой не должно теряться). Не показывается при простом несовпадении статуса.
+   */
+  secondaryActionLabel?: string;
+  secondaryAfterStatusId?: number;
+  onSecondaryAction?: (vin: string) => Promise<ProductionPlanItem>;
 }) {
   const [input, setInput] = useState('');
   const [found, setFound] = useState<ProductionPlanItem | null>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [blockedByCheck, setBlockedByCheck] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<ProductionPlanItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +96,7 @@ export function ScanTransitionScreen({
       setFound(item);
 
       if (item.statusId !== eligibleStatusId) {
+        setBlockedByCheck(false);
         setMessage({
           kind: 'error',
           text: `Статус «${statusCodeLabel(item.statusId)}», ожидался «${statusCodeLabel(eligibleStatusId)}» — перевести нельзя.`,
@@ -83,11 +104,13 @@ export function ScanTransitionScreen({
       } else {
         const blockReason = extraCheck ? await extraCheck(item) : null;
         if (id !== requestId.current) return;
+        setBlockedByCheck(blockReason !== null);
         setMessage(blockReason ? { kind: 'error', text: blockReason } : null);
       }
     } catch (e) {
       if (id !== requestId.current) return;
       setFound(null);
+      setBlockedByCheck(false);
       setMessage({
         kind: 'error',
         text: e instanceof ApiError && e.status === 404 ? `VIN ${vin} не найден` : 'Нет связи с сервером',
@@ -108,6 +131,27 @@ export function ScanTransitionScreen({
       // Между поиском и подтверждением кто-то мог изменить статус — переспрашиваем заново,
       // а не доверяем устаревшей карточке (раздел 28, п.5 спецификации: конфликт не должен
       // тихо потеряться).
+      setFound(null);
+      setMessage({ kind: 'error', text: 'Не удалось выполнить переход — отсканируйте VIN ещё раз' });
+    } finally {
+      setBusy(false);
+      setInput('');
+      focusInput();
+    }
+  }
+
+  async function secondary(vin: string) {
+    if (!onSecondaryAction) return;
+    setBusy(true);
+    try {
+      const after = await onSecondaryAction(vin);
+      setFound(null);
+      setMessage({
+        kind: 'ok',
+        text: `Готово: ${vin} → «${statusCodeLabel(secondaryAfterStatusId ?? after.statusId)}»`,
+      });
+      reloadPending();
+    } catch {
       setFound(null);
       setMessage({ kind: 'error', text: 'Не удалось выполнить переход — отсканируйте VIN ещё раз' });
     } finally {
@@ -181,10 +225,18 @@ export function ScanTransitionScreen({
                   <dd>{statusCodeLabel(found.statusId)}</dd>
                 </div>
               </dl>
+
+              {extraContent && extraContent(found, () => void lookup(found.vin))}
+
               <div className="modal-actions">
                 <button type="button" onClick={() => { setFound(null); setMessage(null); focusInput(); }}>
                   Отмена
                 </button>
+                {blockedByCheck && onSecondaryAction && (
+                  <button type="button" disabled={busy} onClick={() => void secondary(found.vin)}>
+                    {secondaryActionLabel}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="primary"

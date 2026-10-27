@@ -7,6 +7,7 @@ import { StartScreen } from './StartScreen';
 import { StationScreen } from './StationScreen';
 import { CompleteScreen } from './CompleteScreen';
 import { FokScreen } from './FokScreen';
+import { ReworkScreen } from './ReworkScreen';
 import { LoginScreen } from './LoginScreen';
 
 type Session = { userName: string | null; mode: string } | null;
@@ -45,6 +46,8 @@ export function App() {
       return <CompleteScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'fok':
       return <FokScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'rework':
+      return <ReworkScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'ncp':
       return <NcpScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
   }
