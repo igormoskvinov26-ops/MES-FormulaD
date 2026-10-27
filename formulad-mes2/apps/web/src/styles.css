@@ -1,26 +1,34 @@
 :root {
-  /* Фирменные цвета F7: графит и красный. Красный зарезервирован под брак и аварию,
-     оформлением он не работает — иначе настоящую тревогу перестанут замечать. */
-  --graphite: #16181d;
-  --graphite-soft: #2a2e38;
-  --f7-red: #d81f26;
+  /* Палитра и шкала из концепта «F7 MES» (docs/design/concept-design-system.png).
+     Красный — фирменный цвет и цвет главного действия; статус «брак» тоже красный,
+     но это всегда маленький залитый бейдж с иконкой и словом, а не крупная кнопка. */
+  --graphite: #101216;
+  --graphite-soft: #1c2026;
+  --graphite-line: #2a2f38;
+  --f7-red: #e31e24;
+  --f7-red-dark: #b8171c;
 
-  --bg: #eef0f4;
+  --bg: #f4f5f7;
   --surface: #ffffff;
-  --border: #ccd0da;
-  --border-strong: #9aa1b2;
-  --text: #16181d;
-  --muted: #5c6376;
+  --border: #e2e5ea;
+  --border-strong: #c3c8d2;
+  --text: #101216;
+  --muted: #646b7a;
 
-  --state-waiting: #8a8fa3;
-  --state-in-work: #1d7a3f;
-  --state-complete: #2d5c9e;
-  --state-fok: #0f6b6b;
-  --warn-bg: #fdf1d8;
-  --warn: #8a5a00;
+  /* Статусы концепта: план — синий, в сборке — зелёный, ожидает — янтарный,
+     контроль — фиолетовый, брак — красный. */
+  --st-plan: #2e7cf6;
+  --st-work: #16a34a;
+  --st-wait: #f59e0b;
+  --st-control: #7c3aed;
+  --st-reject: #dc2626;
+  --st-open: #6b7280;
 
-  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
-  /* Экран смотрят с рабочего ПК, поэтому базовый размер крупнее офисного. */
+  --warn-bg: #fff7e6;
+  --warn: #92650a;
+
+  font-family: Inter, system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Шкала концепта: H1 32 / H2 24 / H3 18 / Body 16 / Small 14 / Caption 12. */
   font-size: 16px;
   color-scheme: light;
 }
@@ -80,11 +88,23 @@ button.link {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 10px 18px;
+  padding: 12px 20px;
   background: var(--graphite);
   color: #f2f3f6;
   border-bottom: 3px solid var(--f7-red);
 }
+
+/* Разделитель-«слэш» из логотипа концепта. */
+.topbar .slash {
+  width: 2px;
+  height: 26px;
+  background: var(--f7-red);
+  transform: skewX(-18deg);
+}
+
+.breadcrumbs { color: #9aa2b1; font-size: 15px; }
+.breadcrumbs b { color: #f2f3f6; font-weight: 600; }
+.topbar-clock { color: #9aa2b1; font-size: 14px; font-variant-numeric: tabular-nums; }
 
 .logo {
   font-weight: 900;
@@ -126,10 +146,10 @@ button.link {
   background: currentColor;
 }
 
-.state-waiting { color: var(--state-waiting); }
-.state-in-work { color: var(--state-in-work); }
-.state-complete { color: var(--state-complete); }
-.state-fok { color: var(--state-fok); }
+.state-waiting { color: var(--st-wait); }
+.state-in-work { color: var(--st-work); }
+.state-complete { color: var(--st-plan); }
+.state-fok { color: var(--st-control); }
 
 /* --- Контент --- */
 .content {
@@ -184,10 +204,22 @@ tbody tr { cursor: pointer; }
 tbody tr:hover { background: #eef1f7; }
 tbody tr.selected { background: #e3e9f6; }
 
-/* Состояние: цвет + слово, цвет один смысла не несёт.
+/* Состояние: залитый бейдж с точкой и словом — цвет один смысла не несёт.
    Внутри ячейки только inline-элементы: display:flex на td ломает табличную раскладку. */
-.state-cell { font-weight: 600; }
-.state-cell .swatch { margin-right: 8px; vertical-align: -1px; }
+.state-cell { font-weight: 500; }
+
+.state-badge {
+  display: inline-block;
+  padding: 3px 11px 3px 9px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: color-mix(in srgb, currentColor 12%, white);
+  border: 1px solid color-mix(in srgb, currentColor 28%, white);
+}
+
+.state-badge .swatch { margin-right: 7px; vertical-align: -1px; border-radius: 50%; }
 
 /* VIN — главное в строке, остальное тише. */
 td.vin { font-weight: 700; font-size: 16px; }
@@ -246,7 +278,7 @@ dd { margin: 0; text-align: right; font-weight: 500; }
 .login { display: flex; justify-content: center; padding: 64px 16px; }
 .login .card { width: 400px; display: flex; flex-direction: column; gap: 12px; }
 .login label { display: flex; flex-direction: column; gap: 4px; }
-.login h1 { margin: 0; font-size: 22px; }
+.login h1 { margin: 0; font-size: 24px; }
 
 .sr-only {
   position: absolute;
@@ -280,11 +312,12 @@ dd { margin: 0; text-align: right; font-weight: 500; }
 .order-cell button { padding: 2px 9px; line-height: 1.4; margin-right: 4px; }
 
 button.primary {
-  background: var(--graphite);
-  border-color: var(--graphite);
-  color: #f2f3f6;
+  background: var(--f7-red);
+  border-color: var(--f7-red);
+  color: #fff;
+  font-weight: 600;
 }
-button.primary:hover:not([disabled]) { background: var(--graphite-soft); }
+button.primary:hover:not([disabled]) { background: var(--f7-red-dark); border-color: var(--f7-red-dark); }
 
 /* Перемещённая строка подсвечивается и гаснет сама. */
 tbody tr.moved { animation: moved-flash 2.5s ease-out; }
@@ -318,7 +351,7 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
   box-shadow: 0 16px 48px rgba(0, 0, 0, .3);
 }
 
-.modal h2 { margin: 0 0 14px; font-size: 19px; }
+.modal h2 { margin: 0 0 14px; font-size: 18px; }
 .modal label { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
 .modal input { font-size: 18px; }
 
@@ -333,3 +366,5 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 .preview-bad { background: #f3e5e5; color: var(--f7-red); }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+.logo-suffix { margin-left: 6px; font-weight: 800; font-style: normal; letter-spacing: 0; }
