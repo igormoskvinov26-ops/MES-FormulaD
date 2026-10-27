@@ -39,6 +39,31 @@ export type NcpItem = {
 
 export type ComponentItem = { code: string; name: string; station: string | null };
 
+export type ModelRef = { article: string; name: string };
+export type PlanReference = { models: ModelRef[]; colors: string[]; specifications: string[] };
+
+export type ImportRawRow = {
+  vin: string | null;
+  modelArticle: string | null;
+  engineNumber: string | null;
+  color: string | null;
+  specificationName: string | null;
+  plannedStartDate: string | null;
+  plannedCompleteDate: string | null;
+  plannedShipmentDate: string | null;
+};
+
+export type ImportRowResult = { rowNumber: number; row: ImportRawRow; errors: string[] };
+export type ImportSession = {
+  id: string;
+  createdAt: string;
+  createdBy: string;
+  source: string;
+  rows: ImportRowResult[];
+  totalCount: number;
+  errorCount: number;
+};
+
 export type ComponentCheck = { componentCode: string; checked: boolean; checkedBy: string | null; checkedAt: string | null };
 
 export type Paged<T> = { items: T[]; page: number; pageSize: number; total: number };
@@ -118,6 +143,30 @@ export const api = {
   /** Завершение Rework (4 → 2). Блокируется незакрытой обязательной деталью — как FOK. */
   finishRework: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/rework/finish`, { method: 'POST' }),
+
+  planImportReference: () => request<PlanReference>('/api/v1/plan-import/reference'),
+
+  /** Загружает сырые строки на проверку — временная область (раздел 6.1). Существует только в демо-режиме. */
+  stageImport: (rows: ImportRawRow[], source: string) =>
+    request<ImportSession>('/api/v1/plan-import/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows, source }),
+    }),
+
+  /** Исправление строки «прямо в строке» — заново проверяет всю загрузку. */
+  replaceImportRow: (sessionId: string, rowNumber: number, row: ImportRawRow) =>
+    request<ImportSession>(`/api/v1/plan-import/sessions/${encodeURIComponent(sessionId)}/rows/${rowNumber}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(row),
+    }),
+
+  /** Публикация в конец очереди. Доступна только при нуле ошибок — проверяется и на сервере. */
+  publishImport: (sessionId: string) =>
+    request<{ published: number }>(`/api/v1/plan-import/sessions/${encodeURIComponent(sessionId)}/publish`, {
+      method: 'POST',
+    }),
 
   ncpTypes: () => request<string[]>('/api/v1/ncp/types'),
   ncpStations: () => request<string[]>('/api/v1/ncp/stations'),

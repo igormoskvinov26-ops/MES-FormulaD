@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace FormulaD.Mes.Api;
 
 /// <summary>Читает синтетические записи из fixtures/production-plan.demo.json. Никакого SQL.</summary>
-public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrderEditor, IPlanTransitions, IJobCardPrinter
+public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrderEditor, IPlanTransitions, IJobCardPrinter, IPlanPublisher
 {
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
@@ -212,6 +212,44 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
             _items.Value[index] = updated;
             _eventLog.Record("ProductionPlan", vin, "Print", current.PrintDate?.ToString("O"), updated.PrintDate?.ToString("O"), userName);
             return Task.FromResult<ProductionPlanItem?>(updated);
+        }
+    }
+
+    // Раздел 6.3: «в конец существующей очереди», одной операцией под общей блокировкой —
+    // значит ни одна другая запись (перестановка, переход статуса) не может вклиниться
+    // между вычислением следующего SEQN/ID и добавлением строк.
+    public Task<int> PublishAsync(IReadOnlyList<NewPlanRow> rows, string userName, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            var nextId = _items.Value.Count == 0 ? 1 : _items.Value.Max(i => i.Id) + 1;
+            var nextSeqn = _items.Value.Count == 0 ? 1 : _items.Value.Where(i => i.Seqn is not null).Select(i => i.Seqn!.Value).DefaultIfEmpty(0).Max() + 1;
+
+            foreach (var row in rows)
+            {
+                var item = new ProductionPlanItem(
+                    Vin: row.Vin,
+                    Id: nextId++,
+                    Seqn: nextSeqn++,
+                    ModelArticle: row.ModelArticle,
+                    ModelName: row.ModelName,
+                    EngineNumber: row.EngineNumber,
+                    Color: row.Color,
+                    SpecificationName: row.SpecificationName,
+                    Status: "planned",
+                    StatusId: 0,
+                    PrintDate: null,
+                    PlannedStartDate: row.PlannedStartDate,
+                    PlannedCompleteDate: row.PlannedCompleteDate,
+                    PlannedShipmentDate: row.PlannedShipmentDate,
+                    StartDate: null,
+                    CompleteDate: null,
+                    FokDate: null);
+                _items.Value.Add(item);
+                _eventLog.Record("ProductionPlan", item.Vin, "Import", null, $"SEQN={item.Seqn}", userName);
+            }
+
+            return Task.FromResult(rows.Count);
         }
     }
 }

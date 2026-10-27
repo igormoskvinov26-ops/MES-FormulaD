@@ -29,6 +29,7 @@ switch (dataSource.ToLowerInvariant())
         builder.Services.AddSingleton<IPlanOrderEditor>(demoReader);
         builder.Services.AddSingleton<IPlanTransitions>(demoReader);
         builder.Services.AddSingleton<IJobCardPrinter>(demoReader);
+        builder.Services.AddSingleton<IPlanPublisher>(demoReader);
 
         // NCP — тоже только демо: точная схема dbo.tblNCP не обследована (см. Ncp.cs).
         var ncpPath = builder.Configuration["Demo:NcpFixturePath"]
@@ -41,6 +42,16 @@ switch (dataSource.ToLowerInvariant())
 
         // Отметки проверки компонентов по станциям (Этап 5) — тоже только демо.
         builder.Services.AddSingleton<IStationChecks>(new DemoStationChecks(demoReader, ncpStore, eventLog));
+
+        // Импорт плана (Этап 8) — справочники модели/цвета/комплектации свои, не связаны с NCP.
+        var modelsPath = builder.Configuration["Demo:ModelsFixturePath"]
+                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "models.demo.json");
+        var colorsPath = builder.Configuration["Demo:ColorsFixturePath"]
+                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "colors.demo.json");
+        var specificationsPath = builder.Configuration["Demo:SpecificationsFixturePath"]
+                                ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "specifications.demo.json");
+        builder.Services.AddSingleton<IPlanImport>(
+            new DemoPlanImport(modelsPath, colorsPath, specificationsPath, demoReader, demoReader, eventLog));
         break;
 
     case "sql":
@@ -447,6 +458,56 @@ if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
                 title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
                 statusCode: StatusCodes.Status404NotFound),
             _ => Problem("Компонент не найден", "Такого артикула нет в справочнике компонентов."),
+        };
+    });
+
+    // Импорт плана (раздел 6, Этап 8): источник сырых строк (файл/вставка) эндпоинту не важен —
+    // он принимает уже разобранный список строк одинаковой формы.
+    var planImport = api.MapGroup("/plan-import").RequireAuthorization();
+
+    planImport.MapGet("/reference", async (IPlanImport import, CancellationToken ct) =>
+        Results.Ok(await import.GetReferenceAsync(ct)));
+
+    planImport.MapPost("/sessions", async (StageImportRequest request, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        if (request.Rows.Count == 0)
+        {
+            return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
+        }
+        // ponytail: простая защитная граница объёма одной демо-загрузки, не требование спецификации.
+        if (request.Rows.Count > 500)
+        {
+            return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
+        }
+        var session = await import.StageAsync(request.Rows, request.Source, user.Identity?.Name ?? "неизвестно", ct);
+        return Results.Ok(session);
+    });
+
+    planImport.MapGet("/sessions/{id}", async (string id, IPlanImport import, CancellationToken ct) =>
+    {
+        var session = await import.GetSessionAsync(id, ct);
+        return session is null
+            ? Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound)
+            : Results.Ok(session);
+    });
+
+    planImport.MapPut("/sessions/{id}/rows/{rowNumber:int}", async (
+        string id, int rowNumber, ImportRawRow row, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        var session = await import.ReplaceRowAsync(id, rowNumber, row, user.Identity?.Name ?? "неизвестно", ct);
+        return session is null
+            ? Results.Problem(title: "Загрузка или строка не найдена", statusCode: StatusCodes.Status404NotFound)
+            : Results.Ok(session);
+    });
+
+    planImport.MapPost("/sessions/{id}/publish", async (string id, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        var (outcome, published) = await import.PublishAsync(id, user.Identity?.Name ?? "неизвестно", ct);
+        return outcome switch
+        {
+            PublishOutcome.Ok => Results.Ok(new { published }),
+            PublishOutcome.SessionNotFound => Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound),
+            _ => Problem("Нельзя опубликовать", "В загрузке остались ошибки — исправьте все строки перед публикацией."),
         };
     });
 }

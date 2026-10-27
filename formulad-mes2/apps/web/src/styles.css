@@ -745,3 +745,12 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
   .jobcard:last-child { page-break-after: auto; }
   .no-print { display: none !important; }
 }
+
+/* --- Импорт плана (раздел 6): строки с ошибками подсвечены, текст ошибок — построчно. --- */
+tbody tr.import-row-error { background: color-mix(in srgb, var(--f7-red) 6%, white); }
+tbody tr.import-row-error:hover { background: color-mix(in srgb, var(--f7-red) 10%, white); }
+
+.import-errors { list-style: none; margin: 0; padding: 0; color: var(--f7-red-dark); font-size: 13px; white-space: normal; }
+.import-errors li { padding: 1px 0; }
+
+td input, td select { width: 100%; min-width: 120px; }

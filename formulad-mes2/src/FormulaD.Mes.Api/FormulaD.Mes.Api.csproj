@@ -12,6 +12,9 @@
     <Content Include="../../fixtures/production-plan.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/production-plan.demo.json" />
     <Content Include="../../fixtures/ncp.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/ncp.demo.json" />
     <Content Include="../../fixtures/components.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/components.demo.json" />
+    <Content Include="../../fixtures/models.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/models.demo.json" />
+    <Content Include="../../fixtures/colors.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/colors.demo.json" />
+    <Content Include="../../fixtures/specifications.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/specifications.demo.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />

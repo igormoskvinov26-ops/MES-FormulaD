@@ -8,6 +8,7 @@ import { StationScreen } from './StationScreen';
 import { CompleteScreen } from './CompleteScreen';
 import { FokScreen } from './FokScreen';
 import { ReworkScreen } from './ReworkScreen';
+import { ImportScreen } from './ImportScreen';
 import { LoginScreen } from './LoginScreen';
 
 type Session = { userName: string | null; mode: string } | null;
@@ -38,6 +39,8 @@ export function App() {
   switch (screen) {
     case 'plan':
       return <PlanScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'import':
+      return <ImportScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'start':
       return <StartScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'stations':
