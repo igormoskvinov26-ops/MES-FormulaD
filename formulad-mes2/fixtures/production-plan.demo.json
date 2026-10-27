@@ -28,7 +28,7 @@
     "color": "Красный",
     "specificationName": "Pathcross 1000 LTD · ДЕМО",
     "status": "planned",
-    "statusId": null,
+    "statusId": 0,
     "printDate": "2026-10-12T00:00:00",
     "plannedStartDate": "2026-10-14T00:00:00",
     "plannedCompleteDate": "2026-10-17T00:00:00",

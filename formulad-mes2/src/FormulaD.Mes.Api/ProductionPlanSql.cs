@@ -19,12 +19,13 @@ internal static class ProductionPlanSql
     /// Страница плана. COUNT(*) OVER() отдаёт общее число строк тем же запросом —
     /// второй round-trip ради total не нужен.
     /// </summary>
-    internal static string Page(bool filterByVin, bool filterByStatus, bool statusIsNull) => $"""
+    internal static string Page(bool filterByVin, bool filterByStatus, bool statusIsNull, bool filterByStatusId) => $"""
         SELECT {Columns}, COUNT(*) OVER() AS [TotalRows]
         FROM [dbo].[tblProductionPlan]
         WHERE 1 = 1
         {(filterByVin ? "AND [VIN] LIKE @vin ESCAPE '\\'" : string.Empty)}
         {StatusPredicate(filterByStatus, statusIsNull)}
+        {(filterByStatusId ? "AND [statusid] = @statusId" : string.Empty)}
         ORDER BY {OrderBy}
         OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
         """;

@@ -25,8 +25,9 @@ switch (dataSource.ToLowerInvariant())
                           ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "production-plan.demo.json");
         var demoReader = new DemoProductionPlanReader(fixturePath, eventLog);
         builder.Services.AddSingleton<IProductionPlanReader>(demoReader);
-        // Правка порядка существует только у демо-источника (см. IPlanOrderEditor).
+        // Правка порядка и переходы по статусам существуют только у демо-источника.
         builder.Services.AddSingleton<IPlanOrderEditor>(demoReader);
+        builder.Services.AddSingleton<IPlanTransitions>(demoReader);
 
         // NCP — тоже только демо: точная схема dbo.tblNCP не обследована (см. Ncp.cs).
         var ncpPath = builder.Configuration["Demo:NcpFixturePath"]
@@ -120,6 +121,7 @@ plan.MapGet("", async (
     CancellationToken ct,
     string? vin = null,
     string? status = null,
+    int? statusId = null,
     int page = 1,
     int pageSize = 25) =>
 {
@@ -136,7 +138,7 @@ plan.MapGet("", async (
         return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
     }
 
-    var result = await reader.GetPageAsync(new ProductionPlanQuery(vin, status, page, pageSize), ct);
+    var result = await reader.GetPageAsync(new ProductionPlanQuery(vin, status, statusId, page, pageSize), ct);
     return Results.Ok(result);
 });
 
@@ -183,6 +185,28 @@ if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
             MoveOutcome.NoPosition => Problem(
                 "Нет позиции в плане", "У изделия не задан порядок запуска, перемещать нечего."),
             _ => Problem("Позиция не найдена", "В плане нет позиции с таким номером."),
+        };
+    });
+
+    // Запуск в производство: 0 → 1 (раздел 10 спецификации). Как и /move — только демо.
+    plan.MapPost("/{vin}/start", async (
+        string vin, IPlanTransitions transitions, ClaimsPrincipal user, CancellationToken ct) =>
+    {
+        if (vin.Length is 0 or > 50)
+        {
+            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+        }
+
+        var (outcome, item) = await transitions.StartAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
+        return outcome switch
+        {
+            TransitionOutcome.Ok => Results.Ok(item),
+            TransitionOutcome.VinNotFound => Results.Problem(
+                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+                statusCode: StatusCodes.Status404NotFound),
+            _ => Problem(
+                "Нельзя запустить",
+                $"Изделие уже в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(0)}»."),
         };
     });
 
@@ -293,6 +317,19 @@ if (devAuth.CanLogIn)
 }
 
 app.Run();
+
+// Раздел 5 спецификации — коды 0..4. Неизвестный код не ломает сообщение, показываем как есть
+// (то же правило, что и для строкового Status: неизвестное значение не прячем и не придумываем).
+static string StatusLabel(int? id) => id switch
+{
+    0 => "Запланировано",
+    1 => "В работе",
+    2 => "Производство завершено",
+    3 => "FOK пройден",
+    4 => "Rework",
+    null => "без статуса",
+    _ => $"код {id}",
+};
 
 static ProblemHttpResult Problem(string title, string detail)
     => TypedResults.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);

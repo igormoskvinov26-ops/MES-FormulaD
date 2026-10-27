@@ -25,7 +25,12 @@ public sealed record ProductionPlanItem(
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int Total);
 
-public sealed record ProductionPlanQuery(string? Vin, string? Status, int Page, int PageSize);
+/// <summary>
+/// <paramref name="StatusId"/> — числовой статус 0..4 из раздела 5 спецификации
+/// (docs/SPECIFICATION.md), отдельно от строкового <paramref name="Status"/> из реальной
+/// базы: их не путать, они фильтруют по разным колонкам (statusid и Status).
+/// </summary>
+public sealed record ProductionPlanQuery(string? Vin, string? Status, int? StatusId, int Page, int PageSize);
 
 public sealed record DevAuthLoginRequest(string Username, string Password);
 

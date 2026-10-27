@@ -15,9 +15,10 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
         var filterByVin = !string.IsNullOrWhiteSpace(query.Vin);
         var filterByStatus = query.Status is not null;
         var statusIsNull = query.Status is { Length: 0 };
+        var filterByStatusId = query.StatusId.HasValue;
 
         await using var connection = await OpenAsync(ct);
-        await using var command = new SqlCommand(ProductionPlanSql.Page(filterByVin, filterByStatus, statusIsNull), connection)
+        await using var command = new SqlCommand(ProductionPlanSql.Page(filterByVin, filterByStatus, statusIsNull, filterByStatusId), connection)
         {
             CommandTimeout = options.CommandTimeoutSeconds,
         };
@@ -35,6 +36,10 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
         if (filterByStatus && !statusIsNull)
         {
             command.Parameters.Add("@status", SqlDbType.NVarChar, 50).Value = query.Status!;
+        }
+        if (filterByStatusId)
+        {
+            command.Parameters.Add("@statusId", SqlDbType.Int).Value = query.StatusId!.Value;
         }
         command.Parameters.Add("@offset", SqlDbType.Int).Value = (query.Page - 1) * query.PageSize;
         command.Parameters.Add("@pageSize", SqlDbType.Int).Value = query.PageSize;

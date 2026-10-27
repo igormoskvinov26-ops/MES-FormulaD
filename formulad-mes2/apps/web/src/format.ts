@@ -51,3 +51,17 @@ export function rowState(item: {
   if (item.startDate) return { key: 'in-work', label: 'В производстве' };
   return { key: 'waiting', label: 'В ожидании' };
 }
+
+/** Раздел 5 спецификации: статусные коды 0..4. Неизвестный код не ломает UI — показываем как есть. */
+const STATUS_CODE_LABELS: Record<number, string> = {
+  0: 'Запланировано',
+  1: 'В работе',
+  2: 'Производство завершено',
+  3: 'FOK пройден',
+  4: 'Rework',
+};
+
+export function statusCodeLabel(id: number | null): string {
+  if (id === null) return 'без статуса';
+  return STATUS_CODE_LABELS[id] ?? `код ${id}`;
+}

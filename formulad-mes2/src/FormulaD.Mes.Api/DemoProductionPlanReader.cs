@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace FormulaD.Mes.Api;
 
 /// <summary>Читает синтетические записи из fixtures/production-plan.demo.json. Никакого SQL.</summary>
-public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrderEditor
+public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrderEditor, IPlanTransitions
 {
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
@@ -54,6 +54,11 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
             // Пустая строка = фильтр по записям без статуса (Status IS NULL).
             var status = query.Status.Length == 0 ? null : query.Status;
             q = q.Where(i => string.Equals(i.Status, status, StringComparison.Ordinal));
+        }
+
+        if (query.StatusId.HasValue)
+        {
+            q = q.Where(i => i.StatusId == query.StatusId);
         }
 
         // Тот же порядок, что в SQL: по SEQN, изделия без порядка — в конец, затем VIN.
@@ -135,5 +140,34 @@ public sealed class DemoProductionPlanReader : IProductionPlanReader, IPlanOrder
             .ThenBy(s => s, StringComparer.Ordinal)
             .ToList();
         return Task.FromResult(statuses);
+    }
+
+    /// <summary>
+    /// 0 → 1. Строковое поле Status обновляется тем же литералом, что использует реальный
+    /// Access-обработчик (R-03 аудита: `Status='in progress'`) — не придумываем новое значение,
+    /// копируем существующее. В отличие от AS-IS, статус проверяется ДО записи (строго 0),
+    /// поэтому повторный запуск невозможен.
+    /// </summary>
+    public Task<(TransitionOutcome, ProductionPlanItem?)> StartAsync(string vin, string userName, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            var index = _items.Value.FindIndex(i => string.Equals(i.Vin, vin, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+            {
+                return Task.FromResult<(TransitionOutcome, ProductionPlanItem?)>((TransitionOutcome.VinNotFound, null));
+            }
+
+            var current = _items.Value[index];
+            if (current.StatusId != 0)
+            {
+                return Task.FromResult<(TransitionOutcome, ProductionPlanItem?)>((TransitionOutcome.WrongStatus, current));
+            }
+
+            var updated = current with { StatusId = 1, Status = "in progress", StartDate = DateTime.Now };
+            _items.Value[index] = updated;
+            _eventLog.Record("ProductionPlan", vin, "Start", "0", "1", userName);
+            return Task.FromResult<(TransitionOutcome, ProductionPlanItem?)>((TransitionOutcome.Ok, updated));
+        }
     }
 }

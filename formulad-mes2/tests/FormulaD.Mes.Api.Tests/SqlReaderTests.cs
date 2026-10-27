@@ -56,7 +56,7 @@ public sealed class ProductionPlanSqlTests
     [Fact]
     public void Page_Query_Is_Parameterised_And_Paged()
     {
-        var sql = ProductionPlanSql.Page(filterByVin: true, filterByStatus: true, statusIsNull: false);
+        var sql = ProductionPlanSql.Page(filterByVin: true, filterByStatus: true, statusIsNull: false, filterByStatusId: false);
 
         Assert.Contains("@vin", sql);
         Assert.Contains("@status", sql);
@@ -66,9 +66,17 @@ public sealed class ProductionPlanSqlTests
     }
 
     [Fact]
+    public void StatusId_Filter_Adds_Parameterised_Predicate()
+    {
+        var sql = ProductionPlanSql.Page(filterByVin: false, filterByStatus: false, statusIsNull: false, filterByStatusId: true);
+
+        Assert.Contains("AND [statusid] = @statusId", sql);
+    }
+
+    [Fact]
     public void Null_Status_Filter_Uses_Is_Null_Not_Equality()
     {
-        var sql = ProductionPlanSql.Page(filterByVin: false, filterByStatus: true, statusIsNull: true);
+        var sql = ProductionPlanSql.Page(filterByVin: false, filterByStatus: true, statusIsNull: true, filterByStatusId: false);
 
         Assert.Contains("[Status] IS NULL", sql);
         Assert.DoesNotContain("@status", sql);
@@ -79,7 +87,7 @@ public sealed class ProductionPlanSqlTests
     [InlineData(false, false, false)]
     public void Queries_Never_Select_Star_Or_Use_Nolock(bool byVin, bool byStatus, bool statusIsNull)
     {
-        foreach (var sql in new[] { ProductionPlanSql.Page(byVin, byStatus, statusIsNull), ProductionPlanSql.ByVin(), ProductionPlanSql.Statuses() })
+        foreach (var sql in new[] { ProductionPlanSql.Page(byVin, byStatus, statusIsNull, filterByStatusId: false), ProductionPlanSql.ByVin(), ProductionPlanSql.Statuses() })
         {
             Assert.DoesNotContain("SELECT *", sql, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("NOLOCK", sql, StringComparison.OrdinalIgnoreCase);

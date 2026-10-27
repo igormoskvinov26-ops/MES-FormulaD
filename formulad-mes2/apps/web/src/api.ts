@@ -75,10 +75,11 @@ export const api = {
 
   statuses: () => request<(string | null)[]>('/api/v1/production-plan/statuses'),
 
-  plan: (params: { vin?: string; status?: string | null; page: number; pageSize: number }) => {
+  plan: (params: { vin?: string; status?: string | null; statusId?: number; page: number; pageSize: number }) => {
     const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });
     if (params.vin) query.set('vin', params.vin);
     if (params.status !== undefined && params.status !== null) query.set('status', params.status);
+    if (params.statusId !== undefined) query.set('statusId', String(params.statusId));
     return request<Paged<ProductionPlanItem>>(`/api/v1/production-plan?${query}`);
   },
 
@@ -91,6 +92,10 @@ export const api = {
     }),
 
   byVin: (vin: string) => request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}`),
+
+  /** Запуск в производство (0 → 1). Существует только в демо-режиме сервера. */
+  start: (vin: string) =>
+    request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/start`, { method: 'POST' }),
 
   ncpTypes: () => request<string[]>('/api/v1/ncp/types'),
   ncpStations: () => request<string[]>('/api/v1/ncp/stations'),

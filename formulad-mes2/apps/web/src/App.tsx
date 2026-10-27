@@ -3,6 +3,7 @@ import type { Screen } from './AppHeader';
 import { ApiError, api, type Paged, type ProductionPlanItem } from './api';
 import { PlanScreen } from './PlanScreen';
 import { NcpScreen } from './NcpScreen';
+import { StartScreen } from './StartScreen';
 import { LoginScreen } from './LoginScreen';
 
 type Session = { userName: string | null; mode: string } | null;
@@ -28,11 +29,16 @@ export function App() {
     return <LoginScreen onLoggedIn={(userName) => setSession({ userName, mode: 'dev' })} />;
   }
 
-  return screen === 'plan' ? (
-    <PlanScreen session={session} onNavigate={setScreen} onLogout={() => setSession(null)} />
-  ) : (
-    <NcpScreen session={session} onNavigate={setScreen} onLogout={() => setSession(null)} />
-  );
+  const onLogout = () => setSession(null);
+
+  switch (screen) {
+    case 'plan':
+      return <PlanScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'start':
+      return <StartScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'ncp':
+      return <NcpScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+  }
 }
 
 /** Загрузка страницы плана. Вынесено, чтобы PlanScreen оставался про разметку. */
