@@ -57,15 +57,13 @@ ELSE
     PRINT 'Таблица tblProductionPlan уже существует в FormulaD_TEST.';
 GO
 
--- 4. Копируем несколько строк для проверки (первые 50 по VIN).
---    Если хотите все данные — уберите TOP 50.
---    Если хотите пустую базу — закомментируйте этот блок.
+-- 4. Полная копия данных из PROD.
 
 IF NOT EXISTS (SELECT 1 FROM [FormulaD_TEST].[dbo].[tblProductionPlan])
 BEGIN
     INSERT INTO [FormulaD_TEST].[dbo].[tblProductionPlan]
-    SELECT TOP 50 * FROM [FormulaD].[dbo].[tblProductionPlan] ORDER BY [VIN];
-    PRINT 'Скопировано до 50 строк из FormulaD в FormulaD_TEST.';
+    SELECT * FROM [FormulaD].[dbo].[tblProductionPlan];
+    PRINT 'Все строки скопированы из FormulaD в FormulaD_TEST.';
 END
 ELSE
     PRINT 'Данные уже есть — пропускаем копирование.';
