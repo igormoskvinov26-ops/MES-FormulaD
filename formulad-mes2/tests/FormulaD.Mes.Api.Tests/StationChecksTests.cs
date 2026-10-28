@@ -104,10 +104,10 @@ public sealed class StationChecksTests
     }
 
     [Fact]
-    public async Task Stations_Route_Does_Not_Exist_In_Sql_Mode()
+    public async Task Stations_Route_Exists_In_Sql_Mode_Behind_Auth()
     {
         using var factory = new SqlConfiguredFactory();
         var response = await factory.CreateClient().GetAsync("/api/v1/stations/DEMO-VIN-00001/checks");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

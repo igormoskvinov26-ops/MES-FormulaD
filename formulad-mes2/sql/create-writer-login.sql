@@ -36,4 +36,11 @@ GRANT SELECT ON [dbo].[tblComponent] TO [mes_writer];
 GRANT SELECT ON [dbo].[tblDiscrepancyList] TO [mes_writer];
 GRANT INSERT ON [dbo].[tblNCP] TO [mes_writer];
 GRANT UPDATE ON [dbo].[tblNCP] ([Status], [ClosedBy], [ClosedAt], [Comment]) TO [mes_writer];
+
+-- Station checks: таблица tblComponentCheck создаётся приложением автоматически.
+-- ponytail: CREATE TABLE требует db_ddladmin или db_owner; mes_writer нужны только DML-права.
+-- Выполнить после первого запуска приложения (таблица уже будет создана).
+GRANT SELECT ON [dbo].[tblComponentCheck] TO [mes_writer];
+GRANT INSERT ON [dbo].[tblComponentCheck] TO [mes_writer];
+GRANT UPDATE ON [dbo].[tblComponentCheck] ([Checked], [CheckedBy], [CheckedAt]) TO [mes_writer];
 GO
