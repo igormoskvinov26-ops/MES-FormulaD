@@ -123,6 +123,8 @@ if (!devAuth.CanLogIn)
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -719,6 +721,9 @@ if (devAuth.CanLogIn)
         return Results.Ok(new { userName = request.Username, mode = "dev" });
     }).AllowAnonymous();
 }
+
+// SPA fallback: любой не-API запрос без расширения → index.html
+app.MapFallbackToFile("index.html");
 
 app.Run();
 
