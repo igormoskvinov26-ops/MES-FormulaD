@@ -87,14 +87,17 @@ export function ReportsScreen({
         <article className="card">
           <h2>Производственный план</h2>
           {planCounts ? (
-            <dl>
-              <div><dt>Всего в плане</dt><dd>{planCounts.all}</dd></div>
-              <div><dt>{statusCodeLabel(0)}</dt><dd>{planCounts[0]}</dd></div>
-              <div><dt>{statusCodeLabel(1)}</dt><dd>{planCounts[1]}</dd></div>
-              <div><dt>{statusCodeLabel(2)}</dt><dd>{planCounts[2]}</dd></div>
-              <div><dt>{statusCodeLabel(3)}</dt><dd>{planCounts[3]}</dd></div>
-              <div><dt>{statusCodeLabel(4)}</dt><dd>{reworkCount ?? '—'}</dd></div>
-            </dl>
+            <>
+              <p className="report-hero">{planCounts.all}</p>
+              <p className="muted" style={{ marginTop: -8 }}>изделий в плане</p>
+              <dl>
+                <div><dt>{statusCodeLabel(0)}</dt><dd className="state-waiting">{planCounts[0]}</dd></div>
+                <div><dt>{statusCodeLabel(1)}</dt><dd className="state-in-work">{planCounts[1]}</dd></div>
+                <div><dt>{statusCodeLabel(2)}</dt><dd className="state-complete">{planCounts[2]}</dd></div>
+                <div><dt>{statusCodeLabel(3)}</dt><dd className="state-fok">{planCounts[3]}</dd></div>
+                <div><dt>{statusCodeLabel(4)}</dt><dd>{reworkCount ?? '—'}</dd></div>
+              </dl>
+            </>
           ) : (
             <p className="muted">Загрузка…</p>
           )}
@@ -104,11 +107,11 @@ export function ReportsScreen({
           <h2>Несоответствия (NCP)</h2>
           {ncp ? (
             <>
-              <dl>
-                <div><dt>Всего</dt><dd>{ncp.total}</dd></div>
-                <div><dt>Открыто</dt><dd>{ncp.open}</dd></div>
-                <div><dt>Закрыто</dt><dd>{ncp.closed}</dd></div>
-              </dl>
+              <div className="report-row">
+                <div className="report-mini"><strong>{ncp.total}</strong><span>всего</span></div>
+                <div className="report-mini report-mini-warn"><strong>{ncp.open}</strong><span>открыто</span></div>
+                <div className="report-mini report-mini-ok"><strong>{ncp.closed}</strong><span>закрыто</span></div>
+              </div>
               <h3>По типу</h3>
               <dl>
                 {Object.entries(ncp.byType).map(([type, count]) => (
@@ -124,15 +127,19 @@ export function ReportsScreen({
         <article className="card">
           <h2>Входной контроль</h2>
           {incoming ? (
-            <dl>
-              <div><dt>Поставок</dt><dd>{incoming.deliveries}</dd></div>
-              <div><dt>В работе</dt><dd>{incoming.open}</dd></div>
-              <div><dt>Проверено</dt><dd>{incoming.verified}</dd></div>
-              <div><dt>Проверено, с замечаниями</dt><dd>{incoming.verifiedWithIssues}</dd></div>
-              <div><dt>Брак (шт.)</dt><dd>{incoming.defect}</dd></div>
-              <div><dt>Пересорт (шт.)</dt><dd>{incoming.mismatch}</dd></div>
-              <div><dt>Недостача (шт.)</dt><dd>{incoming.shortage}</dd></div>
-            </dl>
+            <>
+              <div className="report-row">
+                <div className="report-mini"><strong>{incoming.deliveries}</strong><span>поставок</span></div>
+                <div className="report-mini report-mini-ok"><strong>{incoming.verified}</strong><span>проверено</span></div>
+                <div className="report-mini report-mini-warn"><strong>{incoming.verifiedWithIssues}</strong><span>с замеч.</span></div>
+              </div>
+              <dl>
+                <div><dt>В работе</dt><dd>{incoming.open}</dd></div>
+                <div><dt>Брак (шт.)</dt><dd style={incoming.defect > 0 ? { color: 'var(--f7-red)' } : undefined}>{incoming.defect}</dd></div>
+                <div><dt>Пересорт (шт.)</dt><dd>{incoming.mismatch}</dd></div>
+                <div><dt>Недостача (шт.)</dt><dd>{incoming.shortage}</dd></div>
+              </dl>
+            </>
           ) : (
             <p className="muted">Загрузка…</p>
           )}
