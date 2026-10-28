@@ -32,7 +32,7 @@ switch (dataSource.ToLowerInvariant())
         builder.Services.AddSingleton<IJobCardPrinter>(demoReader);
         builder.Services.AddSingleton<IPlanPublisher>(demoReader);
 
-        // NCP — тоже только демо: точная схема dbo.tblNCP не обследована (см. Ncp.cs).
+        // NCP — демо-режим (см. Ncp.cs).
         var ncpPath = builder.Configuration["Demo:NcpFixturePath"]
                      ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "ncp.demo.json");
         var componentsPath = builder.Configuration["Demo:ComponentsFixturePath"]
@@ -73,6 +73,9 @@ switch (dataSource.ToLowerInvariant())
         builder.Services.AddSingleton<IPlanOrderEditor>(sp => new SqlPlanOrderEditor(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
         builder.Services.AddSingleton<IJobCardPrinter>(sp => new SqlJobCardPrinter(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
         builder.Services.AddSingleton<IPlanPublisher>(sp => new SqlPlanPublisher(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+        var sqlNcp = new SqlNcpStore(sqlOptions, eventLog);
+        builder.Services.AddSingleton<INcpReader>(sqlNcp);
+        builder.Services.AddSingleton<INcpWriter>(sqlNcp);
         break;
 
     default:
@@ -238,8 +241,6 @@ plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, Cancellat
             return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
         }
 
-        // ponytail: проверка NCP missing parts — только если INcpReader зарегистрирован (Demo).
-        // В SQL-режиме проверку добавить когда появится SqlNcpReader.
         var ncp = httpCtx.RequestServices.GetService<INcpReader>();
         if (ncp is not null)
         {
@@ -364,89 +365,88 @@ plan.MapPost("/{vin}/print", async (
         : Results.Ok(item);
 });
 
-// NCP, станции, импорт, входной контроль — пока только Demo (нет SQL-реализаций).
+// NCP — чтение и запись (работает и с Demo, и с SQL).
+var ncp = api.MapGroup("/ncp").RequireAuthorization();
+
+ncp.MapGet("/types", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetTypesAsync(ct)));
+ncp.MapGet("/stations", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetStationsAsync(ct)));
+ncp.MapGet("/components", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetComponentsAsync(ct)));
+
+ncp.MapGet("/missing-parts", async (string vin, INcpReader reader, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(vin) || vin.Length > 50)
+    {
+        return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+    }
+    return Results.Ok(await reader.GetMissingRequiredPartsAsync(vin, ct));
+});
+
+ncp.MapGet("", async (
+    INcpReader reader, CancellationToken ct,
+    string? vin = null, string? status = null, int page = 1, int pageSize = 25) =>
+{
+    if (vin is { Length: > 50 })
+    {
+        return Problem("Некорректный VIN", "Длина VIN не может превышать 50 символов.");
+    }
+    if (page < 1)
+    {
+        return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
+    }
+    if (pageSize is < 1 or > 100)
+    {
+        return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
+    }
+
+    var result = await reader.GetPageAsync(new NcpQuery(vin, status, page, pageSize), ct);
+    return Results.Ok(result);
+});
+
+ncp.MapPost("", async (CreateNcpRequest request, INcpWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Vin) || request.Vin.Length > 50)
+    {
+        return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+    }
+
+    var (outcome, created) = await writer.CreateAsync(request, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
+    {
+        CreateNcpOutcome.Ok => Results.Ok(created),
+        CreateNcpOutcome.VinNotFound => Results.Problem(
+            title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+            statusCode: StatusCodes.Status404NotFound),
+        CreateNcpOutcome.ComponentNotFound => Problem("Компонент не найден", "Такого артикула нет в справочнике компонентов."),
+        CreateNcpOutcome.InvalidStation => Problem("Некорректная станция", "Такой станции нет в списке."),
+        CreateNcpOutcome.InvalidQuantity => Problem("Некорректное количество", "Количество должно быть от 1 до 9999."),
+        _ => Problem("Некорректный тип", "Такого типа несоответствия нет в справочнике."),
+    };
+});
+
+ncp.MapPost("/{id:int}/part-installed", async (
+    int id, SetPartInstalledRequest request, INcpWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var (outcome, updated) = await writer.SetPartInstalledAsync(id, request.Installed, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome == NcpActionOutcome.Ok
+        ? Results.Ok(updated)
+        : Results.Problem(title: "Заявка не найдена", statusCode: StatusCodes.Status404NotFound);
+});
+
+ncp.MapPost("/{id:int}/close", async (
+    int id, CloseNcpRequest request, INcpWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var (outcome, closed) = await writer.CloseAsync(id, user.Identity?.Name ?? "неизвестно", request, ct);
+    return outcome switch
+    {
+        NcpActionOutcome.Ok => Results.Ok(closed),
+        NcpActionOutcome.AlreadyClosed => Problem("Уже закрыто", "Эта заявка уже закрыта."),
+        _ => Results.Problem(title: "Заявка не найдена", statusCode: StatusCodes.Status404NotFound),
+    };
+});
+
+// Станции, импорт, входной контроль — пока только Demo (нет SQL-реализаций).
 if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
 {
-    // NCP — операции чтения и записи только для демо-источника (см. Ncp.cs).
-    var ncp = api.MapGroup("/ncp").RequireAuthorization();
-
-    ncp.MapGet("/types", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetTypesAsync(ct)));
-    ncp.MapGet("/stations", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetStationsAsync(ct)));
-    ncp.MapGet("/components", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetComponentsAsync(ct)));
-
-    // Для проактивной подсказки на экране FOK (до попытки подтверждения, не только после отказа).
-    ncp.MapGet("/missing-parts", async (string vin, INcpReader reader, CancellationToken ct) =>
-    {
-        if (string.IsNullOrWhiteSpace(vin) || vin.Length > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-        return Results.Ok(await reader.GetMissingRequiredPartsAsync(vin, ct));
-    });
-
-    ncp.MapGet("", async (
-        INcpReader reader, CancellationToken ct,
-        string? vin = null, string? status = null, int page = 1, int pageSize = 25) =>
-    {
-        if (vin is { Length: > 50 })
-        {
-            return Problem("Некорректный VIN", "Длина VIN не может превышать 50 символов.");
-        }
-        if (page < 1)
-        {
-            return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
-        }
-        if (pageSize is < 1 or > 100)
-        {
-            return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
-        }
-
-        var result = await reader.GetPageAsync(new NcpQuery(vin, status, page, pageSize), ct);
-        return Results.Ok(result);
-    });
-
-    ncp.MapPost("", async (CreateNcpRequest request, INcpWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        if (string.IsNullOrWhiteSpace(request.Vin) || request.Vin.Length > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-
-        var (outcome, created) = await writer.CreateAsync(request, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            CreateNcpOutcome.Ok => Results.Ok(created),
-            CreateNcpOutcome.VinNotFound => Results.Problem(
-                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound),
-            CreateNcpOutcome.ComponentNotFound => Problem("Компонент не найден", "Такого артикула нет в справочнике компонентов."),
-            CreateNcpOutcome.InvalidStation => Problem("Некорректная станция", "Такой станции нет в списке."),
-            CreateNcpOutcome.InvalidQuantity => Problem("Некорректное количество", "Количество должно быть от 1 до 9999."),
-            _ => Problem("Некорректный тип", "Такого типа несоответствия нет в справочнике."),
-        };
-    });
-
-    ncp.MapPost("/{id:int}/part-installed", async (
-        int id, SetPartInstalledRequest request, INcpWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        var (outcome, updated) = await writer.SetPartInstalledAsync(id, request.Installed, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome == NcpActionOutcome.Ok
-            ? Results.Ok(updated)
-            : Results.Problem(title: "Заявка не найдена", statusCode: StatusCodes.Status404NotFound);
-    });
-
-    ncp.MapPost("/{id:int}/close", async (
-        int id, CloseNcpRequest request, INcpWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        var (outcome, closed) = await writer.CloseAsync(id, user.Identity?.Name ?? "неизвестно", request, ct);
-        return outcome switch
-        {
-            NcpActionOutcome.Ok => Results.Ok(closed),
-            NcpActionOutcome.AlreadyClosed => Problem("Уже закрыто", "Эта заявка уже закрыта."),
-            _ => Results.Problem(title: "Заявка не найдена", statusCode: StatusCodes.Status404NotFound),
-        };
-    });
-
     // Станции (Этап 5): отметки проверки компонентов. Остальное (список станций, каталог
     // компонентов, NCP по VIN) экран собирает из уже существующих эндпоинтов /ncp/* —
     // дублировать их здесь незачем.

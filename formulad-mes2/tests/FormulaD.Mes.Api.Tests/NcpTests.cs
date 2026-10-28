@@ -174,14 +174,11 @@ public sealed class NcpTests
     }
 
     [Fact]
-    public async Task Ncp_Routes_Do_Not_Exist_In_Sql_Mode()
+    public async Task Ncp_Routes_Exist_In_Sql_Mode_Behind_Auth()
     {
-        // Валидная (не фактически подключаемая) SQL-конфигурация проходит старт приложения;
-        // маршруты /api/v1/ncp/* при этом не регистрируются вообще (см. Program.cs) —
-        // в отличие от 401 (эндпоинт есть, но закрыт), здесь должен быть 404 (эндпоинта нет).
         using var factory = new SqlConfiguredFactory();
         var response = await factory.CreateClient().GetAsync("/api/v1/ncp");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

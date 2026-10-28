@@ -29,4 +29,11 @@ GRANT UPDATE ON [dbo].[tblProductionPlan] ([statusid], [Status], [StartDate], [C
 
 -- Вставка: импорт плана (Этап 8) добавляет новые строки.
 GRANT INSERT ON [dbo].[tblProductionPlan] TO [mes_writer];
+
+-- NCP: чтение справочников + полный CRUD на tblNCP.
+GRANT SELECT ON [dbo].[tblNCP] TO [mes_writer];
+GRANT SELECT ON [dbo].[tblComponent] TO [mes_writer];
+GRANT SELECT ON [dbo].[tblDiscrepancyList] TO [mes_writer];
+GRANT INSERT ON [dbo].[tblNCP] TO [mes_writer];
+GRANT UPDATE ON [dbo].[tblNCP] ([Status], [ClosedBy], [ClosedAt], [Comment]) TO [mes_writer];
 GO
