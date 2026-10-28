@@ -26,4 +26,7 @@ GRANT SELECT ON [dbo].[tblProductionPlan] TO [mes_writer];
 -- Запись: только UPDATE на конкретные колонки, которые меняют переходы статусов.
 GRANT UPDATE ON [dbo].[tblProductionPlan] ([statusid], [Status], [StartDate], [CompleteDate],
     [FOK_date], [reworkdate], [reworkcompletedate], [PrintDate], [SEQN]) TO [mes_writer];
+
+-- Вставка: импорт плана (Этап 8) добавляет новые строки.
+GRANT INSERT ON [dbo].[tblProductionPlan] TO [mes_writer];
 GO
