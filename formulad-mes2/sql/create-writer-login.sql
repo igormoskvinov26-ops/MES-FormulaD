@@ -43,4 +43,27 @@ GRANT UPDATE ON [dbo].[tblNCP] ([Status], [ClosedBy], [ClosedAt], [Comment]) TO 
 GRANT SELECT ON [dbo].[tblComponentCheck] TO [mes_writer];
 GRANT INSERT ON [dbo].[tblComponentCheck] TO [mes_writer];
 GRANT UPDATE ON [dbo].[tblComponentCheck] ([Checked], [CheckedBy], [CheckedAt]) TO [mes_writer];
+
+-- Incoming inspection: таблицы создаются приложением автоматически (EnsureTable).
+-- Выполнить после первого запуска приложения.
+GRANT SELECT ON [dbo].[tblIncomingSupplier] TO [mes_writer];
+GRANT INSERT ON [dbo].[tblIncomingSupplier] TO [mes_writer];
+
+GRANT SELECT ON [dbo].[tblInspectionQuota] TO [mes_writer];
+GRANT INSERT ON [dbo].[tblInspectionQuota] TO [mes_writer];
+
+GRANT SELECT ON [dbo].[tblIncomingDelivery] TO [mes_writer];
+GRANT INSERT ON [dbo].[tblIncomingDelivery] TO [mes_writer];
+
+GRANT SELECT ON [dbo].[tblIncomingPackage] TO [mes_writer];
+GRANT INSERT ON [dbo].[tblIncomingPackage] TO [mes_writer];
+GRANT UPDATE ON [dbo].[tblIncomingPackage] ([Status], [ClosedAt], [ClosedBy]) TO [mes_writer];
+
+GRANT SELECT ON [dbo].[tblIncomingPackingRow] TO [mes_writer];
+GRANT INSERT ON [dbo].[tblIncomingPackingRow] TO [mes_writer];
+GRANT UPDATE ON [dbo].[tblIncomingPackingRow] ([RequiredQuantity], [OkQuantity], [DefectQuantity],
+    [MismatchQuantity], [ShortageQuantity], [DiscrepancyReason]) TO [mes_writer];
+
+-- Входной контроль также вставляет в tblComponent (добавление неизвестного артикула).
+GRANT INSERT ON [dbo].[tblComponent] TO [mes_writer];
 GO

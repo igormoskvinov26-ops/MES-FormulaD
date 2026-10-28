@@ -82,6 +82,9 @@ switch (dataSource.ToLowerInvariant())
             sp.GetRequiredService<IProductionPlanReader>(),
             sp.GetRequiredService<IPlanPublisher>(),
             sp.GetRequiredService<IEventLog>()));
+        var sqlIncoming = new SqlIncomingInspection(sqlOptions, eventLog);
+        builder.Services.AddSingleton<IIncomingInspectionReader>(sqlIncoming);
+        builder.Services.AddSingleton<IIncomingInspectionWriter>(sqlIncoming);
         break;
 
     default:
@@ -529,172 +532,168 @@ planImport.MapPost("/sessions/{id}/publish", async (string id, IPlanImport impor
     };
 });
 
-// Входной контроль — пока только Demo (нет SQL-реализации).
-if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
+// Входной контроль (разделы 19-24, Этап 9): поставка → упаковки/коробки → строки (IncomingInspection.cs).
+var incoming = api.MapGroup("/incoming-inspection").RequireAuthorization();
+
+incoming.MapGet("/suppliers", async (IIncomingInspectionReader reader, CancellationToken ct) =>
+    Results.Ok(await reader.GetSuppliersAsync(ct)));
+
+incoming.MapGet("/components", async (IIncomingInspectionReader reader, CancellationToken ct) =>
+    Results.Ok(await reader.GetComponentsAsync(ct)));
+
+incoming.MapPost("/components", async (AddComponentRequest request, IIncomingInspectionWriter writer, CancellationToken ct) =>
 {
-    // Входной контроль (разделы 19-24, Этап 9): поставка → упаковки/коробки → строки (IncomingInspection.cs).
-    var incoming = api.MapGroup("/incoming-inspection").RequireAuthorization();
+    var added = await writer.AddComponentAsync(request, ct);
+    return added
+        ? Results.NoContent()
+        : Problem("Нельзя добавить артикул", "Код и наименование обязательны, а артикул не должен уже существовать в справочнике.");
+});
 
-    incoming.MapGet("/suppliers", async (IIncomingInspectionReader reader, CancellationToken ct) =>
-        Results.Ok(await reader.GetSuppliersAsync(ct)));
-
-    incoming.MapGet("/components", async (IIncomingInspectionReader reader, CancellationToken ct) =>
-        Results.Ok(await reader.GetComponentsAsync(ct)));
-
-    incoming.MapPost("/components", async (AddComponentRequest request, IIncomingInspectionWriter writer, CancellationToken ct) =>
+incoming.MapGet("/deliveries", async (IIncomingInspectionReader reader, CancellationToken ct, int page = 1, int pageSize = 25) =>
+{
+    if (page < 1)
     {
-        var added = await writer.AddComponentAsync(request, ct);
-        return added
-            ? Results.NoContent()
-            : Problem("Нельзя добавить артикул", "Код и наименование обязательны, а артикул не должен уже существовать в справочнике.");
-    });
-
-    incoming.MapGet("/deliveries", async (IIncomingInspectionReader reader, CancellationToken ct, int page = 1, int pageSize = 25) =>
+        return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
+    }
+    if (pageSize is < 1 or > 100)
     {
-        if (page < 1)
-        {
-            return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
-        }
-        if (pageSize is < 1 or > 100)
-        {
-            return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
-        }
-        return Results.Ok(await reader.GetDeliveriesAsync(page, pageSize, ct));
-    });
+        return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
+    }
+    return Results.Ok(await reader.GetDeliveriesAsync(page, pageSize, ct));
+});
 
-    incoming.MapPost("/deliveries", async (CreateDeliveryRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+incoming.MapPost("/deliveries", async (CreateDeliveryRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var (outcome, created) = await writer.CreateDeliveryAsync(request, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
     {
-        var (outcome, created) = await writer.CreateDeliveryAsync(request, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            CreateDeliveryOutcome.Ok => Results.Ok(created),
-            CreateDeliveryOutcome.SupplierNotFound => Problem("Поставщик не найден", "Такого поставщика нет в справочнике."),
-            _ => Problem("Некорректная дата инвойса", "Ожидается формат ГГГГ-ММ-ДД или ДД.ММ.ГГГГ."),
-        };
-    });
+        CreateDeliveryOutcome.Ok => Results.Ok(created),
+        CreateDeliveryOutcome.SupplierNotFound => Problem("Поставщик не найден", "Такого поставщика нет в справочнике."),
+        _ => Problem("Некорректная дата инвойса", "Ожидается формат ГГГГ-ММ-ДД или ДД.ММ.ГГГГ."),
+    };
+});
 
-    incoming.MapGet("/deliveries/{id}", async (string id, IIncomingInspectionReader reader, CancellationToken ct) =>
-    {
-        var delivery = await reader.GetDeliveryAsync(id, ct);
-        return delivery is null
-            ? Results.Problem(title: "Поставка не найдена", statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(delivery);
-    });
+incoming.MapGet("/deliveries/{id}", async (string id, IIncomingInspectionReader reader, CancellationToken ct) =>
+{
+    var delivery = await reader.GetDeliveryAsync(id, ct);
+    return delivery is null
+        ? Results.Problem(title: "Поставка не найдена", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(delivery);
+});
 
-    incoming.MapGet("/deliveries/{id}/packages/by-hu/{hu}", async (string id, string hu, IIncomingInspectionReader reader, CancellationToken ct) =>
-    {
-        var package = await reader.GetPackageByHuAsync(id, hu, ct);
-        return package is null
-            ? Results.Problem(title: "Коробка не найдена", detail: "В этой поставке нет коробки с таким HU.", statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(package);
-    });
+incoming.MapGet("/deliveries/{id}/packages/by-hu/{hu}", async (string id, string hu, IIncomingInspectionReader reader, CancellationToken ct) =>
+{
+    var package = await reader.GetPackageByHuAsync(id, hu, ct);
+    return package is null
+        ? Results.Problem(title: "Коробка не найдена", detail: "В этой поставке нет коробки с таким HU.", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(package);
+});
 
-    incoming.MapPost("/deliveries/{id}/packing-list/sessions", async (
-        string id, StagePackingListRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+incoming.MapPost("/deliveries/{id}/packing-list/sessions", async (
+    string id, StagePackingListRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (request.Rows.Count == 0)
     {
-        if (request.Rows.Count == 0)
-        {
-            return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
-        }
-        if (request.Rows.Count > 500)
-        {
-            return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
-        }
-        var session = await writer.StagePackingListAsync(id, request.Rows, user.Identity?.Name ?? "неизвестно", ct);
-        return session is null
-            ? Results.Problem(title: "Поставка не найдена", statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(session);
-    });
+        return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
+    }
+    if (request.Rows.Count > 500)
+    {
+        return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
+    }
+    var session = await writer.StagePackingListAsync(id, request.Rows, user.Identity?.Name ?? "неизвестно", ct);
+    return session is null
+        ? Results.Problem(title: "Поставка не найдена", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(session);
+});
 
-    incoming.MapGet("/packing-list/sessions/{sessionId}", async (string sessionId, IIncomingInspectionWriter writer, CancellationToken ct) =>
-    {
-        var session = await writer.GetSessionAsync(sessionId, ct);
-        return session is null
-            ? Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(session);
-    });
+incoming.MapGet("/packing-list/sessions/{sessionId}", async (string sessionId, IIncomingInspectionWriter writer, CancellationToken ct) =>
+{
+    var session = await writer.GetSessionAsync(sessionId, ct);
+    return session is null
+        ? Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(session);
+});
 
-    incoming.MapPut("/packing-list/sessions/{sessionId}/rows/{rowNumber:int}", async (
-        string sessionId, int rowNumber, PackingListRawRow row, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        var session = await writer.ReplaceRowAsync(sessionId, rowNumber, row, user.Identity?.Name ?? "неизвестно", ct);
-        return session is null
-            ? Results.Problem(title: "Загрузка или строка не найдена", statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(session);
-    });
+incoming.MapPut("/packing-list/sessions/{sessionId}/rows/{rowNumber:int}", async (
+    string sessionId, int rowNumber, PackingListRawRow row, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var session = await writer.ReplaceRowAsync(sessionId, rowNumber, row, user.Identity?.Name ?? "неизвестно", ct);
+    return session is null
+        ? Results.Problem(title: "Загрузка или строка не найдена", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(session);
+});
 
-    incoming.MapPost("/packing-list/sessions/{sessionId}/confirm", async (
-        string sessionId, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+incoming.MapPost("/packing-list/sessions/{sessionId}/confirm", async (
+    string sessionId, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var (outcome, delivery) = await writer.ConfirmSessionAsync(sessionId, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
     {
-        var (outcome, delivery) = await writer.ConfirmSessionAsync(sessionId, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            ConfirmPackingListOutcome.Ok => Results.Ok(delivery),
-            ConfirmPackingListOutcome.SessionNotFound => Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound),
-            _ => Problem("Нельзя подтвердить", "В загрузке остались ошибки — исправьте все строки перед подтверждением."),
-        };
-    });
+        ConfirmPackingListOutcome.Ok => Results.Ok(delivery),
+        ConfirmPackingListOutcome.SessionNotFound => Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound),
+        _ => Problem("Нельзя подтвердить", "В загрузке остались ошибки — исправьте все строки перед подтверждением."),
+    };
+});
 
-    incoming.MapPost("/packages/{packageId:int}/rows/{rowId:int}/result", async (
-        int packageId, int rowId, RecordRowResultRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+incoming.MapPost("/packages/{packageId:int}/rows/{rowId:int}/result", async (
+    int packageId, int rowId, RecordRowResultRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var (outcome, package) = await writer.RecordRowResultAsync(packageId, rowId, request, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
     {
-        var (outcome, package) = await writer.RecordRowResultAsync(packageId, rowId, request, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            RowResultOutcome.Ok => Results.Ok(package),
-            RowResultOutcome.NotFound => Results.Problem(title: "Коробка или строка не найдена", statusCode: StatusCodes.Status404NotFound),
-            RowResultOutcome.PackageClosed => Problem("Коробка закрыта", "Сначала переоткройте коробку, чтобы изменить результат проверки."),
-            RowResultOutcome.InvalidOutcome => Problem("Некорректный результат", "Допустимо: OK, Брак, Пересорт, Недостача."),
-            RowResultOutcome.InvalidQuantity => Problem("Некорректное количество", "Количество должно быть положительным."),
-            _ => Problem("Превышен объём контроля", "Сумма проверенного и недостачи не может превышать требуемый объём — увеличьте норматив, если нужно."),
-        };
-    });
+        RowResultOutcome.Ok => Results.Ok(package),
+        RowResultOutcome.NotFound => Results.Problem(title: "Коробка или строка не найдена", statusCode: StatusCodes.Status404NotFound),
+        RowResultOutcome.PackageClosed => Problem("Коробка закрыта", "Сначала переоткройте коробку, чтобы изменить результат проверки."),
+        RowResultOutcome.InvalidOutcome => Problem("Некорректный результат", "Допустимо: OK, Брак, Пересорт, Недостача."),
+        RowResultOutcome.InvalidQuantity => Problem("Некорректное количество", "Количество должно быть положительным."),
+        _ => Problem("Превышен объём контроля", "Сумма проверенного и недостачи не может превышать требуемый объём — увеличьте норматив, если нужно."),
+    };
+});
 
-    incoming.MapPost("/packages/{packageId:int}/rows/{rowId:int}/quota", async (
-        int packageId, int rowId, IncreaseQuotaRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+incoming.MapPost("/packages/{packageId:int}/rows/{rowId:int}/quota", async (
+    int packageId, int rowId, IncreaseQuotaRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Comment))
     {
-        if (string.IsNullOrWhiteSpace(request.Comment))
-        {
-            return Problem("Нужен комментарий", "Увеличение норматива требует комментария (раздел 22, В-30).");
-        }
-        var (outcome, package) = await writer.IncreaseQuotaAsync(packageId, rowId, request, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            QuotaOutcome.Ok => Results.Ok(package),
-            QuotaOutcome.NotFound => Results.Problem(title: "Коробка или строка не найдена", statusCode: StatusCodes.Status404NotFound),
-            QuotaOutcome.PackageClosed => Problem("Коробка закрыта", "Сначала переоткройте коробку."),
-            _ => Problem("Некорректный объём", "Новый объём должен быть больше текущего и не превышать поступившее количество."),
-        };
-    });
+        return Problem("Нужен комментарий", "Увеличение норматива требует комментария (раздел 22, В-30).");
+    }
+    var (outcome, package) = await writer.IncreaseQuotaAsync(packageId, rowId, request, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
+    {
+        QuotaOutcome.Ok => Results.Ok(package),
+        QuotaOutcome.NotFound => Results.Problem(title: "Коробка или строка не найдена", statusCode: StatusCodes.Status404NotFound),
+        QuotaOutcome.PackageClosed => Problem("Коробка закрыта", "Сначала переоткройте коробку."),
+        _ => Problem("Некорректный объём", "Новый объём должен быть больше текущего и не превышать поступившее количество."),
+    };
+});
 
-    incoming.MapPost("/packages/{packageId:int}/close", async (int packageId, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+incoming.MapPost("/packages/{packageId:int}/close", async (int packageId, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var (outcome, package) = await writer.ClosePackageAsync(packageId, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
     {
-        var (outcome, package) = await writer.ClosePackageAsync(packageId, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            PackageActionOutcome.Ok => Results.Ok(package),
-            PackageActionOutcome.NotFound => Results.Problem(title: "Коробка не найдена", statusCode: StatusCodes.Status404NotFound),
-            PackageActionOutcome.AlreadyClosed => Problem("Уже закрыта", "Эта коробка уже закрыта."),
-            _ => Problem("Нельзя закрыть", "Не все строки отработаны по требуемому нормативу."),
-        };
-    });
+        PackageActionOutcome.Ok => Results.Ok(package),
+        PackageActionOutcome.NotFound => Results.Problem(title: "Коробка не найдена", statusCode: StatusCodes.Status404NotFound),
+        PackageActionOutcome.AlreadyClosed => Problem("Уже закрыта", "Эта коробка уже закрыта."),
+        _ => Problem("Нельзя закрыть", "Не все строки отработаны по требуемому нормативу."),
+    };
+});
 
-    incoming.MapPost("/packages/{packageId:int}/reopen", async (
-        int packageId, ReopenRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+incoming.MapPost("/packages/{packageId:int}/reopen", async (
+    int packageId, ReopenRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Comment))
     {
-        if (string.IsNullOrWhiteSpace(request.Comment))
-        {
-            return Problem("Нужен комментарий", "Переоткрытие закрытой коробки требует комментария (раздел 23, В-32).");
-        }
-        var (outcome, package) = await writer.ReopenPackageAsync(packageId, request, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            PackageActionOutcome.Ok => Results.Ok(package),
-            PackageActionOutcome.NotFound => Results.Problem(title: "Коробка не найдена", statusCode: StatusCodes.Status404NotFound),
-            _ => Problem("Нельзя переоткрыть", "Эта коробка и так открыта."),
-        };
-    });
-}
+        return Problem("Нужен комментарий", "Переоткрытие закрытой коробки требует комментария (раздел 23, В-32).");
+    }
+    var (outcome, package) = await writer.ReopenPackageAsync(packageId, request, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
+    {
+        PackageActionOutcome.Ok => Results.Ok(package),
+        PackageActionOutcome.NotFound => Results.Problem(title: "Коробка не найдена", statusCode: StatusCodes.Status404NotFound),
+        _ => Problem("Нельзя переоткрыть", "Эта коробка и так открыта."),
+    };
+});
 
 api.MapGet("/auth/me", (ClaimsPrincipal user, DevAuthOptions opts) => Results.Ok(new
 {
