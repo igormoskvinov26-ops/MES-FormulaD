@@ -66,7 +66,8 @@ BEGIN
     DECLARE @cols NVARCHAR(MAX), @sql NVARCHAR(MAX);
     SELECT @cols = STRING_AGG(QUOTENAME(COLUMN_NAME), ', ')
     FROM [FormulaD_TEST].INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_NAME = 'tblProductionPlan';
+    WHERE TABLE_NAME = 'tblProductionPlan'
+      AND DATA_TYPE NOT IN ('timestamp', 'rowversion');
 
     SET @sql = N'INSERT INTO [FormulaD_TEST].[dbo].[tblProductionPlan] (' + @cols + N')
     SELECT ' + @cols + N' FROM [FormulaD].[dbo].[tblProductionPlan]';
