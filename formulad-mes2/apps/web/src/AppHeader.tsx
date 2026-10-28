@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 import { api } from './api';
 import { QuadMark } from './QuadMark';
+import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports } from './SidebarIcons';
 
 export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'reports';
 
@@ -22,17 +24,19 @@ function Clock() {
   );
 }
 
-const TABS: { key: Screen; label: string }[] = [
-  { key: 'plan', label: 'Производственный план' },
-  { key: 'import', label: 'Импорт плана' },
-  { key: 'start', label: 'Старт' },
-  { key: 'stations', label: 'Станции' },
-  { key: 'complete', label: 'Завершение' },
-  { key: 'fok', label: 'FOK' },
-  { key: 'rework', label: 'Rework' },
-  { key: 'ncp', label: 'Несоответствия' },
-  { key: 'incoming', label: 'Входной контроль' },
-  { key: 'reports', label: 'Отчётность' },
+type Tab = { key: Screen; label: string; Icon: ComponentType<{ className?: string }>; group?: string };
+
+const TABS: Tab[] = [
+  { key: 'plan', label: 'Производственный план', Icon: IconPlan },
+  { key: 'import', label: 'Импорт плана', Icon: IconImport },
+  { key: 'start', label: 'Старт', Icon: IconStart, group: 'Производство' },
+  { key: 'stations', label: 'Станции', Icon: IconStations },
+  { key: 'complete', label: 'Завершение', Icon: IconComplete },
+  { key: 'fok', label: 'FOK', Icon: IconFok },
+  { key: 'rework', label: 'Rework', Icon: IconRework },
+  { key: 'ncp', label: 'Несоответствия', Icon: IconNcp, group: 'Качество' },
+  { key: 'incoming', label: 'Входной контроль', Icon: IconIncoming },
+  { key: 'reports', label: 'Отчётность', Icon: IconReports },
 ];
 
 /** Общая навигация всех экранов: боковое меню (фиксированное, только для рабочего места на ПК)
@@ -63,12 +67,14 @@ export function AppHeader({
         <ul className="sidebar-nav">
           {TABS.map((tab) => (
             <li key={tab.key}>
+              {tab.group && <span className="sidebar-group">{tab.group}</span>}
               <button
                 type="button"
                 className={tab.key === screen ? 'sidebar-link active' : 'sidebar-link'}
                 aria-current={tab.key === screen ? 'page' : undefined}
                 onClick={() => onNavigate(tab.key)}
               >
+                <tab.Icon className="sidebar-icon" />
                 {tab.label}
               </button>
             </li>

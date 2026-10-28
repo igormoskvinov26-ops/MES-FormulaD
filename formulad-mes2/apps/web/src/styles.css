@@ -139,21 +139,40 @@ button.link {
 .sidebar-link {
   width: 100%;
   text-align: left;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
   color: #9aa2b1;
   font-weight: 500;
+  font-size: 14px;
   box-shadow: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .1s ease;
 }
+.sidebar-icon { flex-shrink: 0; opacity: .7; }
 .sidebar-link:hover { background: rgba(255, 255, 255, .1); color: #f2f3f6; transform: translateX(2px); }
+.sidebar-link:hover .sidebar-icon { opacity: 1; }
 .sidebar-link.active {
   background: linear-gradient(135deg, #ff3b3f, var(--f7-red-dark));
   color: #fff;
   font-weight: 600;
   box-shadow: 0 8px 20px -8px rgba(227, 30, 36, .65);
+}
+.sidebar-link.active .sidebar-icon { opacity: 1; }
+
+.sidebar-group {
+  display: block;
+  padding: 14px 12px 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #5a6172;
+  border-top: 1px solid var(--graphite-line);
 }
 
 .sidebar .badge-demo { align-self: flex-start; }
@@ -187,7 +206,7 @@ button.link {
 h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
 
 .topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
-.topbar-user { color: var(--muted); font-variant-numeric: tabular-nums; }
+.topbar-user { font-variant-numeric: tabular-nums; }
 .spacer { flex: 1; }
 
 /* --- Сводка по статусам: отдельные приподнятые плашки с цветным значком, как в референсе. --- */
@@ -783,3 +802,45 @@ td input, td select { width: 100%; min-width: 120px; }
 .pkg-row-action { display: flex; gap: 6px; margin-top: 4px; align-items: center; flex-wrap: wrap; }
 .pkg-row-action input, .pkg-row-action select { width: auto; min-width: 70px; }
 .pkg-row-error { font-size: 13px; margin: 4px 0 0; }
+
+/* --- Micro-animations and polish --- */
+@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.card, .scan-panel, .stat-tile { animation: fade-in .25s ease-out; }
+
+.modal-backdrop { animation: backdrop-in .2s ease-out; }
+@keyframes backdrop-in { from { opacity: 0; } }
+.modal { animation: modal-in .25s ease-out; }
+@keyframes modal-in { from { opacity: 0; transform: translateY(16px) scale(.97); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .scan-panel, .stat-tile, .modal-backdrop, .modal { animation: none; }
+}
+
+/* Better empty state styling */
+.center.muted { font-size: 15px; line-height: 1.6; }
+
+/* Topbar user badge */
+.topbar-user {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Toolbar section divider */
+.toolbar + main { border-top: 1px solid var(--border); }
+
+/* Better focus for search inputs */
+input.search:focus-visible {
+  outline-color: var(--f7-red);
+  border-color: var(--f7-red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--f7-red) 15%, transparent);
+}
+
+/* Badge micro-improvement */
+.badge { transition: background-color .15s ease; }
+
+/* Reports grid cards hover */
+.reports-grid .card { transition: box-shadow .15s ease, transform .15s ease; }
+.reports-grid .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
