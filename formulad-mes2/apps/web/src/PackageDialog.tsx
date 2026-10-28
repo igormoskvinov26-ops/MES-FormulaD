@@ -184,12 +184,19 @@ export function PackageDialog({ pkg, onChanged, onClose }: { pkg: DeliveryPackag
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div className="modal pkg-modal" role="dialog" aria-modal="true" aria-label={`Коробка ${pkg.huNumber}`} onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-actions">
-          <h2>
-            Коробка {pkg.huNumber}{' '}
-            <span className={closed ? (pkg.hasIssues ? 'badge badge-warn' : 'badge badge-ok') : 'badge'}>
-              {closed ? (pkg.hasIssues ? 'Проверено, с замечаниями' : 'Проверено') : 'Открыта'}
-            </span>
-          </h2>
+          <div>
+            <h2>
+              Коробка {pkg.huNumber}{' '}
+              <span className={closed ? (pkg.hasIssues ? 'badge badge-warn' : 'badge badge-ok') : 'badge'}>
+                {closed ? (pkg.hasIssues ? 'Проверено, с замечаниями' : 'Проверено') : 'Открыта'}
+              </span>
+            </h2>
+            <div className="pkg-progress">
+              <span>Строк: {pkg.rows.length}</span>
+              <span>·</span>
+              <span>Отработано: {pkg.rows.filter((r) => r.isComplete).length} из {pkg.rows.length}</span>
+            </div>
+          </div>
           <button type="button" onClick={onClose}>
             Закрыть окно
           </button>
@@ -225,6 +232,14 @@ export function PackageDialog({ pkg, onChanged, onClose }: { pkg: DeliveryPackag
                   <span className={row.isComplete ? 'badge status-ok' : 'badge'}>
                     {row.isComplete ? 'Отработано' : `Осталось ${row.requiredQuantity - row.checkedQuantity}`}
                   </span>
+                  {row.requiredQuantity > 0 && (
+                    <div className="progress-bar">
+                      <div
+                        className={`progress-bar-fill${row.isComplete ? ' complete' : ''}${row.hasIssues ? ' has-issues' : ''}`}
+                        style={{ width: `${Math.min(100, (row.checkedQuantity / row.requiredQuantity) * 100)}%` }}
+                      />
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

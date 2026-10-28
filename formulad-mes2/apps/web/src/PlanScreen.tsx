@@ -221,7 +221,7 @@ export function PlanScreen({
             ref={searchRef}
             className="search"
             aria-label="Поиск VIN или сканирование"
-            placeholder="Сканируйте VIN или введите начало / последние цифры"
+            placeholder="Поиск VIN (Ctrl+K)"
             value={vin}
             maxLength={50}
             autoFocus
