@@ -61,8 +61,18 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM [FormulaD_TEST].[dbo].[tblProductionPlan])
 BEGIN
-    INSERT INTO [FormulaD_TEST].[dbo].[tblProductionPlan]
-    SELECT * FROM [FormulaD].[dbo].[tblProductionPlan];
+    SET IDENTITY_INSERT [FormulaD_TEST].[dbo].[tblProductionPlan] ON;
+
+    DECLARE @cols NVARCHAR(MAX), @sql NVARCHAR(MAX);
+    SELECT @cols = STRING_AGG(QUOTENAME(COLUMN_NAME), ', ')
+    FROM [FormulaD_TEST].INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'tblProductionPlan';
+
+    SET @sql = N'INSERT INTO [FormulaD_TEST].[dbo].[tblProductionPlan] (' + @cols + N')
+    SELECT ' + @cols + N' FROM [FormulaD].[dbo].[tblProductionPlan]';
+    EXEC sp_executesql @sql;
+
+    SET IDENTITY_INSERT [FormulaD_TEST].[dbo].[tblProductionPlan] OFF;
     PRINT 'Все строки скопированы из FormulaD в FormulaD_TEST.';
 END
 ELSE
