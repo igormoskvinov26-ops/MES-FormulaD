@@ -723,8 +723,19 @@ if (devAuth.CanLogIn)
     }).AllowAnonymous();
 }
 
-// SPA fallback: любой не-API запрос без расширения → index.html
-app.MapFallbackToFile("index.html");
+// SPA fallback: GET вне /api/ → index.html
+app.MapFallback(context =>
+{
+    if (context.Request.Method == "GET" && !context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Request.Path = "/index.html";
+        return context.Response.SendFileAsync(
+            context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>()
+                .WebRootFileProvider.GetFileInfo("index.html"));
+    }
+    context.Response.StatusCode = 404;
+    return Task.CompletedTask;
+});
 
 app.Run();
 
