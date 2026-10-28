@@ -43,48 +43,32 @@ GO
 ALTER ROLE [db_datareader] ADD MEMBER [mes_reader];
 GO
 
--- 3. Таблица tblProductionPlan — единственная, которую приложение запрашивает через SQL.
---    Типы данных выведены из PROD-схемы и DTO приложения.
---    Если реальные типы отличаются — поправьте под свою схему.
+-- 3. Копируем схему tblProductionPlan из PROD (без данных).
+--    SELECT TOP 0 создаёт таблицу с теми же колонками и типами, но без индексов/PK.
+--    PK добавляем отдельно.
 
-IF OBJECT_ID(N'dbo.tblProductionPlan', N'U') IS NULL
+IF OBJECT_ID(N'FormulaD_TEST.dbo.tblProductionPlan', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[tblProductionPlan]
-    (
-        [VIN]                 NVARCHAR(50)   NOT NULL,
-        [ID]                  INT            NOT NULL IDENTITY(1,1),
-        [SEQN]                INT            NULL,
-        [ModelArticle]        NVARCHAR(100)  NULL,
-        [ModelName]           NVARCHAR(100)  NULL,
-        [EngineNumber]        NVARCHAR(50)   NULL,
-        [Color]               NVARCHAR(50)   NULL,
-        [SpecificationName]   NVARCHAR(100)  NULL,
-        [Status]              NVARCHAR(50)   NULL,
-        [statusid]            INT            NULL,
-        [PrintDate]           DATETIME       NULL,
-        [plannedstartdate]    DATETIME       NULL,
-        [PlannedShipmentDate] DATETIME       NULL,
-        [StartDate]           DATETIME       NULL,
-        [CompleteDate]        DATETIME       NULL,
-        [FOK_date]            DATETIME       NULL,
-
-        CONSTRAINT [PK_tblProductionPlan] PRIMARY KEY CLUSTERED ([VIN])
-    );
-    PRINT 'Таблица tblProductionPlan создана.';
+    SELECT TOP 0 * INTO [FormulaD_TEST].[dbo].[tblProductionPlan] FROM [FormulaD].[dbo].[tblProductionPlan];
+    ALTER TABLE [FormulaD_TEST].[dbo].[tblProductionPlan] ADD CONSTRAINT [PK_tblProductionPlan] PRIMARY KEY CLUSTERED ([VIN]);
+    PRINT 'Таблица tblProductionPlan скопирована из FormulaD (схема без данных).';
 END
 ELSE
-    PRINT 'Таблица tblProductionPlan уже существует.';
+    PRINT 'Таблица tblProductionPlan уже существует в FormulaD_TEST.';
 GO
 
--- 4. Тестовые данные (5 записей для проверки пагинации и поиска)
-INSERT INTO [dbo].[tblProductionPlan]
-    ([VIN], [SEQN], [ModelArticle], [ModelName], [EngineNumber], [Color], [SpecificationName], [Status], [statusid], [PrintDate], [plannedstartdate])
-VALUES
-    (N'TEST-VIN-001', 1, N'ART-100', N'CF Moto 450',   N'ENG-001', N'Красный',  N'Стандарт',   N'Запланировано', 0, NULL, '2024-11-01'),
-    (N'TEST-VIN-002', 2, N'ART-100', N'CF Moto 450',   N'ENG-002', N'Чёрный',   N'Стандарт',   N'Запланировано', 0, NULL, '2024-11-01'),
-    (N'TEST-VIN-003', 3, N'ART-200', N'CF Moto 600',   N'ENG-003', N'Белый',    N'Комфорт',    N'В производстве', 1, '2024-10-28', '2024-11-02'),
-    (N'TEST-VIN-004', 4, N'ART-200', N'CF Moto 600',   N'ENG-004', N'Зелёный',  N'Комфорт',    N'Завершено',     2, '2024-10-27', '2024-11-01'),
-    (N'TEST-VIN-005', 5, N'ART-300', N'CF Moto 800MT', N'ENG-005', N'Серебро',  N'Премиум',    N'FOK',           3, '2024-10-26', '2024-10-30');
+-- 4. Копируем несколько строк для проверки (первые 50 по VIN).
+--    Если хотите все данные — уберите TOP 50.
+--    Если хотите пустую базу — закомментируйте этот блок.
+
+IF NOT EXISTS (SELECT 1 FROM [FormulaD_TEST].[dbo].[tblProductionPlan])
+BEGIN
+    INSERT INTO [FormulaD_TEST].[dbo].[tblProductionPlan]
+    SELECT TOP 50 * FROM [FormulaD].[dbo].[tblProductionPlan] ORDER BY [VIN];
+    PRINT 'Скопировано до 50 строк из FormulaD в FormulaD_TEST.';
+END
+ELSE
+    PRINT 'Данные уже есть — пропускаем копирование.';
 GO
 
 PRINT '';
