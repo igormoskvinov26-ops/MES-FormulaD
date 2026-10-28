@@ -3,13 +3,14 @@ using Microsoft.Data.SqlClient;
 namespace FormulaD.Mes.Api;
 
 /// <summary>
-/// Настройки подключения к TEST-экземпляру SQL Server. Fail-closed: любая неполная
+/// Настройки подключения к TEST-базе SQL Server. Fail-closed: любая неполная
 /// или похожая на PROD конфигурация приводит к ошибке запуска, а не к попытке соединения.
+/// Допускается тестовая база на том же экземпляре, что и PROD — защита по имени базы,
+/// логину и флагу IsTestEnvironment.
 /// </summary>
 public sealed record SqlOptions(string ConnectionString, int CommandTimeoutSeconds)
 {
-    /// <summary>Имена PROD-ресурсов, которые приложение отказывается открывать даже на чтение.</summary>
-    private static readonly string[] ForbiddenHosts = ["SQLACCESS"];
+    /// <summary>PROD-база, которую приложение отказывается открывать даже на чтение.</summary>
     private static readonly string[] ForbiddenDatabases = ["FormulaD"];
 
     /// <summary>Админские учётки, недопустимые для read-only доступа.</summary>
@@ -46,13 +47,8 @@ public sealed record SqlOptions(string ConnectionString, int CommandTimeoutSecon
 
     private static void Validate(SqlConnectionStringBuilder builder)
     {
-        var host = builder.DataSource ?? string.Empty;
-        if (ForbiddenHosts.Any(forbidden => host.Contains(forbidden, StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new InvalidOperationException(
-                $"Хост '{host}' относится к PROD и запрещён. Допустим только отдельный тестовый экземпляр SQL Server.");
-        }
-
+        // ponytail: проверка хоста убрана — допускается тестовая база на том же экземпляре,
+        // что и PROD. Три оставшихся барьера (имя базы, логин, флаг IsTestEnvironment) достаточны.
         var database = builder.InitialCatalog ?? string.Empty;
         if (ForbiddenDatabases.Any(forbidden => string.Equals(database, forbidden, StringComparison.OrdinalIgnoreCase)))
         {

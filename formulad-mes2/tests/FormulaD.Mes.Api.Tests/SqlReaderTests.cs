@@ -31,14 +31,22 @@ public sealed class SqlOptionsTests
     }
 
     [Theory]
-    [InlineData("Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=x", "SQLACCESS")]
     [InlineData("Server=mes-test-sql;Database=FormulaD;User ID=mes_reader;Password=x", "FormulaD")]
     [InlineData("Server=mes-test-sql;Database=FormulaD_TEST;User ID=sa1;Password=x", "sa1")]
-    public void Rejects_Prod_Host_Prod_Database_And_Admin_Logins(string connectionString, string expected)
+    public void Rejects_Prod_Database_And_Admin_Logins(string connectionString, string expected)
     {
         var error = Assert.Throws<InvalidOperationException>(() =>
             SqlOptions.Create(Config(("Sql:IsTestEnvironment", "true"), ("Sql:ConnectionString", connectionString))));
         Assert.Contains(expected, error.Message);
+    }
+
+    [Fact]
+    public void Accepts_Prod_Host_With_Test_Database()
+    {
+        var options = SqlOptions.Create(Config(
+            ("Sql:IsTestEnvironment", "true"),
+            ("Sql:ConnectionString", "Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=x")));
+        Assert.Contains("ReadOnly", options.ConnectionString);
     }
 
     [Fact]
