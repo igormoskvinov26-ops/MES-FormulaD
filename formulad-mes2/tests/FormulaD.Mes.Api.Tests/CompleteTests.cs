@@ -73,10 +73,10 @@ public sealed class CompleteTests
     }
 
     [Fact]
-    public async Task Complete_Route_Does_Not_Exist_In_Sql_Mode()
+    public async Task Complete_Route_Exists_In_Sql_Mode()
     {
         using var factory = new SqlConfiguredFactory();
         var response = await factory.CreateClient().PostAsync("/api/v1/production-plan/DEMO-VIN-00001/complete", null);
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

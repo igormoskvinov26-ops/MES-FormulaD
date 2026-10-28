@@ -94,7 +94,7 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
         return connection;
     }
 
-    private static ProductionPlanItem Map(SqlDataReader reader) => new(
+    internal static ProductionPlanItem Map(SqlDataReader reader) => new(
         Vin: reader.GetString(reader.GetOrdinal("VIN")),
         Id: reader.GetInt32(reader.GetOrdinal("ID")),
         Seqn: GetNullableInt(reader, "SEQN"),

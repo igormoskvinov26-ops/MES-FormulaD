@@ -8,7 +8,7 @@ namespace FormulaD.Mes.Api;
 /// Допускается тестовая база на том же экземпляре, что и PROD — защита по имени базы,
 /// логину и флагу IsTestEnvironment.
 /// </summary>
-public sealed record SqlOptions(string ConnectionString, int CommandTimeoutSeconds)
+public sealed record SqlOptions(string ConnectionString, string WriteConnectionString, int CommandTimeoutSeconds)
 {
     /// <summary>PROD-база, которую приложение отказывается открывать даже на чтение.</summary>
     private static readonly string[] ForbiddenDatabases = ["FormulaD"];
@@ -38,11 +38,16 @@ public sealed record SqlOptions(string ConnectionString, int CommandTimeoutSecon
 
         // ponytail: ReadOnly-намерение и таймауты — страховка, а не замена прав SQL-логина.
         // Настоящая гарантия только чтения — отдельный TEST-логин с одним SELECT.
-        builder.ApplicationIntent = ApplicationIntent.ReadOnly;
-        builder.ApplicationName = "FormulaD.Mes.Api (read-only)";
+        builder.ApplicationName = "FormulaD.Mes.Api";
         builder.ConnectTimeout = Math.Min(builder.ConnectTimeout is 0 ? 5 : builder.ConnectTimeout, 15);
 
-        return new SqlOptions(builder.ConnectionString, configuration.GetValue("Sql:CommandTimeoutSeconds", 15));
+        var writeCs = builder.ConnectionString;
+
+        builder.ApplicationIntent = ApplicationIntent.ReadOnly;
+        builder.ApplicationName = "FormulaD.Mes.Api (read-only)";
+        var readCs = builder.ConnectionString;
+
+        return new SqlOptions(readCs, writeCs, configuration.GetValue("Sql:CommandTimeoutSeconds", 15));
     }
 
     private static void Validate(SqlConnectionStringBuilder builder)

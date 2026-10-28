@@ -117,11 +117,11 @@ public sealed class ReworkTests
     }
 
     [Fact]
-    public async Task Rework_Routes_Do_Not_Exist_In_Sql_Mode()
+    public async Task Rework_Routes_Exist_In_Sql_Mode()
     {
         using var factory = new SqlConfiguredFactory();
         var client = factory.CreateClient();
-        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00003/rework", null)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00003/rework/finish", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00003/rework", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00003/rework/finish", null)).StatusCode);
     }
 }
