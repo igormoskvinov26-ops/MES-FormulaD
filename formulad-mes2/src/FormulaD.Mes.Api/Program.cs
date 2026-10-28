@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseWindowsService();
 
 // --- Журнал событий ---------------------------------------------------------
 // Общий для всех операций записи, заводится один раз до них (docs/DEVELOPMENT_PLAN.md,
