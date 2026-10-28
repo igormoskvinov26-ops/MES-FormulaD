@@ -179,10 +179,10 @@ public sealed class PlanImportTests
     }
 
     [Fact]
-    public async Task Plan_Import_Routes_Do_Not_Exist_In_Sql_Mode()
+    public async Task Plan_Import_Routes_Exist_In_Sql_Mode_Behind_Auth()
     {
         using var factory = new SqlConfiguredFactory();
         var response = await factory.CreateClient().GetAsync("/api/v1/plan-import/reference");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }

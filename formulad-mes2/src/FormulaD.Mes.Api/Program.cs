@@ -77,6 +77,11 @@ switch (dataSource.ToLowerInvariant())
         builder.Services.AddSingleton<INcpReader>(sqlNcp);
         builder.Services.AddSingleton<INcpWriter>(sqlNcp);
         builder.Services.AddSingleton<IStationChecks>(new SqlStationChecks(sqlOptions, eventLog));
+        builder.Services.AddSingleton<IPlanImport>(sp => new SqlPlanImport(
+            sp.GetRequiredService<SqlOptions>(),
+            sp.GetRequiredService<IProductionPlanReader>(),
+            sp.GetRequiredService<IPlanPublisher>(),
+            sp.GetRequiredService<IEventLog>()));
         break;
 
     default:
@@ -476,59 +481,57 @@ stations.MapPost("/{vin}/components/{code}/check", async (
     };
 });
 
-// Импорт, входной контроль — пока только Demo (нет SQL-реализаций).
+// Импорт плана (раздел 6, Этап 8) — работает и с Demo, и с SQL.
+var planImport = api.MapGroup("/plan-import").RequireAuthorization();
+
+planImport.MapGet("/reference", async (IPlanImport import, CancellationToken ct) =>
+    Results.Ok(await import.GetReferenceAsync(ct)));
+
+planImport.MapPost("/sessions", async (StageImportRequest request, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (request.Rows.Count == 0)
+    {
+        return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
+    }
+    if (request.Rows.Count > 500)
+    {
+        return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
+    }
+    var session = await import.StageAsync(request.Rows, request.Source, user.Identity?.Name ?? "неизвестно", ct);
+    return Results.Ok(session);
+});
+
+planImport.MapGet("/sessions/{id}", async (string id, IPlanImport import, CancellationToken ct) =>
+{
+    var session = await import.GetSessionAsync(id, ct);
+    return session is null
+        ? Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(session);
+});
+
+planImport.MapPut("/sessions/{id}/rows/{rowNumber:int}", async (
+    string id, int rowNumber, ImportRawRow row, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var session = await import.ReplaceRowAsync(id, rowNumber, row, user.Identity?.Name ?? "неизвестно", ct);
+    return session is null
+        ? Results.Problem(title: "Загрузка или строка не найдена", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(session);
+});
+
+planImport.MapPost("/sessions/{id}/publish", async (string id, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var (outcome, published) = await import.PublishAsync(id, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
+    {
+        PublishOutcome.Ok => Results.Ok(new { published }),
+        PublishOutcome.SessionNotFound => Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound),
+        _ => Problem("Нельзя опубликовать", "В загрузке остались ошибки — исправьте все строки перед публикацией."),
+    };
+});
+
+// Входной контроль — пока только Demo (нет SQL-реализации).
 if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
 {
-    // Импорт плана (раздел 6, Этап 8): источник сырых строк (файл/вставка) эндпоинту не важен —
-    // он принимает уже разобранный список строк одинаковой формы.
-    var planImport = api.MapGroup("/plan-import").RequireAuthorization();
-
-    planImport.MapGet("/reference", async (IPlanImport import, CancellationToken ct) =>
-        Results.Ok(await import.GetReferenceAsync(ct)));
-
-    planImport.MapPost("/sessions", async (StageImportRequest request, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        if (request.Rows.Count == 0)
-        {
-            return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
-        }
-        // ponytail: простая защитная граница объёма одной демо-загрузки, не требование спецификации.
-        if (request.Rows.Count > 500)
-        {
-            return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
-        }
-        var session = await import.StageAsync(request.Rows, request.Source, user.Identity?.Name ?? "неизвестно", ct);
-        return Results.Ok(session);
-    });
-
-    planImport.MapGet("/sessions/{id}", async (string id, IPlanImport import, CancellationToken ct) =>
-    {
-        var session = await import.GetSessionAsync(id, ct);
-        return session is null
-            ? Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(session);
-    });
-
-    planImport.MapPut("/sessions/{id}/rows/{rowNumber:int}", async (
-        string id, int rowNumber, ImportRawRow row, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        var session = await import.ReplaceRowAsync(id, rowNumber, row, user.Identity?.Name ?? "неизвестно", ct);
-        return session is null
-            ? Results.Problem(title: "Загрузка или строка не найдена", statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(session);
-    });
-
-    planImport.MapPost("/sessions/{id}/publish", async (string id, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        var (outcome, published) = await import.PublishAsync(id, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            PublishOutcome.Ok => Results.Ok(new { published }),
-            PublishOutcome.SessionNotFound => Results.Problem(title: "Загрузка не найдена", statusCode: StatusCodes.Status404NotFound),
-            _ => Problem("Нельзя опубликовать", "В загрузке остались ошибки — исправьте все строки перед публикацией."),
-        };
-    });
-
     // Входной контроль (разделы 19-24, Этап 9): поставка → упаковки/коробки → строки (IncomingInspection.cs).
     var incoming = api.MapGroup("/incoming-inspection").RequireAuthorization();
 
