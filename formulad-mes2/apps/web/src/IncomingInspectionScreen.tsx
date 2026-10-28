@@ -189,7 +189,7 @@ export function IncomingInspectionScreen({
               </thead>
               <tbody>
                 {deliveries.map((d) => (
-                  <tr key={d.id} onDoubleClick={() => setSelectedId(d.id)} style={{ cursor: 'pointer' }}>
+                  <tr key={d.id} onClick={() => setSelectedId(d.id)} style={{ cursor: 'pointer' }}>
                     <td>{d.supplierName}</td>
                     <td>{d.invoiceNumber}</td>
                     <td>{formatDate(d.invoiceDate)}</td>
@@ -402,7 +402,7 @@ export function IncomingInspectionScreen({
             </thead>
             <tbody>
               {delivery.packages.map((p) => (
-                <tr key={p.id} onDoubleClick={() => setOpenPackage(p)} style={{ cursor: 'pointer' }}>
+                <tr key={p.id} onClick={() => setOpenPackage(p)} style={{ cursor: 'pointer' }}>
                   <td>{p.huNumber}</td>
                   <td>{p.rows.length}</td>
                   <td>
