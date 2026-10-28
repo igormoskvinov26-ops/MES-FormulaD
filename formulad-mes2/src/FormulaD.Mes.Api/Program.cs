@@ -70,6 +70,8 @@ switch (dataSource.ToLowerInvariant())
         builder.Services.AddSingleton(sqlOptions);
         builder.Services.AddSingleton<IProductionPlanReader>(sp => new SqlProductionPlanReader(sp.GetRequiredService<SqlOptions>()));
         builder.Services.AddSingleton<IPlanTransitions>(sp => new SqlPlanTransitions(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+        builder.Services.AddSingleton<IPlanOrderEditor>(sp => new SqlPlanOrderEditor(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+        builder.Services.AddSingleton<IJobCardPrinter>(sp => new SqlJobCardPrinter(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
         break;
 
     default:
@@ -315,57 +317,55 @@ plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, Cancellat
     });
 }
 
-// Операции, требующие интерфейсов, доступных только в Demo (IPlanOrderEditor, INcpWriter и т.д.).
+// Перемещение и печать: работают и в Demo, и в SQL.
+plan.MapPost("/{vin}/move", async (
+    string vin,
+    MoveRequest request,
+    IPlanOrderEditor editor,
+    IProductionPlanReader reader,
+    ClaimsPrincipal user,
+    CancellationToken ct) =>
+{
+    if (vin.Length is 0 or > 50)
+    {
+        return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+    }
+    if (request.ToPosition < 1)
+    {
+        return Problem("Некорректная позиция", "Номер позиции должен быть положительным.");
+    }
+
+    var outcome = await editor.MoveAsync(vin, request.ToPosition, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
+    {
+        MoveOutcome.Ok => Results.Ok(await reader.GetByVinAsync(vin, ct)),
+        MoveOutcome.VinNotFound => Results.Problem(
+            title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+            statusCode: StatusCodes.Status404NotFound),
+        MoveOutcome.NoPosition => Problem(
+            "Нет позиции в плане", "У изделия не задан порядок запуска, перемещать нечего."),
+        _ => Problem("Позиция не найдена", "В плане нет позиции с таким номером."),
+    };
+});
+
+plan.MapPost("/{vin}/print", async (
+    string vin, IJobCardPrinter printer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (vin.Length is 0 or > 50)
+    {
+        return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+    }
+
+    var item = await printer.MarkPrintedAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
+    return item is null
+        ? Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
+            statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(item);
+});
+
+// NCP, станции, импорт, входной контроль — пока только Demo (нет SQL-реализаций).
 if (string.Equals(dataSource, "Demo", StringComparison.OrdinalIgnoreCase))
 {
-    plan.MapPost("/{vin}/move", async (
-        string vin,
-        MoveRequest request,
-        IPlanOrderEditor editor,
-        IProductionPlanReader reader,
-        ClaimsPrincipal user,
-        CancellationToken ct) =>
-    {
-        if (vin.Length is 0 or > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-        if (request.ToPosition < 1)
-        {
-            return Problem("Некорректная позиция", "Номер позиции должен быть положительным.");
-        }
-
-        var outcome = await editor.MoveAsync(vin, request.ToPosition, user.Identity?.Name ?? "неизвестно", ct);
-        return outcome switch
-        {
-            MoveOutcome.Ok => Results.Ok(await reader.GetByVinAsync(vin, ct)),
-            MoveOutcome.VinNotFound => Results.Problem(
-                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound),
-            MoveOutcome.NoPosition => Problem(
-                "Нет позиции в плане", "У изделия не задан порядок запуска, перемещать нечего."),
-            _ => Problem("Позиция не найдена", "В плане нет позиции с таким номером."),
-        };
-    });
-
-    // Печать JobCard (раздел 8): отмечает PrintDate, допустимо в любом статусе, не меняет
-    // статус изделия. QR генерируется в браузере (DEVELOPMENT_PLAN.md, Этап 7) и кодирует VIN
-    // (мой ответ по умолчанию на В-12) — сервер про QR ничего не знает.
-    plan.MapPost("/{vin}/print", async (
-        string vin, IJobCardPrinter printer, ClaimsPrincipal user, CancellationToken ct) =>
-    {
-        if (vin.Length is 0 or > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-
-        var item = await printer.MarkPrintedAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
-        return item is null
-            ? Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound)
-            : Results.Ok(item);
-    });
-
     // NCP — операции чтения и записи только для демо-источника (см. Ncp.cs).
     var ncp = api.MapGroup("/ncp").RequireAuthorization();
 
