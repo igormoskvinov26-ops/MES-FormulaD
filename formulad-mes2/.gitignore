@@ -15,3 +15,5 @@ appsettings.*.local.json
 # Референсные картинки концептов (docs/design/) не коммитим — как и *.png выше,
 # это материал для сверки, а не часть репозитория.
 docs/design/*.webp
+wwwroot/
+*.tsbuildinfo
