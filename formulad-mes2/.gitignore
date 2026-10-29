@@ -1,0 +1,19 @@
+bin/
+obj/
+node_modules/
+dist/
+.env
+.env.local
+appsettings.Production.json
+appsettings.*.local.json
+*.user
+.DS_Store
+
+# Корневой .gitignore репозитория игнорирует все *.png — возвращаем скриншоты интерфейса.
+!docs/screenshots/*.png
+
+# Референсные картинки концептов (docs/design/) не коммитим — как и *.png выше,
+# это материал для сверки, а не часть репозитория.
+docs/design/*.webp
+wwwroot/
+*.tsbuildinfo
