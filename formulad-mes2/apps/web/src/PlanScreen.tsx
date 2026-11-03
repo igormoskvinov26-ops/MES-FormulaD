@@ -52,6 +52,7 @@ export function PlanScreen({
   const searchRef = useRef<HTMLInputElement>(null);
   const { visible, toggle, reset } = useColumnPrefs();
   const [editOrder, setEditOrder] = useState(false);
+  const [filterStatusId, setFilterStatusId] = useState<number | null>(null);
   const [activeVin, setActiveVin] = useState<string | null>(null);
   const [movedVin, setMovedVin] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<ProductionPlanItem | null>(null);
@@ -62,7 +63,7 @@ export function PlanScreen({
   const [ncpSummaryVin, setNcpSummaryVin] = useState<string | null>(null);
 
   const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
-  const { data, state, error, reload } = usePlan(vin.trim(), statusFilter, page, PAGE_SIZE);
+  const { data, state, error, reload } = usePlan(vin.trim(), filterStatusId !== null ? null : statusFilter, page, PAGE_SIZE, filterStatusId ?? undefined);
   const columns = COLUMNS.filter((c) => c.locked || visible.includes(c.key));
   const counts = usePlanCounts();
 
@@ -186,7 +187,7 @@ export function PlanScreen({
       <AppHeader screen="plan" onNavigate={onNavigate} session={session} onLogout={onLogout} />
 
       <section className="stat-tiles" aria-label="Сводка по статусам">
-        <div className="stat-tile">
+        <div className="stat-tile" role="button" tabIndex={0} aria-label="Показать все" onClick={() => { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); } }}>
           <span className="stat-tile-icon">
             <IconLayers />
           </span>
@@ -196,7 +197,7 @@ export function PlanScreen({
           </div>
         </div>
         {COUNT_TILES.map((tile) => (
-          <div key={tile.statusId} className="stat-tile">
+          <div key={tile.statusId} className="stat-tile" role="button" tabIndex={0} aria-label={`Фильтр: ${statusCodeLabel(tile.statusId)}`} onClick={() => { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); } }}>
             <span className={`stat-tile-icon ${tile.toneClass}`}>
               <tile.Icon />
             </span>
@@ -235,6 +236,7 @@ export function PlanScreen({
             value={statusChoice}
             onChange={(event) => {
               setStatusChoice(event.target.value);
+              setFilterStatusId(null);
               setPage(1);
             }}
           >

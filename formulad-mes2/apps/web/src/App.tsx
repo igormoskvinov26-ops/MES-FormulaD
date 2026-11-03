@@ -12,6 +12,7 @@ import { ImportScreen } from './ImportScreen';
 import { IncomingInspectionScreen } from './IncomingInspectionScreen';
 import { LoginScreen } from './LoginScreen';
 import { ReportsScreen } from './ReportsScreen';
+import { AdminScreen } from './AdminScreen';
 
 type Session = { userName: string | null; mode: string } | null;
 
@@ -59,11 +60,13 @@ export function App() {
       return <IncomingInspectionScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
     case 'reports':
       return <ReportsScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'admin':
+      return <AdminScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
   }
 }
 
 /** Загрузка страницы плана. Вынесено, чтобы PlanScreen оставался про разметку. */
-export function usePlan(vin: string, status: string | null, page: number, pageSize: number) {
+export function usePlan(vin: string, status: string | null, page: number, pageSize: number, statusId?: number) {
   const [data, setData] = useState<Paged<ProductionPlanItem> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string>('');
@@ -73,7 +76,7 @@ export function usePlan(vin: string, status: string | null, page: number, pageSi
     const id = ++requestId.current;
     setState('loading');
     api
-      .plan({ vin, status, page, pageSize })
+      .plan({ vin, status, statusId, page, pageSize })
       .then((result) => {
         if (id !== requestId.current) return;
         setData(result);

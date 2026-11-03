@@ -105,3 +105,12 @@ export function IconReports({ className }: P) {
     </svg>
   );
 }
+
+export function IconAdmin({ className }: P) {
+  return (
+    <svg {...b(className)}>
+      <circle cx="10" cy="10" r="3" />
+      <path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.2 4.2l1.8 1.8M14 14l1.8 1.8M15.8 4.2L14 6M6 14l-1.8 1.8" />
+    </svg>
+  );
+}

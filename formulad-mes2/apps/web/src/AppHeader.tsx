@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import { api } from './api';
 import { QuadMark } from './QuadMark';
-import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports } from './SidebarIcons';
+import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports, IconAdmin } from './SidebarIcons';
 
-export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'reports';
+export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'reports' | 'admin';
 
 /** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
 function Clock() {
@@ -37,6 +37,7 @@ const TABS: Tab[] = [
   { key: 'ncp', label: 'Несоответствия', Icon: IconNcp, group: 'Качество' },
   { key: 'incoming', label: 'Входной контроль', Icon: IconIncoming },
   { key: 'reports', label: 'Отчётность', Icon: IconReports },
+  { key: 'admin', label: 'Администрирование', Icon: IconAdmin, group: 'Администрирование' },
 ];
 
 /** Общая навигация всех экранов: боковое меню (фиксированное, только для рабочего места на ПК)
@@ -80,6 +81,14 @@ export function AppHeader({
             </li>
           ))}
         </ul>
+        <button type="button" className="theme-switch" onClick={() => {
+          const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          try { localStorage.setItem('f7-theme', next); } catch {}
+        }} aria-label="Переключить тему">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1v2m0 10v2m-5-7H1m14 0h-2m-1.5-4.5L10 5m-4-1.5L4.5 5m7 7L10 11m-4 1.5L4.5 11"/></svg>
+          Тема
+        </button>
         <span className="badge badge-demo" title="Синтетические данные, не производственные">
           DEMO
         </span>

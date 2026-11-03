@@ -83,6 +83,9 @@ export function ScanTransitionScreen({
 
   useEffect(reloadPending, [reloadPending]);
 
+  // ponytail: autofocus on mount and after screen switch
+  useEffect(() => { focusInput(); }, [screen]);
+
   function focusInput() {
     requestAnimationFrame(() => inputRef.current?.focus());
   }
@@ -116,7 +119,7 @@ export function ScanTransitionScreen({
         text: e instanceof ApiError && e.status === 404 ? `VIN ${vin} не найден` : 'Нет связи с сервером',
       });
     } finally {
-      if (id === requestId.current) setBusy(false);
+      if (id === requestId.current) { setBusy(false); focusInput(); }
     }
   }
 
