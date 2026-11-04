@@ -73,6 +73,6 @@ describe('ReportsScreen', () => {
     const incomingCard = screen.getByRole('heading', { name: 'Входной контроль' }).closest('article')!;
     // поставок=1, брак=1, недостача=1 из тестовой строки.
     expect(within(incomingCard).getAllByText('1').length).toBeGreaterThanOrEqual(3);
-    expect(within(incomingCard).getByText('Проверено, с замечаниями')).toBeInTheDocument();
+    expect(within(incomingCard).getByText('с замеч.')).toBeInTheDocument();
   });
 });

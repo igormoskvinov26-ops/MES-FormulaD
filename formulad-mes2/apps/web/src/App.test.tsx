@@ -86,8 +86,8 @@ describe('App', () => {
     // сводного NCP-листа (раздел 15), это печатные документы, а не переходы статуса.
     const card = screen.getByLabelText('Карточка изделия DEMO-VIN-00001');
     expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'Печать JobCard',
-      'Печать сводного NCP-листа',
+      'Печать',
+      'NCP-лист',
     ]);
   });
 

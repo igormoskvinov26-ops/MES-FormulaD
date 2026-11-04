@@ -134,7 +134,7 @@ describe('PlanScreen — печать JobCard', () => {
 
     render(<PlanScreen session={session} onNavigate={noop} onLogout={noop} />);
     await userEvent.type(screen.getByLabelText('Поиск VIN или сканирование'), 'DEMO-VIN-00001{Enter}');
-    await userEvent.click(await screen.findByRole('button', { name: 'Печать сводного NCP-листа' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'NCP-лист' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Сводный NCP-лист DEMO-VIN-00001' });
     expect(await within(dialog).findByText('NC-2026-0001')).toBeInTheDocument();
