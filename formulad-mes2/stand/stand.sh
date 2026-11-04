@@ -14,6 +14,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN="$ROOT/stand/.run"
 PORT="${PORT:-5080}"
 URL="http://localhost:$PORT"
+# На macOS нет утилиты setsid — запасной вариант через perl (есть и на macOS, и на Linux).
+if command -v setsid >/dev/null; then NEWSESSION=(setsid); else NEWSESSION=(perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' --); fi
 USER_NAME="${STAND_USER:-demo-operator}"
 API_DIR="$ROOT/src/FormulaD.Mes.Api"
 
@@ -44,7 +46,7 @@ up() {
   env -u Sql__ConnectionString -u Sql__IsTestEnvironment \
     DataSource=Demo ASPNETCORE_ENVIRONMENT=Development \
     DevAuth__Enabled=true DevAuth__Username="$USER_NAME" DevAuth__Password="$password" \
-    setsid nohup dotnet run --no-build -c Release --no-launch-profile --urls "$URL" \
+    "${NEWSESSION[@]}" nohup dotnet run --no-build -c Release --no-launch-profile --urls "$URL" \
     > "$RUN/stand.log" 2>&1 < /dev/null &
   echo $! > "$RUN/pid"
   cd "$ROOT"
