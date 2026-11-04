@@ -1,0 +1,413 @@
+/* F7 MES — industrial HMI component styles.
+   Used inside the existing app shell (sidebar + topbar).
+   Dark/light follows :root[data-theme] from styles.css. */
+
+/* ── Root scope ─────────────────────────────────────────── */
+.f7mes {
+  --f7-accent: var(--f7-red, #e31e24);
+  --f7-accent-dark: var(--f7-red-dark, #b8171c);
+  --f7-bg: var(--bg);
+  --f7-surface: var(--surface);
+  --f7-border: var(--border);
+  --f7-text: var(--text);
+  --f7-muted: var(--muted);
+  --f7-radius: var(--radius-md, 14px);
+  --f7-font: var(--font-display, Rajdhani, Inter, sans-serif);
+  min-height: 100vh;
+  padding: 0 24px 32px;
+}
+
+/* ── Intro: heading + scan ──────────────────────────────── */
+.f7mes__intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.f7mes__heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.f7mes__slash {
+  display: block;
+  width: 8px;
+  height: 48px;
+  background: var(--f7-accent);
+  transform: skewX(-12deg);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.f7mes__heading h1 {
+  margin: 0;
+  font: 700 28px/1 var(--f7-font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--f7-text);
+}
+.f7mes__heading small {
+  display: block;
+  font: 400 13px/1.3 Inter, sans-serif;
+  color: var(--f7-muted);
+  margin-top: 2px;
+}
+
+/* ── Scan panel ─────────────────────────────────────────── */
+.f7mes__scan {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--f7-surface);
+  border: 1px solid var(--f7-border);
+  border-radius: var(--f7-radius);
+  padding: 8px 16px;
+  max-width: 420px;
+  flex: 1 1 280px;
+}
+.f7mes__scan-symbol {
+  font-size: 22px;
+  color: var(--f7-muted);
+  flex-shrink: 0;
+}
+.f7mes__scan-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.f7mes__scan-field label {
+  font: 600 10px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f7-muted);
+}
+.f7mes__scan-field input {
+  border: none;
+  background: transparent;
+  font: 500 15px/1.4 Inter, sans-serif;
+  color: var(--f7-text);
+  padding: 2px 0;
+  outline: none;
+  width: 100%;
+}
+
+/* ── Quality signal banner ──────────────────────────────── */
+.f7mes__signal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--f7-radius);
+  font: 600 14px/1.4 Inter, sans-serif;
+  margin-bottom: 16px;
+  transition: background .2s, color .2s;
+}
+.f7mes__signal[data-type="blocked"] {
+  background: color-mix(in srgb, var(--f7-accent) 12%, var(--f7-surface));
+  color: var(--f7-accent);
+  border: 1px solid color-mix(in srgb, var(--f7-accent) 30%, transparent);
+}
+.f7mes__signal[data-type="ready"] {
+  background: color-mix(in srgb, var(--st-work, #16a34a) 12%, var(--f7-surface));
+  color: var(--st-work, #16a34a);
+  border: 1px solid color-mix(in srgb, var(--st-work, #16a34a) 30%, transparent);
+}
+.f7mes__signal[data-type="idle"] {
+  background: var(--f7-surface);
+  color: var(--f7-muted);
+  border: 1px solid var(--f7-border);
+}
+.f7mes__signal-icon { font-size: 20px; flex-shrink: 0; }
+.f7mes__signal button {
+  margin-left: auto;
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font: 600 12px/1 Inter, sans-serif;
+  white-space: nowrap;
+}
+
+/* ── 3-zone body ────────────────────────────────────────── */
+.f7mes__body {
+  display: grid;
+  grid-template-columns: 340px 1fr 280px;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 1100px) {
+  .f7mes__body { grid-template-columns: 1fr; }
+}
+
+/* ── Panel (shared card base) ───────────────────────────── */
+.f7mes__panel {
+  background: var(--f7-surface);
+  border: 1px solid var(--f7-border);
+  border-radius: var(--f7-radius);
+  padding: 20px;
+}
+.f7mes__panel--cut {
+  /* ponytail: clip-path cut corner — upgrade to SVG mask if aliasing is bad */
+  clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+}
+
+/* ── Identity panel (left) ──────────────────────────────── */
+.f7mes__ident-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.f7mes__label {
+  font: 600 10px/1 Inter, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--f7-muted);
+}
+.f7mes__tag {
+  font: 700 10px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+.f7mes__tag[data-type="blocked"] { background: color-mix(in srgb, var(--f7-accent) 15%, transparent); color: var(--f7-accent); }
+.f7mes__tag[data-type="ready"]   { background: color-mix(in srgb, var(--st-work) 15%, transparent); color: var(--st-work); }
+.f7mes__tag[data-type="idle"]    { background: color-mix(in srgb, var(--f7-muted) 15%, transparent); color: var(--f7-muted); }
+
+.f7mes__vin {
+  font: 700 22px/1.2 var(--f7-font);
+  letter-spacing: 0.02em;
+  color: var(--f7-text);
+  margin-bottom: 12px;
+}
+
+.f7mes__spec {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+}
+.f7mes__spec div { display: flex; flex-direction: column; gap: 2px; }
+.f7mes__spec dt {
+  font: 600 10px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f7-muted);
+}
+.f7mes__spec dd { margin: 0; font: 500 14px/1.3 Inter, sans-serif; color: var(--f7-text); }
+
+/* ── NCP (missing parts) list ───────────────────────────── */
+.f7mes__ncp-section { margin-bottom: 16px; }
+.f7mes__ncp-title {
+  display: flex;
+  justify-content: space-between;
+  font: 700 11px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f7-accent);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--f7-border);
+  margin-bottom: 8px;
+}
+.f7mes__ncp-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--f7-border) 50%, transparent);
+  font-size: 13px;
+}
+.f7mes__ncp-item strong { color: var(--f7-text); font-weight: 600; }
+.f7mes__ncp-item small { color: var(--f7-muted); display: block; font-size: 11px; }
+.f7mes__ncp-item b { color: var(--f7-accent); font-weight: 700; white-space: nowrap; }
+
+/* ── Action buttons ─────────────────────────────────────── */
+.f7mes__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.f7mes__btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  font: 600 14px/1 Inter, sans-serif;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+}
+.f7mes__btn:disabled { opacity: .4; cursor: default; }
+.f7mes__btn--secondary {
+  background: color-mix(in srgb, var(--f7-muted) 12%, var(--f7-surface));
+  color: var(--f7-text);
+  border: 1px solid var(--f7-border);
+}
+.f7mes__btn--accent {
+  background: var(--f7-accent);
+  color: #fff;
+}
+.f7mes__btn--accent:not(:disabled):hover { background: var(--f7-accent-dark); }
+.f7mes__btn--warn {
+  background: color-mix(in srgb, var(--st-wait, #f59e0b) 15%, var(--f7-surface));
+  color: var(--st-wait, #b45309);
+  border: 1px solid color-mix(in srgb, var(--st-wait) 30%, transparent);
+}
+
+/* ── Vehicle stage (center) ─────────────────────────────── */
+.f7mes__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--graphite, #101216);
+  border-radius: var(--f7-radius);
+  padding: 24px 16px;
+  position: relative;
+  overflow: hidden;
+  min-height: 280px;
+}
+.f7mes__stage img {
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 24px rgba(0,0,0,.4));
+}
+.f7mes__vehicle-label,
+.f7mes__vehicle-footer {
+  font: 600 10px/1 Inter, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.45);
+}
+.f7mes__vehicle-label { align-self: flex-start; margin-bottom: 8px; }
+.f7mes__vehicle-label strong { color: rgba(255,255,255,.7); display: block; font-size: 13px; letter-spacing: 0.08em; }
+.f7mes__vehicle-label small { font-weight: 400; }
+.f7mes__vehicle-footer { align-self: flex-end; margin-top: auto; padding-top: 12px; }
+
+/* ── Queue panel (right) ────────────────────────────────── */
+.f7mes__queue-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.f7mes__queue-head h2 {
+  margin: 0;
+  font: 700 14px/1 var(--f7-font);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--f7-text);
+}
+.f7mes__queue-head b {
+  font: 700 13px/1 Inter, sans-serif;
+  color: var(--f7-muted);
+  background: color-mix(in srgb, var(--f7-muted) 12%, transparent);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.f7mes__queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.f7mes__queue-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--f7-border);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--f7-text);
+  transition: border-color .15s, background .15s;
+  width: 100%;
+}
+.f7mes__queue-entry:hover { border-color: var(--f7-accent); }
+.f7mes__queue-entry[data-selected="true"] {
+  border-color: var(--f7-accent);
+  background: color-mix(in srgb, var(--f7-accent) 8%, var(--f7-surface));
+}
+.f7mes__queue-entry .f7mes__label { font-size: 9px; }
+.f7mes__queue-entry strong { font: 600 13px/1.2 Inter, sans-serif; }
+.f7mes__queue-entry small { font: 400 11px/1.2 Inter, sans-serif; color: var(--f7-muted); }
+
+/* ── Route rail ─────────────────────────────────────────── */
+.f7mes__route {
+  margin-top: 4px;
+}
+.f7mes__route-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.f7mes__route-heading h2 {
+  margin: 0;
+  font: 700 14px/1 var(--f7-font);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--f7-text);
+}
+.f7mes__route-heading span {
+  font: 400 11px/1 Inter, sans-serif;
+  color: var(--f7-muted);
+}
+.f7mes__route-steps {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.f7mes__route-step {
+  flex: 1 0 60px;
+  min-width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 6px;
+  text-align: center;
+  transition: background .15s;
+}
+.f7mes__route-step b {
+  font: 700 15px/1 var(--f7-font);
+}
+.f7mes__route-step small {
+  font: 500 9px/1.1 Inter, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--f7-muted);
+}
+.f7mes__route-step[data-state="done"] {
+  background: color-mix(in srgb, var(--st-work) 10%, transparent);
+}
+.f7mes__route-step[data-state="done"] b { color: var(--st-work); }
+.f7mes__route-step[data-state="current"] {
+  background: color-mix(in srgb, var(--f7-accent) 12%, var(--f7-surface));
+}
+.f7mes__route-step[data-state="current"] b { color: var(--f7-accent); }
+.f7mes__route-step[data-state="pending"] {
+  background: color-mix(in srgb, var(--f7-muted) 8%, transparent);
+}
+.f7mes__route-step[data-state="pending"] b { color: var(--f7-muted); }
+.f7mes__route-step[data-state="blocked"] {
+  background: color-mix(in srgb, var(--f7-accent) 8%, transparent);
+}
+.f7mes__route-step[data-state="blocked"] b { color: var(--f7-accent); }
+
+/* ── Hint ───────────────────────────────────────────────── */
+.f7mes__hint {
+  font: 400 12px/1.4 Inter, sans-serif;
+  color: var(--f7-muted);
+  margin: 16px 0 0;
+  text-align: center;
+}
