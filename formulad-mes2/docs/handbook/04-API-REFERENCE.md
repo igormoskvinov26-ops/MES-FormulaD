@@ -130,7 +130,7 @@ curl -s -b jar.txt -H 'Content-Type: application/json' -d '{"toPosition":23}' \
 | 16 | `GET /ncp/stations` | — | `string[]` | — | `NcpScreen`, `StationScreen`, `FokScreen`, `AdminScreen` | D+S |
 | 17 | `GET /ncp/components` | — | `ComponentItem[]` | — | `NcpScreen`, `StationScreen`, `AdminScreen` | D+S |
 | 18 | `GET /ncp/missing-parts` | query: `vin` (обязателен) | `NcpItem[]` — блокирующие FOK | 400: VIN пуст или > 50 | `FokScreen`, `ReworkScreen` | D+S |
-| 19 | `GET /ncp` | query: `vin?`, `status?`, `page`, `pageSize` | `PagedResult<NcpItem>` | 400: VIN, страница, размер | `StationScreen`, `ReworkScreen` (через `ncpList`), `NcpScreen` | D+S |
+| 19 | `GET /ncp` | query: `vin?`, `status?`, `page`, `pageSize` | `PagedResult<NcpItem>` | 400: VIN, страница, размер | `NcpScreen`, `StationScreen`, `ReworkScreen`, `NcpPrintDialog`, `ReportsScreen` | D+S |
 | 20 | `POST /ncp` | `{vin, station, componentCode, quantity, type, operatorComment?}` | созданный `NcpItem` (код **200**, не 201) | 400: VIN; «Компонент не найден»; «Некорректная станция»; «Некорректное количество» (1..9999); «Некорректный тип»; 404 «Изделие не найдено» | `NcpScreen`, `StationScreen` | D+S |
 | 21 | `POST /ncp/{id}/part-installed` | `{installed: bool}` | обновлённый `NcpItem` | 404 «Заявка не найдена» | `NcpScreen`, `ReworkScreen` | D+S, **в SQL не меняет данные** |
 | 22 | `POST /ncp/{id}/close` | `{engineerComment?: string}` | закрытый `NcpItem` | 400 «Уже закрыто»; 404 «Заявка не найдена» | `NcpScreen`, `ReworkScreen` | D+S |
@@ -138,6 +138,7 @@ curl -s -b jar.txt -H 'Content-Type: application/json' -d '{"toPosition":23}' \
 Примечания:
 
 - **#16** Demo: список `1..11`; SQL: `DISTINCT StationID` из `tblComponent`, при пустом результате — тот же список `1..11`.
+- **#19** Сортировка: новые сверху (`CreatedAt DESC, Id DESC`). Фильтр `status`: Demo — точное совпадение строки; SQL — значение `Закрыто` (без учёта регистра) → `Status=2`, **любое другое непустое значение → `Status=1`** (то есть произвольная строка сработает как «Открыто»). Поиск по VIN — по тому же правилу, что и план.
 - **#18** Критерий «блокирует» различается по режимам: Demo — любая NCP с `partInstalled=false`; SQL — любая открытая NCP ([03 §4.1](03-DOMAIN-MODEL.md#41-блокировка-fok-незакрытой-деталью)).
 - **#20** Порядок проверок: длина VIN → существование VIN → станция → компонент → количество → тип. Первой сработавшей проверкой определяется текст ошибки.
 - **#21** В SQL-режиме признака установки нет, метод только пишет событие в журнал ([03 §6.1](03-DOMAIN-MODEL.md#61-ncp-признак-установки-детали)). Тело `{"installed": true}`.
@@ -202,7 +203,7 @@ curl -s -b jar.txt -H 'Content-Type: application/json' -d '{"installed":true}' \
 | 30 | `GET /suppliers` | — | `SupplierRef[]` | — | `IncomingInspectionScreen` |
 | 31 | `GET /components` | — | `ComponentItem[]` | — | (в UI не вызывается; есть `api.incomingComponents`) |
 | 32 | `POST /components` | `{code, name}` | `204` | 400 «Нельзя добавить артикул» (пустые поля или артикул уже есть) | `IncomingInspectionScreen` |
-| 33 | `GET /deliveries` | query: `page`, `pageSize` | `PagedResult<Delivery>` (новые сверху) | 400 страница/размер | `IncomingInspectionScreen` |
+| 33 | `GET /deliveries` | query: `page`, `pageSize` | `PagedResult<Delivery>` (новые сверху) | 400 страница/размер | `IncomingInspectionScreen`, `ReportsScreen` |
 | 34 | `POST /deliveries` | `{supplierCode, invoiceNumber, invoiceDate, accompanyingDocument?}` | `Delivery` | 400 «Поставщик не найден»; 400 «Некорректная дата инвойса» (формат `ГГГГ-ММ-ДД` или `ДД.ММ.ГГГГ`) | `IncomingInspectionScreen` |
 | 35 | `GET /deliveries/{id}` | — | `Delivery` | 404 «Поставка не найдена» | `IncomingInspectionScreen` |
 | 36 | `GET /deliveries/{id}/packages/by-hu/{hu}` | — | `Package` | 404 «Коробка не найдена» | `IncomingInspectionScreen` |
@@ -281,7 +282,7 @@ curl -s -b jar.txt -H 'Content-Type: application/json' \
 
 ## 10. Матрица «экран → эндпоинты»
 
-По фактическим вызовам `api.*` в `apps/web/src/*.tsx` (без тестов). Названия методов — как в `api.ts`.
+По фактическим вызовам `api.*` в `apps/web/src/*.tsx` (без тестов; учтены и вызовы, разнесённые по нескольким строкам). Названия методов — как в `api.ts`.
 
 | Экран (файл) | Методы `api` | Эндпоинты |
 |---|---|---|
@@ -290,17 +291,17 @@ curl -s -b jar.txt -H 'Content-Type: application/json' \
 | Навигация (`AppHeader`) | `logout` | #4 |
 | План (`PlanScreen`) | `plan`, `statuses`, `byVin`, `move` | #6, #5, #7, #13 |
 | Печать JobCard (`JobCardDialog`) | `print` | #14 |
-| Печать NCP-листа (`NcpPrintDialog`) | `byVin` | #7 |
+| Печать NCP-листа (`NcpPrintDialog`) | `byVin`, `ncpList` | #7, #19 |
 | Старт (`StartScreen` → `ScanTransitionScreen`) | `start`, `byVin`, `plan` | #8, #7, #6 |
 | Станции (`StationScreen`) | `byVin`, `stationChecks`, `setStationCheck`, `ncpStations`, `ncpComponents`, `ncpTypes`, `ncpList`, `ncpCreate` | #7, #23, #24, #16, #17, #15, #19, #20 |
 | Завершение (`CompleteScreen` → `ScanTransitionScreen`) | `complete`, `byVin`, `plan` | #9, #7, #6 |
 | FOK (`FokScreen`) | `byVin`, `ncpMissingParts`, `fok`, `sendToRework`, `ncpStations`, `plan` | #7, #18, #10, #11, #16, #6 |
-| Rework (`ReworkScreen` → `ScanTransitionScreen`) | `finishRework`, `ncpMissingParts`, `ncpSetPartInstalled`, `ncpClose`, `byVin`, `plan` | #12, #18, #21, #22, #7, #6 |
-| Несоответствия (`NcpScreen`) | `ncpClose`, `ncpComponents`, `ncpCreate`, `ncpSetPartInstalled`, `ncpStations`, `ncpTypes` | #22, #17, #20, #21, #16, #15 (список — собственный `useNcpList` → `ncpList`, #19) |
+| Rework (`ReworkScreen` → `ScanTransitionScreen`) | `finishRework`, `ncpMissingParts`, `ncpList`, `ncpSetPartInstalled`, `ncpClose`, `byVin`, `plan` | #12, #18, #19, #21, #22, #7, #6 |
+| Несоответствия (`NcpScreen`) | `ncpList` (через хук `useNcpList`), `ncpClose`, `ncpComponents`, `ncpCreate`, `ncpSetPartInstalled`, `ncpStations`, `ncpTypes` | #19, #22, #17, #20, #21, #16, #15 |
 | Импорт плана (`ImportScreen`) | `planImportReference`, `stageImport`, `replaceImportRow`, `publishImport` | #25, #26, #28, #29 |
 | Входной контроль (`IncomingInspectionScreen`) | `suppliers`, `deliveries`, `delivery`, `createDelivery`, `addComponent`, `stagePackingList`, `replacePackingListRow`, `confirmPackingList`, `packageByHu` | #30, #33, #35, #34, #32, #37, #39, #40, #36 |
 | Коробка (`PackageDialog`) | `recordRowResult`, `increaseQuota`, `closePackage`, `reopenPackage` | #41, #42, #43, #44 |
-| Отчётность (`ReportsScreen`) | `plan` (и входной контроль через собственные вызовы) | #6 |
+| Отчётность (`ReportsScreen`) | `plan`, `ncpList`, `deliveries` | #6, #19, #33 |
 | Администрирование (`AdminScreen`) | `planImportReference`, `ncpComponents`, `ncpStations`, `suppliers` | #25, #17, #16, #30 |
 
 > Эндпоинты, которые в UI не вызываются: **#27** (`GET /plan-import/sessions/{id}`), **#31** (`GET /incoming-inspection/components`), **#38** (`GET /packing-list/sessions/{sessionId}`) — клиент `api.ts` для #27 и #38 метода не имеет, для #31 метод есть (`incomingComponents`), но экраны его не используют.
