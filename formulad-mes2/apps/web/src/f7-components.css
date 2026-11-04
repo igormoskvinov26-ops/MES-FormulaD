@@ -810,3 +810,101 @@
 
 /* поле поиска: одно кольцо фокуса вместо двойной рамки */
 :root .f7plan input.search:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; box-shadow: none; }
+
+/* ── Экраны скана (Старт / Завершение / Rework): единая сетка ───────────────
+   Левая грань заголовка, поля скана и карточки совпадает с отступом страницы (--page-gutter, как у верхней
+   полосы), правая грань поля скана — с правой гранью очереди. Очередь сворачивается в рейку. */
+:root { --page-gutter: 24px; --queue-w: 320px; }
+:root[data-queue="collapsed"] { --queue-w: 64px; }
+
+.scanx {
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--queue-w);
+  column-gap: var(--page-gutter); row-gap: 16px; align-items: start;
+  padding: 16px var(--page-gutter) 40px; transition: grid-template-columns .25s ease;
+}
+.scanx__title { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
+.scanx__title h1 { margin: 0; font: 700 24px/1.1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .03em; color: var(--text); }
+.scanx__title small { display: block; margin-top: 3px; font: 400 14px/1.35 Inter, sans-serif; color: var(--muted); }
+.scanx__main { grid-column: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* поле скана — главный элемент экрана */
+.scanx__scan {
+  position: relative; display: flex; align-items: center; gap: 16px; min-height: 80px; padding: 12px 24px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-top: 3px solid var(--border-strong);
+  box-shadow: var(--shadow-md); --cut: 14px;
+}
+.scanx__scan::after {
+  content: ''; position: absolute; bottom: -1px; right: -1px; width: var(--cut); height: var(--cut); pointer-events: none;
+  background: linear-gradient(to top left, var(--bg) calc(50% - .5px), var(--border-strong) calc(50% - .5px), var(--border-strong) calc(50% + .5px), transparent calc(50% + .5px));
+}
+.scanx__scan:focus-within { border-color: var(--text); box-shadow: var(--shadow-md), 0 0 0 3px color-mix(in srgb, var(--text) 12%, transparent); }
+.scanx__scan-symbol { font-size: 32px; line-height: 1; color: var(--muted); }
+.scanx__scan-field { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.scanx__scan-label { margin-bottom: 6px; font: 600 12px/1 Inter, sans-serif; letter-spacing: .08em; color: var(--muted); }
+:root .scanx .scanx__scan input {
+  width: 100%; min-height: 0; padding: 0; border: 0; outline: 0; box-shadow: none; background: transparent;
+  font: 600 24px/1.25 'JetBrains Mono', ui-monospace, Menlo, monospace; color: var(--text);
+}
+:root .scanx .scanx__scan input::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); font-weight: 500; }
+
+.scanx__placeholder {
+  display: grid; place-items: center; min-height: 320px;
+  border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--muted) 4%, var(--surface));
+}
+
+/* карточка найденного изделия: на всю ширину главной колонки */
+:root .f7plan .scan-found { max-width: none; width: 100%; padding: 24px 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; --cut-bg: var(--bg); }
+.scan-found__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.f7plan .scan-found .scan-found__head h2 { margin: 0; font: 700 34px/1.1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
+.scan-found__tag { font: 700 12px/1 Inter, sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 6px 10px; background: color-mix(in srgb, var(--f7-red) 14%, transparent); color: var(--f7-red); }
+.scan-found__tag[data-ok="true"] { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, transparent); color: var(--st-work, #16a34a); }
+:root .f7plan .scan-found dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 28px; margin: 0; }
+:root .f7plan .scan-found dl > div { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+:root .f7plan .scan-found dd { margin: 0; font: 500 18px/1.3 Inter, sans-serif; color: var(--text); text-align: left; }
+.scan-found__actions { display: flex; gap: 12px; margin-top: 4px; }
+:root .f7plan .scan-found__actions button { min-height: 52px; font-size: 16px; }
+:root .f7plan .scan-found__actions button.primary { flex: 1; }
+.scan-found__extra { min-width: 0; }
+@media (min-width: 1280px) {
+  :root .f7plan .scan-found--split { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: repeat(3, auto) 1fr; column-gap: 32px; }
+  .scan-found--split > :not(.scan-found__extra) { grid-column: 1; }
+  .scan-found--split .scan-found__extra { grid-column: 2; grid-row: 1 / -1; align-self: start; }
+}
+
+/* очередь */
+.scanx__queue { position: relative; grid-column: 2; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-md); min-width: 0; }
+.scanx__queue-body { padding: 16px 16px 18px; min-width: 0; }
+.scanx__queue-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 12px; }
+.scanx__queue-head .side-title { margin: 0; }
+.scanx__queue-head b, .scanx__queue-rail b { font: 700 12px/1 Inter, sans-serif; padding: 3px 8px; background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); }
+.scanx__queue-head small { flex-basis: 100%; font: 400 12px/1.3 Inter, sans-serif; color: var(--muted); }
+.scanx__queue-note { margin: 0 0 10px; padding: 6px 10px; font: 500 12px/1.3 Inter, sans-serif; color: var(--st-wait, #b45309); background: color-mix(in srgb, var(--st-wait, #f59e0b) 14%, transparent); }
+.scanx__queue-rail { display: none; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0; }
+.scanx__queue-rail span { writing-mode: vertical-rl; letter-spacing: .18em; font: 700 12px/1 Inter, sans-serif; color: var(--muted); }
+.scanx__queue[data-collapsed="true"] .scanx__queue-body { display: none; }
+.scanx__queue[data-collapsed="true"] .scanx__queue-rail { display: flex; }
+
+/* кнопка-язычок на середине левой грани очереди */
+:root .scanx button.scanx__queue-toggle {
+  position: absolute; z-index: 3; left: -15px; top: 50%; transform: translateY(-50%); width: 30px; height: 60px; padding: 0;
+  display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); cursor: pointer;
+}
+:root .scanx button.scanx__queue-toggle:hover { border-color: var(--f7-red); color: var(--f7-red); }
+.scanx__queue-toggle svg { transition: transform .25s ease; transform: rotate(0deg); }
+.scanx__queue[data-collapsed="true"] .scanx__queue-toggle svg { transform: rotate(180deg); }
+@media (pointer: coarse) { :root .scanx button.scanx__queue-toggle { width: 36px; left: -18px; } }
+
+/* выбранное (найденное) изделие отмечено в очереди цветом */
+:root .f7plan .pending-list button[data-selected="true"] {
+  background: color-mix(in srgb, var(--f7-red) 11%, var(--surface)); border-color: var(--f7-red); box-shadow: inset 3px 0 0 var(--f7-red);
+}
+:root .f7plan .pending-list button[data-selected="true"] .mono { font-weight: 800; }
+:root .f7plan .pending-list button[data-selected="true"] .f7mes__queue-chevron { color: var(--f7-red); }
+
+@media (max-width: 1100px) { .scanx { column-gap: 20px; } }
+@media (prefers-reduced-motion: reduce) { .scanx, .scanx__queue-toggle svg { transition: none; } }
+.scanx__title .f7mes__slash { background: var(--f7-red, #e31e24); }
+/* Rework: карточки NCP не сжимаются во flex-контейнере (раньше обрезались), прокручивается сам список */
+.rework-ncp > * { flex-shrink: 0; }
+.scan-found--split .rework-ncp { margin-top: 0; padding-top: 0; border-top: 0; max-height: 62vh; }

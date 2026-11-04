@@ -135,3 +135,64 @@ describe('StartScreen', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('не найден');
   });
 });
+
+describe('StartScreen — очередь', () => {
+  const OTHER = { ...PLANNED, vin: 'DEMO-VIN-00005', id: 1005, seqn: 5 };
+
+  it('называется «Очередь», показывает счётчик и отмечает найденное изделие', async () => {
+    mockFetch((url) => {
+      if (url.includes('statusId=0')) return { body: { items: [PLANNED, OTHER], page: 1, pageSize: 25, total: 2 } };
+      if (url.endsWith('/production-plan/DEMO-VIN-00002')) return { body: PLANNED };
+      return undefined;
+    });
+    render(<StartScreen session={session} onNavigate={noop} onLogout={noop} />);
+
+    expect(await screen.findByRole('heading', { name: 'Очередь' })).toBeInTheDocument();
+    expect(screen.getByText('Ожидают запуска')).toBeInTheDocument();
+    const mine = await screen.findByRole('button', { name: /DEMO-VIN-00002/ });
+    const other = screen.getByRole('button', { name: /DEMO-VIN-00005/ });
+    expect(mine).not.toHaveAttribute('aria-current');
+
+    await userEvent.type(screen.getByLabelText('Сканирование VIN'), 'DEMO-VIN-00002{Enter}');
+    await screen.findByLabelText('Найдено изделие DEMO-VIN-00002');
+    expect(mine).toHaveAttribute('aria-current', 'true');
+    expect(other).not.toHaveAttribute('aria-current');
+  });
+
+  it('изделие вне очереди помечается подсказкой', async () => {
+    mockFetch((url) => {
+      if (url.includes('statusId=0')) return { body: { items: [OTHER], page: 1, pageSize: 25, total: 1 } };
+      if (url.endsWith('/production-plan/DEMO-VIN-00002')) return { body: PLANNED };
+      return undefined;
+    });
+    render(<StartScreen session={session} onNavigate={noop} onLogout={noop} />);
+    await screen.findByRole('button', { name: /DEMO-VIN-00005/ });
+    expect(screen.queryByText('Изделие не в очереди')).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Сканирование VIN'), 'DEMO-VIN-00002{Enter}');
+    expect(await screen.findByText('Изделие не в очереди')).toBeInTheDocument();
+  });
+
+  it('кнопка-язычок сворачивает очередь и запоминает выбор', async () => {
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-queue');
+    mockFetch((url) => {
+      if (url.includes('statusId=0')) return { body: { items: [PLANNED], page: 1, pageSize: 25, total: 1 } };
+      return undefined;
+    });
+    render(<StartScreen session={session} onNavigate={noop} onLogout={noop} />);
+
+    const toggle = await screen.findByRole('button', { name: 'Свернуть очередь' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    await userEvent.click(toggle);
+    const expand = await screen.findByRole('button', { name: 'Развернуть очередь' });
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    expect(document.documentElement.getAttribute('data-queue')).toBe('collapsed');
+    expect(localStorage.getItem('f7-queue')).toBe('collapsed');
+
+    await userEvent.click(expand);
+    expect(await screen.findByRole('button', { name: 'Свернуть очередь' })).toBeInTheDocument();
+    document.documentElement.removeAttribute('data-queue');
+  });
+});

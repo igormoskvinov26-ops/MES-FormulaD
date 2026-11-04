@@ -242,7 +242,10 @@
 | Компонент | Классы | Заметки |
 |---|---|---|
 | Очередь (FOK) | `.f7mes__strip`, `.f7mes__chip[data-selected]` | лента чипов над рабочей зоной; выбранное изделие заливка + полоса слева, `aria-current` |
-| Очередь (скан-экраны) | `.pending-list button` + `.f7mes__queue-chevron` | красная полоса слева |
+| Сетка экрана скана | `.scanx`, `.scanx__title`, `.scanx__main`, `--page-gutter`, `--queue-w` | общая сетка для Старта, Завершения и Rework |
+| Поле скана (герой) | `.scanx__scan`, `.scanx__scan-label`, `.scanx__scan input` | высота ≥ 80 px, моно-шрифт 24 px, срез угла снизу справа, спокойный фокус |
+| Карточка изделия (скан) | `.scan-found`, `.scan-found--split`, `.scan-found__head/__tag/__extra/__actions` | на всю ширину; две колонки от 1280 px |
+| Очередь (скан-экраны) | `.scanx__queue`, `.scanx__queue-toggle`, `.scanx__queue-rail`, `.pending-list button[data-selected]`, `.scanx__queue-note` | выбранное изделие залито акцентом, рейка при сворачивании |
 | Условия FOK | `.f7mes__conds li[data-state=ok\|fail\|warn\|idle]`, `.f7mes__cond-action` | чек-лист реальных проверок; блокируют только статус и обязательные детали |
 | Схема готовности | `.twin`, `.twin__ring`, `.twin__seg--{grey\|blue\|green\|yellow\|red}`, `.twin__car`, `.twin__lamp`, `[data-mode=idle\|ready\|blocked\|done]` | кольцо станций + фары как сигнал; подложка по теме (`--twin-bg`), анимации только при `prefers-reduced-motion: no-preference` |
 | Карточка станции | `.stn-detail`, `.stn-detail__list`, `.twin__stn--selected`, `.twin__hit` | открывается по нажатию на сегмент кольца; цвет полосы слева по состоянию станции |

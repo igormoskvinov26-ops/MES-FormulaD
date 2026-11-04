@@ -642,25 +642,12 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 .ncp-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 
 /* --- Экран сканирования (Старт/Завершение/FOK — общая механика) --- */
-.scan-content { grid-template-columns: minmax(0, 1fr) 320px; }
 
-.scan-panel {
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 28px;
-  min-height: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
 .scan-banner { margin: 0; padding: 12px 18px; border-radius: var(--radius-sm); font-weight: 600; font-size: 16px; }
 .scan-ok { background: #e7f0e9; color: var(--state-in-work); }
 .scan-bad { background: #f3e5e5; color: var(--f7-red-dark); }
 
-.scan-found { max-width: 440px; }
 .scan-found h2 { font-size: 24px; }
 .scan-found-blocked { border-color: var(--f7-red); }
 
@@ -831,7 +818,7 @@ td input, td select { width: 100%; min-width: 120px; }
 
 /* --- Micro-animations and polish --- */
 @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.card, .scan-panel, .stat-tile { animation: fade-in .25s ease-out; }
+.card, .stat-tile { animation: fade-in .25s ease-out; }
 
 .modal-backdrop { animation: backdrop-in .2s ease-out; }
 @keyframes backdrop-in { from { opacity: 0; } }
@@ -839,7 +826,7 @@ td input, td select { width: 100%; min-width: 120px; }
 @keyframes modal-in { from { opacity: 0; transform: translateY(16px) scale(.97); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .card, .scan-panel, .stat-tile, .modal-backdrop, .modal { animation: none; }
+  .card, .stat-tile, .modal-backdrop, .modal { animation: none; }
 }
 
 /* Better empty state styling */
@@ -911,7 +898,6 @@ tbody tr:hover { background: #eef1f7; }
 .side { animation: fade-in .2s ease-out; }
 
 /* Scan screen improvements */
-.scan-panel { position: relative; }
 .scan-found h2 { font-size: 22px; margin: 0 0 8px; }
 
 /* Package dialog progress in header */

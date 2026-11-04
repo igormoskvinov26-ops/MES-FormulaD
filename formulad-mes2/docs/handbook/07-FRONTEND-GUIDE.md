@@ -197,7 +197,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 | Ключ | Кто пишет | Значение |
 |---|---|---|
 | `f7-theme` | `AppHeader` (кнопка «Тема») | `light` \| `dark` |
-| `f7-sidebar` | [`sidebarPref.ts`](../../apps/web/src/sidebarPref.ts) через кнопку «Свернуть/Развернуть меню» | `collapsed` \| `expanded`; пока ключа нет, меню само сворачивается на экране уже 1100 px (`initSidebar` в `main.tsx`, слушает `resize`); явный выбор оператора главнее |
+| `f7-queue` | [`queuePref.ts`](../../apps/web/src/queuePref.ts) через кнопку-язычок очереди на экранах скана | `collapsed` \| `expanded`; без ключа очередь сама сворачивается в рейку на экране уже 1100 px (`data-queue` на корне) |
+| `f7-sidebar` | [`sidebarPref.ts`](../../apps/web/src/sidebarPref.ts) (общая логика — [`collapsePref.ts`](../../apps/web/src/collapsePref.ts)) через кнопку «Свернуть/Развернуть меню» | `collapsed` \| `expanded`; пока ключа нет, меню само сворачивается на экране уже 1100 px (`initSidebar` в `main.tsx`, слушает `resize`); явный выбор оператора главнее |
 | `f7-density` | [`densityPref.ts`](../../apps/web/src/densityPref.ts) через `DensityToggle` (экран плана) | `compact`; без ключа — комфортная плотность (`data-density` на корне) |
 | `f7-sound` | [`resultSignal.tsx`](../../apps/web/src/resultSignal.tsx) (кнопка звука в верхней полосе) | `on` \| `off`; сигнал результата скана (по умолчанию включён) |
 | `formulad.mes.plan.columns.v1` | `useColumnPrefs` | JSON-массив ключей видимых колонок |
@@ -226,6 +227,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 ## 7. `ScanTransitionScreen` — общий экран перехода по сканеру
 
 [`ScanTransitionScreen.tsx`](../../apps/web/src/ScanTransitionScreen.tsx) реализует механику, общую для **Старт**, **Завершение** и **Rework**. Каждый из этих экранов — тонкая обёртка (~25 строк), которая только передаёт параметры:
+
+**Раскладка (сетка `.scanx`).** Заголовок на всю ширину; слева главная колонка — **поле скана-герой** (`.scanx__scan`, высота ≥ 80 px, 24 px шрифт), баннер результата и **одна карточка найденного изделия** на всю ширину колонки (вложенной панели больше нет; на экране от 1280 px при наличии `extraContent` — две колонки `.scan-found--split`: изделие и действия слева, дополнительный блок, например несоответствия Rework, справа); справа **очередь** (`.scanx__queue`). Левые и правые грани заголовка, поля скана, карточки и очереди совпадают (`--page-gutter`). Очередь: заголовок «Очередь · N» с подписью из `listTitle`, найденное изделие отмечено заливкой и `aria-current="true"`, если его нет в очереди — подсказка «Изделие не в очереди», выбранная запись прокручивается в видимую область; кнопка-язычок на середине левой грани сворачивает очередь в рейку (счётчик и вертикальная подпись), главная колонка занимает освободившееся место (`--queue-w`).
 
 ```tsx
 // StartScreen.tsx

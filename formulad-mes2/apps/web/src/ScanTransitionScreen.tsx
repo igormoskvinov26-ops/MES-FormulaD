@@ -4,6 +4,7 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
 import { EmptyState } from './EmptyState';
+import { isQueueCollapsed, setQueueCollapsed, subscribeQueue } from './queuePref';
 import { ResultFlash, useResultSignal } from './resultSignal';
 import './f7-components.css';
 
@@ -72,6 +73,9 @@ export function ScanTransitionScreen({
   const [pending, setPending] = useState<ProductionPlanItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultSignal = useResultSignal(message);
+  const [queueCollapsed, setQueueCollapsedState] = useState(isQueueCollapsed);
+  const listRef = useRef<HTMLUListElement>(null);
+  const inQueue = found !== null && pending.some((item) => item.vin === found.vin);
   const requestId = useRef(0);
 
   // Разрешено подтверждать только когда что-то найдено и ни одна проверка (статус, extraCheck)
@@ -86,6 +90,12 @@ export function ScanTransitionScreen({
   }, [eligibleStatusId]);
 
   useEffect(reloadPending, [reloadPending]);
+  useEffect(() => subscribeQueue(() => setQueueCollapsedState(isQueueCollapsed())), []);
+
+  // Выбранное изделие должно быть видно в длинной очереди.
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [found?.vin, pending]);
 
   // ponytail: autofocus on mount and after screen switch
   useEffect(() => { focusInput(); }, [screen]);
@@ -185,38 +195,37 @@ export function ScanTransitionScreen({
     <div className="app f7plan">
       <AppHeader screen={screen} onNavigate={onNavigate} session={session} onLogout={onLogout} />
 
-      <div className="f7plan__scanbar">
-        <div className="f7plan__title f7plan__title--inline">
+      <ResultFlash signal={resultSignal} />
+
+      <main className="scanx">
+        <header className="scanx__title">
           <span className="f7mes__slash" aria-hidden="true" />
           <div>
             <h1>{title}</h1>
-            <small>Отсканируйте JobCard или введите VIN. Повторный скан того же VIN или кнопка — подтверждение.</small>
+            <small>Повторный скан того же VIN или кнопка — подтверждение.</small>
           </div>
-        </div>
-        <form className="f7mes__scan" onSubmit={onSubmit}>
-          <span className="f7mes__scan-symbol" aria-hidden="true">▥</span>
-          <div className="f7mes__scan-field">
-            <span className="f7plan__scan-label" aria-hidden="true">ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</span>
-            <input
-              ref={inputRef}
-              aria-label="Сканирование VIN"
-              placeholder="VIN / QR-код JobCard"
-              value={input}
-              maxLength={50}
-              autoFocus
-              autoComplete="off"
-              spellCheck={false}
-              disabled={busy}
-              onChange={(event) => setInput(event.target.value)}
-            />
-          </div>
-        </form>
-      </div>
+        </header>
 
-      <ResultFlash signal={resultSignal} />
+        <div className="scanx__main">
+          <form className="scanx__scan" onSubmit={onSubmit}>
+            <span className="scanx__scan-symbol" aria-hidden="true">▥</span>
+            <div className="scanx__scan-field">
+              <span className="scanx__scan-label" aria-hidden="true">ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</span>
+              <input
+                ref={inputRef}
+                aria-label="Сканирование VIN"
+                placeholder="VIN / QR-код JobCard"
+                value={input}
+                maxLength={50}
+                autoFocus
+                autoComplete="off"
+                spellCheck={false}
+                disabled={busy}
+                onChange={(event) => setInput(event.target.value)}
+              />
+            </div>
+          </form>
 
-      <main className="content scan-content">
-        <div className="scan-panel">
           {message && (
             <p role="status" className={message.kind === 'ok' ? 'scan-banner scan-ok' : 'scan-banner scan-bad'}>
               <span aria-hidden="true">{message.kind === 'ok' ? '✓ ' : '⚠ '}</span>
@@ -225,8 +234,16 @@ export function ScanTransitionScreen({
           )}
 
           {found ? (
-            <article className={eligible ? 'card scan-found' : 'card scan-found scan-found-blocked'} aria-label={`Найдено изделие ${found.vin}`}>
-              <h2 className="mono">{found.vin}</h2>
+            <article
+              className={`card scan-found${eligible ? '' : ' scan-found-blocked'}${extraContent ? ' scan-found--split' : ''}`}
+              aria-label={`Найдено изделие ${found.vin}`}
+            >
+              <div className="scan-found__head">
+                <h2 className="mono">{found.vin}</h2>
+                <span className="scan-found__tag" data-ok={String(eligible)}>
+                  {eligible ? 'Можно подтвердить' : 'Подтверждение недоступно'}
+                </span>
+              </div>
               <dl>
                 <div>
                   <dt>Модель</dt>
@@ -242,9 +259,9 @@ export function ScanTransitionScreen({
                 </div>
               </dl>
 
-              {extraContent && extraContent(found, () => void lookup(found.vin))}
+              {extraContent && <div className="scan-found__extra">{extraContent(found, () => void lookup(found.vin))}</div>}
 
-              <div className="modal-actions">
+              <div className="modal-actions scan-found__actions">
                 <button type="button" onClick={() => { setFound(null); setMessage(null); focusInput(); }}>
                   Отмена
                 </button>
@@ -264,27 +281,62 @@ export function ScanTransitionScreen({
               </div>
             </article>
           ) : (
-            <EmptyState title="Отсканируйте изделие, чтобы увидеть карточку" hint="Поле скана всегда активно — просто отсканируйте JobCard" />
+            <div className="scanx__placeholder">
+              <EmptyState title="Отсканируйте изделие, чтобы увидеть карточку" hint="Поле скана всегда активно — просто отсканируйте JobCard" />
+            </div>
           )}
         </div>
 
-        <aside className="side">
-          <h2 className="side-title">{listTitle}</h2>
-          {pending.length === 0 ? (
-            <EmptyState compact title="Список пуст" />
-          ) : (
-            <ul className="pending-list">
-              {pending.map((item) => (
-                <li key={item.vin}>
-                  <button type="button" onClick={() => { setInput(''); void lookup(item.vin); }}>
-                    <span className="mono">{item.vin}</span>
-                    <span className="muted">{dash(item.modelName)}</span>
-                    <span className="f7mes__queue-chevron" aria-hidden="true">›</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+        <aside className="scanx__queue" aria-label={`Очередь: ${listTitle}`} data-collapsed={String(queueCollapsed)}>
+          <button
+            type="button"
+            className="scanx__queue-toggle"
+            aria-expanded={!queueCollapsed}
+            aria-label={queueCollapsed ? 'Развернуть очередь' : 'Свернуть очередь'}
+            title={queueCollapsed ? 'Развернуть очередь' : 'Свернуть очередь'}
+            onClick={() => setQueueCollapsed(!queueCollapsed)}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 2l5 5-5 5" />
+            </svg>
+          </button>
+
+          <div className="scanx__queue-rail" aria-hidden="true">
+            <b>{pending.length}</b>
+            <span>ОЧЕРЕДЬ</span>
+          </div>
+
+          <div className="scanx__queue-body">
+            <header className="scanx__queue-head">
+              <h2 className="side-title">Очередь</h2>
+              <b>{pending.length}</b>
+              <small>{listTitle}</small>
+            </header>
+            {found && !inQueue && <p className="scanx__queue-note">Изделие не в очереди</p>}
+            {pending.length === 0 ? (
+              <EmptyState compact title="Список пуст" />
+            ) : (
+              <ul className="pending-list" ref={listRef}>
+                {pending.map((item) => {
+                  const selected = found?.vin === item.vin;
+                  return (
+                    <li key={item.vin}>
+                      <button
+                        type="button"
+                        data-selected={String(selected)}
+                        aria-current={selected ? 'true' : undefined}
+                        onClick={() => { setInput(''); void lookup(item.vin); }}
+                      >
+                        <span className="mono">{item.vin}</span>
+                        <span className="muted">{dash(item.modelName)}</span>
+                        <span className="f7mes__queue-chevron" aria-hidden="true">›</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </aside>
       </main>
     </div>
