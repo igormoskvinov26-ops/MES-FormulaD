@@ -421,12 +421,7 @@
 .f7mes__route-step[data-state="blocked"] b { color: var(--f7-accent); }
 
 /* ── ATV silhouette ─────────────────────────────────────── */
-.f7mes__atv-silhouette {
-  width: 360px;
-  max-width: 100%;
-  height: auto;
-  filter: drop-shadow(0 4px 32px rgba(0,0,0,.3));
-}
+.f7mes__atv { width: 380px; max-width: 100%; height: auto; }
 
 /* ── Hint ───────────────────────────────────────────────── */
 .f7mes__hint {
