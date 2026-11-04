@@ -47,7 +47,7 @@
 | `StatusId` | `int?` | Числовой статус 0..4 (раздел 5 спецификации) | `statusid` |
 | `PrintDate` | `DateTime?` | Дата печати JobCard | `PrintDate` |
 | `PlannedStartDate` | `DateTime?` | План старта | `plannedstartdate` |
-| `PlannedCompleteDate` | `DateTime?` | План завершения | **нет отдельной колонки** — в SQL заполняется из `PlannedShipmentDate`, см. [расхождение 6.4](#64-датаплан-завершения) |
+| `PlannedCompleteDate` | `DateTime?` | План завершения | **нет отдельной колонки** — в SQL заполняется из `PlannedShipmentDate`, см. [расхождение 6.4](#64-дата-план-завершения) |
 | `PlannedShipmentDate` | `DateTime?` | План отгрузки | `PlannedShipmentDate` |
 | `StartDate` | `DateTime?` | Факт запуска | `StartDate` |
 | `CompleteDate` | `DateTime?` | Факт завершения сборки | `CompleteDate` |
