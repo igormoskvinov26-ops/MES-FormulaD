@@ -38,9 +38,17 @@
   --stn-red: #dc2626;
 
   /* Глубина: скругления и мягкие тени — вместо плоских заливок и прямых углов. */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --focus-ring: #101216;
+  /* Шкала типографики: 12 подписи · 14 текст · 16 крупный текст · 20 подзаголовок · 28 заголовок · 40 цифры */
+  --fs-xs: 12px;
+  --fs-sm: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+  --fs-2xl: 40px;
   --shadow-sm: 0 1px 2px rgba(16, 18, 22, .05);
   --shadow-md: 0 1px 2px rgba(16, 18, 22, .04), 0 12px 28px -10px rgba(16, 18, 22, .16);
   --shadow-lg: 0 20px 48px -16px rgba(16, 18, 22, .28);
@@ -55,6 +63,7 @@
 
 /* Dark theme */
 :root[data-theme="dark"] {
+  --focus-ring: #e6edf3;
   --bg: #0d1117;
   --surface: #161b22;
   --border: #30363d;
@@ -91,7 +100,7 @@ input, select {
 }
 
 input:focus-visible, select:focus-visible, button:focus-visible, tr:focus-visible {
-  outline: 3px solid var(--graphite);
+  outline: 3px solid var(--focus-ring, var(--graphite));
   outline-offset: 1px;
 }
 
@@ -1019,7 +1028,7 @@ thead th {
 /* Clickable stat tiles */
 .stat-tile { cursor: pointer; }
 
-.sidebar-logo { display: block; width: 168px; max-width: 100%; height: auto; }
+.sidebar-logo { display: block; flex-shrink: 0; width: 168px; max-width: 100%; height: auto; }
 
 /* ── Collapsible sidebar: icons only ↔ icons + labels ─────── */
 .sidebar { overflow-x: hidden; transition: width .25s ease, padding .25s ease; }
@@ -1059,3 +1068,12 @@ thead th {
 /* «Выход» был рассчитан на тёмную шапку (светлый текст) и пропадал на светлой. */
 .topbar button.ghost { background: transparent; border-color: var(--border-strong); color: var(--text); }
 .topbar button.ghost:hover { background: color-mix(in srgb, var(--muted) 12%, var(--surface)); }
+
+
+/* ── Этап 2 дизайн-аудита ───────────────────────────────── */
+/* Плитки сводки перестраиваются по ширине (без «сироты» на планшете). */
+.f7plan .stat-tiles { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+/* Кнопка звука в верхней полосе */
+.topbar button.icon-btn { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; }
+.f7plan .stat-tile-text span { white-space: normal; line-height: 1.2; }

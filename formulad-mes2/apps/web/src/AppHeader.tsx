@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import { api } from './api';
+import { SoundToggle } from './resultSignal';
+import { isSidebarCollapsed, setSidebarCollapsed, subscribeSidebar } from './sidebarPref';
 import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports, IconAdmin } from './SidebarIcons';
 
 export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'reports' | 'admin';
@@ -44,8 +46,6 @@ const TABS: Tab[] = [
     в один ряд — оправдано было, пока раздел всего два; сейчас их пять, и боковое меню читается
     быстрее. Боковая панель позиционирована фиксированно, `.app` компенсирует отступом в CSS —
     экраны (PlanScreen/NcpScreen/ScanTransitionScreen) не меняются. */
-const SIDEBAR_KEY = 'f7-sidebar';
-
 export function AppHeader({
   screen,
   onNavigate,
@@ -64,14 +64,9 @@ export function AppHeader({
     if (tab.group) crumb = tab.group;
     if (tab.key === screen) break;
   }
-  const [collapsed, setCollapsed] = useState(() => document.documentElement.getAttribute('data-sidebar') === 'collapsed');
-  function toggleSidebar() {
-    const next = !collapsed;
-    setCollapsed(next);
-    if (next) document.documentElement.setAttribute('data-sidebar', 'collapsed');
-    else document.documentElement.removeAttribute('data-sidebar');
-    try { localStorage.setItem(SIDEBAR_KEY, next ? 'collapsed' : 'expanded'); } catch {}
-  }
+  const [collapsed, setCollapsed] = useState(isSidebarCollapsed);
+  useEffect(() => subscribeSidebar(() => setCollapsed(isSidebarCollapsed())), []);
+  const toggleSidebar = () => setSidebarCollapsed(!collapsed);
   return (
     <>
       <nav className="sidebar" aria-label="Разделы">
@@ -119,6 +114,7 @@ export function AppHeader({
       <header className="topbar">
         <span className="topbar-crumb" title={current?.label}>{crumb}</span>
         <span className="spacer" />
+        <SoundToggle />
         <Clock />
         <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
         <button

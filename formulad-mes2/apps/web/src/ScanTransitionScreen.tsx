@@ -3,6 +3,7 @@ import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
 import { ApiError, api, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
+import { ResultFlash, useResultSignal } from './resultSignal';
 import './f7-components.css';
 
 /**
@@ -69,6 +70,7 @@ export function ScanTransitionScreen({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<ProductionPlanItem[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultSignal = useResultSignal(message);
   const requestId = useRef(0);
 
   // Разрешено подтверждать только когда что-то найдено и ни одна проверка (статус, extraCheck)
@@ -209,6 +211,8 @@ export function ScanTransitionScreen({
           </div>
         </form>
       </div>
+
+      <ResultFlash signal={resultSignal} />
 
       <main className="content scan-content">
         <div className="scan-panel">

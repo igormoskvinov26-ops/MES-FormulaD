@@ -4,6 +4,7 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
 import { ReadinessTwin, type TwinMode } from './ReadinessTwin';
+import { ResultFlash, useResultSignal } from './resultSignal';
 import { StationDetailCard } from './StationDetailCard';
 import { readinessSummary, stationState } from './stationReadiness';
 import './f7-components.css';
@@ -31,6 +32,7 @@ export function FokScreen({
   const [doneKind, setDoneKind] = useState<'fok' | 'rework' | null>(null);
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultSignal = useResultSignal(message);
   const requestId = useRef(0);
   const scanId = useId();
 
@@ -196,6 +198,8 @@ export function FokScreen({
             </div>
           </form>
         </div>
+
+        <ResultFlash signal={resultSignal} />
 
         {/* Quality signal */}
         <div className="f7mes__signal" data-type={message?.kind === 'ok' ? 'ready' : signalType} role="status">
