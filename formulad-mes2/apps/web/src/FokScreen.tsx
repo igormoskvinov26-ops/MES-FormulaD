@@ -21,6 +21,7 @@ export function FokScreen({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<ProductionPlanItem[]>([]);
   const [stations, setStations] = useState<string[]>([]);
+  const [showModal, setShowModal] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
   const scanId = useId();
@@ -97,7 +98,7 @@ export function FokScreen({
     const v = input.trim();
     if (!v || busy) return;
     if (found && eligible && v.toLowerCase() === found.vin.toLowerCase()) {
-      void confirm(found.vin);
+      setShowModal(true);
     } else {
       void lookup(v);
       setInput('');
@@ -198,7 +199,7 @@ export function FokScreen({
                   onClick={() => void sendToRework(found.vin)}>Отправить в Rework</button>
               )}
               <button className="f7mes__btn f7mes__btn--accent" type="button"
-                disabled={!eligible || busy} onClick={() => found && void confirm(found.vin)}>
+                disabled={!eligible || busy} onClick={() => setShowModal(true)}>
                 ✓ Подтвердить FOK
               </button>
             </div>
@@ -207,8 +208,38 @@ export function FokScreen({
           {/* Center: vehicle stage */}
           <div className="f7mes__stage">
             <div className="f7mes__vehicle-label"><strong>FORMULA 7 / ATV</strong><small>ENGINEERED FOR THE LINE</small></div>
-            <svg viewBox="0 0 400 200" width="320" height="160" style={{ opacity: 0.15 }}>
-              <text x="200" y="110" textAnchor="middle" fill="#fff" fontSize="48" fontFamily="Rajdhani, sans-serif" fontWeight="700">F7 ATV</text>
+            <svg className="f7mes__atv-silhouette" viewBox="0 0 480 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* ATV silhouette — simplified quad-bike profile */}
+              <g opacity="0.25" fill="#fff">
+                {/* Rear wheel */}
+                <circle cx="110" cy="185" r="48" stroke="#fff" strokeWidth="3" fill="none"/>
+                <circle cx="110" cy="185" r="38" stroke="#fff" strokeWidth="1.5" fill="none" opacity="0.4"/>
+                <circle cx="110" cy="185" r="6" fill="#fff"/>
+                {/* Front wheel */}
+                <circle cx="370" cy="185" r="48" stroke="#fff" strokeWidth="3" fill="none"/>
+                <circle cx="370" cy="185" r="38" stroke="#fff" strokeWidth="1.5" fill="none" opacity="0.4"/>
+                <circle cx="370" cy="185" r="6" fill="#fff"/>
+                {/* Frame / body */}
+                <path d="M130 170 L160 110 L200 80 L260 65 L310 70 L340 90 L355 140 L350 170" stroke="#fff" strokeWidth="2.5" fill="none"/>
+                {/* Seat */}
+                <path d="M180 80 L200 65 L260 58 L280 62 L260 75 L200 80Z" fill="#fff" opacity="0.3"/>
+                {/* Handlebars */}
+                <path d="M310 70 L330 45 L350 35" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+                <path d="M350 35 L365 30" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
+                {/* Front fender */}
+                <path d="M340 90 L370 100 L390 130 L380 145 L360 140" stroke="#fff" strokeWidth="2" fill="none"/>
+                {/* Rear fender */}
+                <path d="M160 110 L140 120 L120 140 L130 150 L150 140" stroke="#fff" strokeWidth="2" fill="none"/>
+                {/* Rack / carrier */}
+                <path d="M165 95 L130 100 L120 95" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                {/* Engine block */}
+                <rect x="210" y="95" width="60" height="45" rx="4" stroke="#fff" strokeWidth="1.5" fill="none" opacity="0.5"/>
+                {/* Exhaust */}
+                <path d="M210 130 L180 145 L160 155" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity="0.4"/>
+                {/* Axles */}
+                <line x1="150" y1="170" x2="130" y2="180" stroke="#fff" strokeWidth="2"/>
+                <line x1="350" y1="170" x2="360" y2="180" stroke="#fff" strokeWidth="2"/>
+              </g>
             </svg>
             <div className="f7mes__vehicle-footer"><span>MES / QC MONITOR</span></div>
           </div>
@@ -222,9 +253,12 @@ export function FokScreen({
                 <button type="button" key={unit.vin} className="f7mes__queue-entry"
                   data-selected={String(found?.vin === unit.vin)}
                   onClick={() => { setInput(''); void lookup(unit.vin); }}>
-                  <span className="f7mes__label">ИЗДЕЛИЕ {String(i + 1).padStart(2, '0')}</span>
-                  <strong>{unit.vin}</strong>
-                  <small>{dash(unit.modelName)} · {dash(unit.color)}</small>
+                  <div className="f7mes__queue-entry-body">
+                    <span className="f7mes__label">ИЗДЕЛИЕ {String(i + 1).padStart(2, '0')}</span>
+                    <strong>{unit.vin}</strong>
+                    <small>{dash(unit.modelName)} · {dash(unit.color)}</small>
+                  </div>
+                  <span className="f7mes__queue-chevron" aria-hidden="true">›</span>
                 </button>
               ))}
             </div>
@@ -246,6 +280,31 @@ export function FokScreen({
               ))}
             </div>
           </section>
+        )}
+
+        {/* FOK confirmation modal */}
+        {showModal && found && (
+          <div className="f7mes__overlay" onClick={() => setShowModal(false)}>
+            <div className="f7mes__modal" onClick={e => e.stopPropagation()}>
+              <div className="f7mes__modal-header">
+                <span className="f7mes__label">ПОДТВЕРЖДЕНИЕ</span>
+                <button className="f7mes__modal-close" type="button" onClick={() => setShowModal(false)} aria-label="Закрыть">×</button>
+              </div>
+              <div className="f7mes__modal-body">
+                <span className="f7mes__modal-icon" aria-hidden="true">✓</span>
+                <h3>Подтвердить Final OK?</h3>
+                <p>Изделие <strong>{found.vin}</strong> будет переведено в статус «{statusCodeLabel(3)}».</p>
+                <p className="f7mes__modal-hint">Это действие нельзя отменить из этого экрана.</p>
+              </div>
+              <div className="f7mes__modal-actions">
+                <button className="f7mes__btn f7mes__btn--secondary" type="button" onClick={() => setShowModal(false)}>Отмена</button>
+                <button className="f7mes__btn f7mes__btn--accent" type="button" disabled={busy}
+                  onClick={() => { setShowModal(false); void confirm(found.vin); }}>
+                  ✓ Подтвердить FOK
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
