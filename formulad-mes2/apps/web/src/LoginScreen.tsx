@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ApiError, api } from './api';
-import { QuadMark } from './QuadMark';
 
 export function LoginScreen({ onLoggedIn }: { onLoggedIn: (userName: string) => void }) {
   const [username, setUsername] = useState('');
@@ -30,13 +29,10 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: (userName: string) => 
     <main className="login">
       <section className="login-hero" aria-hidden="true">
         <div className="login-hero-brand">
-          <QuadMark className="login-hero-icon" />
-          <p className="logo">
-            F<span className="logo-mark">7</span>
-            <span className="logo-suffix">MES</span>
-          </p>
+          <img className="login-hero-logo" src="/f7-logo.png" alt="" />
           <p className="login-hero-tagline">Производственная система Formula 7 — учёт сборки квадроциклов от плана до FOK.</p>
         </div>
+        <img className="login-hero-atv" src="/atv-hero.png" alt="" />
         <p className="login-hero-foot">Formula 7 · Производство ATV</p>
       </section>
       <div className="login-card">

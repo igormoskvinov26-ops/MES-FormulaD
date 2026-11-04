@@ -26,7 +26,7 @@
 | Набор | Команда | Результат |
 |---|---|---|
 | Backend (xUnit) | `dotnet test tests/FormulaD.Mes.Api.Tests` | **158 пройдено, 0 упало, 0 пропущено** (≈15 с) |
-| Frontend (vitest) | `cd apps/web && npx vitest run` | **66 пройдено** в **15 файлах** (≈10 с) |
+| Frontend (vitest) | `cd apps/web && npx vitest run` | **70 пройдено** в **17 файлах** (≈10 с) |
 | Типы | `cd apps/web && npx tsc -b` | без ошибок |
 | Сборка UI | `cd apps/web && npm run build` | успешно (`tsc -b && vite build`) |
 | Стенд | `./stand/stand.sh smoke` | 11 проверок живого стенда |

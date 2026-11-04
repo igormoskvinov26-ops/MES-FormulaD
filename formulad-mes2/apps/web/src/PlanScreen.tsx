@@ -12,6 +12,9 @@ import { useColumnPrefs } from './useColumnPrefs';
 import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } from './StatIcons';
 import { JobCardDialog } from './JobCardDialog';
 import { NcpPrintDialog } from './NcpPrintDialog';
+import { DensityToggle } from './DensityToggle';
+import { EmptyState } from './EmptyState';
+import { TableSkeleton } from './Skeleton';
 import './f7-components.css';
 
 const FIRST_BATCH_SIZE = 12;
@@ -199,7 +202,7 @@ export function PlanScreen({
       </div>
 
       <section className="stat-tiles" aria-label="Сводка по статусам">
-        <div className="stat-tile" role="button" tabIndex={0} aria-label="Показать все" onClick={() => { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); } }}>
+        <div className="stat-tile" role="button" tabIndex={0} aria-pressed={filterStatusId === null && statusChoice === ALL} aria-label="Показать все" onClick={() => { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); } }}>
           <span className="stat-tile-icon">
             <IconLayers />
           </span>
@@ -209,7 +212,7 @@ export function PlanScreen({
           </div>
         </div>
         {COUNT_TILES.map((tile) => (
-          <div key={tile.statusId} className="stat-tile" role="button" tabIndex={0} aria-label={`Фильтр: ${statusCodeLabel(tile.statusId)}`} onClick={() => { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); } }}>
+          <div key={tile.statusId} className="stat-tile" role="button" tabIndex={0} aria-pressed={filterStatusId === tile.statusId} aria-label={`Фильтр: ${statusCodeLabel(tile.statusId)}`} onClick={() => { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); } }}>
             <span className={`stat-tile-icon ${tile.toneClass}`}>
               <tile.Icon />
             </span>
@@ -262,6 +265,7 @@ export function PlanScreen({
             ))}
           </select>
           <ColumnPicker visible={visible} onToggle={toggle} onReset={reset} />
+          <DensityToggle />
           <button
             type="button"
             className={editOrder ? 'primary' : undefined}
@@ -311,13 +315,13 @@ export function PlanScreen({
 
       <main className={selected || cardError ? 'content' : 'content content-wide'}>
         <div className="table-wrap">
-          {state === 'loading' && <p className="muted">Загрузка…</p>}
+          {state === 'loading' && <TableSkeleton />}
           {state === 'error' && (
             <p role="alert" className="error">
               {error}
             </p>
           )}
-          {state === 'ready' && data && data.items.length === 0 && <p className="muted">Ничего не найдено</p>}
+          {state === 'ready' && data && data.items.length === 0 && <EmptyState title="Ничего не найдено" hint="Измените фильтр или проверьте VIN" />}
           {state === 'ready' && data && data.items.length > 0 && (
             <table>
               <caption className="sr-only">Производственный план (демо-данные), сортировка по порядку запуска</caption>

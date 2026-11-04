@@ -3,6 +3,7 @@ import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
 import { ApiError, api, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
+import { EmptyState } from './EmptyState';
 import { ResultFlash, useResultSignal } from './resultSignal';
 import './f7-components.css';
 
@@ -263,14 +264,14 @@ export function ScanTransitionScreen({
               </div>
             </article>
           ) : (
-            <p className="muted center">Отсканируйте изделие, чтобы увидеть карточку</p>
+            <EmptyState title="Отсканируйте изделие, чтобы увидеть карточку" hint="Поле скана всегда активно — просто отсканируйте JobCard" />
           )}
         </div>
 
         <aside className="side">
           <h2 className="side-title">{listTitle}</h2>
           {pending.length === 0 ? (
-            <p className="muted">Список пуст</p>
+            <EmptyState compact title="Список пуст" />
           ) : (
             <ul className="pending-list">
               {pending.map((item) => (

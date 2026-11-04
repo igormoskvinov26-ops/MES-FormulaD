@@ -6,6 +6,8 @@ import { NcpCreateDialog } from './NcpCreateDialog';
 import { NcpDetails } from './NcpDetails';
 import { NcpPrintDialog } from './NcpPrintDialog';
 import { formatDate, pageList } from './format';
+import { EmptyState } from './EmptyState';
+import { TableSkeleton } from './Skeleton';
 import './f7-components.css';
 
 const PAGE_SIZE = 25;
@@ -164,13 +166,13 @@ export function NcpScreen({
 
       <main className={selected ? 'content' : 'content content-wide'}>
         <div className="table-wrap">
-          {state === 'loading' && <p className="muted">Загрузка…</p>}
+          {state === 'loading' && <TableSkeleton />}
           {state === 'error' && (
             <p role="alert" className="error">
               {error}
             </p>
           )}
-          {state === 'ready' && data && data.items.length === 0 && <p className="muted">Ничего не найдено</p>}
+          {state === 'ready' && data && data.items.length === 0 && <EmptyState title="Ничего не найдено" hint="Измените фильтр или зарегистрируйте несоответствие" />}
           {state === 'ready' && data && data.items.length > 0 && (
             <table>
               <caption className="sr-only">Несоответствия (демо-данные), новые сверху</caption>

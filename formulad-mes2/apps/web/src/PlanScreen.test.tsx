@@ -140,3 +140,19 @@ describe('PlanScreen — печать JobCard', () => {
     expect(await within(dialog).findByText('NC-2026-0001')).toBeInTheDocument();
   });
 });
+
+describe('PlanScreen — плитки-фильтры', () => {
+  it('включённый фильтр помечен aria-pressed, «Показать все» — когда фильтра нет', async () => {
+    mockFetch(baseRoutes());
+    render(<PlanScreen session={session} onNavigate={noop} onLogout={noop} />);
+
+    const all = await screen.findByRole('button', { name: 'Показать все' });
+    const planned = screen.getByRole('button', { name: 'Фильтр: Запланировано' });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    expect(planned).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.click(planned);
+    expect(planned).toHaveAttribute('aria-pressed', 'true');
+    expect(all).toHaveAttribute('aria-pressed', 'false');
+  });
+});

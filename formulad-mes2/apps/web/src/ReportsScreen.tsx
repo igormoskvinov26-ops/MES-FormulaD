@@ -4,6 +4,7 @@ import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
 import { api, type Delivery, type NcpItem } from './api';
 import { statusCodeLabel } from './format';
+import { LinesSkeleton } from './Skeleton';
 
 type NcpSummary = { total: number; open: number; closed: number; byType: Record<string, number> };
 type IncomingSummary = { deliveries: number; open: number; verified: number; verifiedWithIssues: number; defect: number; mismatch: number; shortage: number };
@@ -99,7 +100,7 @@ export function ReportsScreen({
               </dl>
             </>
           ) : (
-            <p className="muted">Загрузка…</p>
+            <LinesSkeleton />
           )}
         </article>
 
@@ -120,7 +121,7 @@ export function ReportsScreen({
               </dl>
             </>
           ) : (
-            <p className="muted">Загрузка…</p>
+            <LinesSkeleton />
           )}
         </article>
 
@@ -141,7 +142,7 @@ export function ReportsScreen({
               </dl>
             </>
           ) : (
-            <p className="muted">Загрузка…</p>
+            <LinesSkeleton />
           )}
         </article>
       </main>

@@ -198,6 +198,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 |---|---|---|
 | `f7-theme` | `AppHeader` (кнопка «Тема») | `light` \| `dark` |
 | `f7-sidebar` | [`sidebarPref.ts`](../../apps/web/src/sidebarPref.ts) через кнопку «Свернуть/Развернуть меню» | `collapsed` \| `expanded`; пока ключа нет, меню само сворачивается на экране уже 1100 px (`initSidebar` в `main.tsx`, слушает `resize`); явный выбор оператора главнее |
+| `f7-density` | [`densityPref.ts`](../../apps/web/src/densityPref.ts) через `DensityToggle` (экран плана) | `compact`; без ключа — комфортная плотность (`data-density` на корне) |
 | `f7-sound` | [`resultSignal.tsx`](../../apps/web/src/resultSignal.tsx) (кнопка звука в верхней полосе) | `on` \| `off`; сигнал результата скана (по умолчанию включён) |
 | `formulad.mes.plan.columns.v1` | `useColumnPrefs` | JSON-массив ключей видимых колонок |
 

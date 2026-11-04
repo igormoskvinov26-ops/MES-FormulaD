@@ -13,6 +13,7 @@ import { IncomingInspectionScreen } from './IncomingInspectionScreen';
 import { LoginScreen } from './LoginScreen';
 import { ReportsScreen } from './ReportsScreen';
 import { AdminScreen } from './AdminScreen';
+import { BootScreen } from './Skeleton';
 
 type Session = { userName: string | null; mode: string } | null;
 
@@ -30,7 +31,7 @@ export function App() {
   }, []);
 
   if (checking) {
-    return <p className="center muted">Загрузка…</p>;
+    return <BootScreen />;
   }
 
   if (!session) {

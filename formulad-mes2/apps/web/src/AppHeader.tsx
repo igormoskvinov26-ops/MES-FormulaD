@@ -7,6 +7,23 @@ import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, I
 
 export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'reports' | 'admin';
 
+function ThemeToggle() {
+  const [dark, setDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
+  function toggle() {
+    const next = dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('f7-theme', next); } catch { /* тема действует до перезагрузки */ }
+    setDark(!dark);
+  }
+  return (
+    <button type="button" className="ghost icon-btn" onClick={toggle} aria-label="Переключить тему" title={dark ? 'Светлая тема' : 'Тёмная тема'}>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {dark ? <><circle cx="9" cy="9" r="3.4" /><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" /></> : <path d="M15 10.5A6.5 6.5 0 0 1 7.5 3a6.5 6.5 0 1 0 7.5 7.5z" />}
+      </svg>
+    </button>
+  );
+}
+
 /** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
 function Clock() {
   const [now, setNow] = useState(() => new Date());
@@ -71,6 +88,7 @@ export function AppHeader({
     <>
       <nav className="sidebar" aria-label="Разделы">
         <img className="sidebar-logo" src="/f7-logo.png" alt="F7 MES" />
+        <img className="sidebar-mark" src="/f7-mark.png" alt="" />
         <ul className="sidebar-nav">
           {TABS.map((tab) => (
             <li key={tab.key}>
@@ -99,21 +117,12 @@ export function AppHeader({
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="sidebar-toggle-icon"><path d="M10 3 5 8l5 5" /></svg>
           <span className="sidebar-label">Свернуть</span>
         </button>
-        <button type="button" className="theme-switch" title="Тема" onClick={() => {
-          const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-          document.documentElement.setAttribute('data-theme', next);
-          try { localStorage.setItem('f7-theme', next); } catch {}
-        }} aria-label="Переключить тему">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1v2m0 10v2m-5-7H1m14 0h-2m-1.5-4.5L10 5m-4-1.5L4.5 5m7 7L10 11m-4 1.5L4.5 11"/></svg>
-          <span className="sidebar-label">Тема</span>
-        </button>
-        <span className="badge badge-demo" title="Синтетические данные, не производственные">
-          DEMO
-        </span>
       </nav>
       <header className="topbar">
         <span className="topbar-crumb" title={current?.label}>{crumb}</span>
         <span className="spacer" />
+        <span className="badge badge-demo" title="Синтетические данные, не производственные">DEMO</span>
+        <ThemeToggle />
         <SoundToggle />
         <Clock />
         <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
