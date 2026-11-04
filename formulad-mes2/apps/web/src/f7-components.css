@@ -658,3 +658,7 @@
 :root .f7plan .station-btn.station-red { background: linear-gradient(145deg, #ef4444, var(--stn-red, #dc2626)); color: #fff; border: 0; }
 .f7plan .station-component { flex-direction: row; align-items: center; }
 .f7plan .station-component input { width: 18px; height: 18px; margin: 0; flex: none; }
+
+/* ── Admin tabs ─────────────────────────────────────────── */
+:root .f7plan .f7plan__tabs button { border-radius: 0; border: 0; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); padding: 11px 24px; font-weight: 600; white-space: nowrap; background: color-mix(in srgb, var(--muted) 16%, var(--surface)); color: var(--text); box-shadow: none; }
+:root .f7plan .f7plan__tabs button.primary { background: var(--f7-red, #e31e24); color: #fff; }

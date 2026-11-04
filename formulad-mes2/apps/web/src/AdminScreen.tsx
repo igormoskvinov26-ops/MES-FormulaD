@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
 import { api, type ComponentItem, type ModelRef, type SupplierRef } from './api';
+import './f7-components.css';
 
 type AdminTab = 'models' | 'colors' | 'specs' | 'components' | 'stations' | 'suppliers';
 
@@ -39,16 +40,25 @@ export function AdminScreen({
   }, []);
 
   return (
-    <div className="app">
+    <div className="app f7plan">
       <AppHeader screen="admin" onNavigate={onNavigate} session={session} onLogout={onLogout} />
+      <div className="f7plan__title">
+        <span className="f7mes__slash" aria-hidden="true" />
+        <div>
+          <h1>АДМИНИСТРИРОВАНИЕ</h1>
+          <small>Справочники: модели, цвета, комплектации, компоненты, станции, поставщики</small>
+        </div>
+      </div>
       <section className="toolbar">
-        <h1>Администрирование</h1>
-        <div className="controls">
+        <div className="controls f7plan__tabs" role="group" aria-label="Справочники">
           {ADMIN_TABS.map((t) => (
-            <button key={t.key} type="button" className={tab === t.key ? 'primary' : undefined} onClick={() => setTab(t.key)}>
+            <button key={t.key} type="button" className={tab === t.key ? 'primary' : undefined} aria-pressed={tab === t.key} onClick={() => setTab(t.key)}>
               {t.label}
             </button>
           ))}
+        </div>
+        <div className="meta">
+          <strong>Записей: {{ models: models.length, colors: colors.length, specs: specs.length, components: components.length, stations: stations.length, suppliers: suppliers.length }[tab]}</strong>
         </div>
       </section>
       <main className="content content-wide">

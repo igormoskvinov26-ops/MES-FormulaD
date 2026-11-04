@@ -120,8 +120,8 @@ export function FokScreen({
 
   const signalType = !found ? 'idle' : blocked ? 'blocked' : eligible ? 'ready' : 'idle';
   const signalText = blocked
-    ? 'FOK заблокирован — имеются неустановленные детали'
-    : message?.kind === 'error' ? message.text
+    ? `FOK заблокирован — ${message?.text ?? 'имеются неустановленные детали'}`
+    : message ? message.text
     : !found ? 'Отсканируйте JobCard для проверки изделия'
     : eligible ? 'Изделие готово к подтверждению Final OK'
     : 'Проверьте доступность операции и статус изделия';
@@ -140,7 +140,7 @@ export function FokScreen({
             <span className="f7mes__scan-symbol" aria-hidden="true">▥</span>
             <div className="f7mes__scan-field">
               <label htmlFor={scanId}>ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</label>
-              <input id={scanId} ref={inputRef} autoComplete="off" spellCheck={false}
+              <input id={scanId} ref={inputRef} aria-label="Сканирование VIN" autoComplete="off" spellCheck={false}
                 value={input} onChange={e => setInput(e.target.value)}
                 placeholder="VIN / QR-код JobCard" disabled={busy} />
             </div>
@@ -148,23 +148,15 @@ export function FokScreen({
         </div>
 
         {/* Quality signal */}
-        <div className="f7mes__signal" data-type={signalType} role={blocked ? 'alert' : 'status'}>
-          <span className="f7mes__signal-icon" aria-hidden="true">{blocked ? '⚠' : eligible ? '✓' : '▥'}</span>
+        <div className="f7mes__signal" data-type={message?.kind === 'ok' ? 'ready' : signalType} role="status">
+          <span className="f7mes__signal-icon" aria-hidden="true">{blocked || message?.kind === 'error' ? '⚠' : eligible || message?.kind === 'ok' ? '✓' : '▥'}</span>
           <span>{signalText}</span>
           {blocked && <button type="button" onClick={() => onNavigate('ncp')}>Открыть NCP →</button>}
         </div>
 
-        {/* Success banner */}
-        {message?.kind === 'ok' && (
-          <div className="f7mes__signal" data-type="ready" role="status">
-            <span className="f7mes__signal-icon" aria-hidden="true">✓</span>
-            <span>{message.text}</span>
-          </div>
-        )}
-
         <div className="f7mes__body">
           {/* Left: identity panel */}
-          <section className="f7mes__panel f7mes__panel--cut f7mes__identity">
+          <section className="f7mes__panel f7mes__panel--cut f7mes__identity" aria-label={found ? `Найдено изделие ${found.vin}` : undefined}>
             <div className="f7mes__ident-head">
               <span className="f7mes__label">ТЕКУЩЕЕ ИЗДЕЛИЕ</span>
               <span className="f7mes__tag" data-type={blocked ? 'blocked' : eligible ? 'ready' : 'idle'}>
@@ -198,7 +190,7 @@ export function FokScreen({
               )}
               <button className="f7mes__btn f7mes__btn--accent" type="button"
                 disabled={!eligible || busy} onClick={() => setShowModal(true)}>
-                ✓ Подтвердить FOK
+                <span aria-hidden="true">✓ </span>Подтвердить FOK
               </button>
             </div>
           </section>
