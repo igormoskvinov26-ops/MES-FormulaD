@@ -6,6 +6,7 @@ import { DeliveryCreateDialog } from './DeliveryCreateDialog';
 import { PackageDialog } from './PackageDialog';
 import { PACKING_LIST_COLUMNS, parsePackingListRows } from './importParse';
 import { formatDate } from './format';
+import './f7-components.css';
 
 const DELIVERY_STATUS_LABEL: Record<Delivery['status'], string> = {
   Open: 'В работе',
@@ -162,10 +163,17 @@ export function IncomingInspectionScreen({
   // --- Список поставок --------------------------------------------------
   if (!delivery) {
     return (
-      <div className="app">
+      <div className="app f7plan">
         <AppHeader screen="incoming" onNavigate={onNavigate} session={authSession} onLogout={onLogout} />
+        <div className="f7plan__title">
+          <span className="f7mes__slash" aria-hidden="true" />
+          <div>
+            <h1>ВХОДНОЙ КОНТРОЛЬ</h1>
+            <small>Поставки, Packing List и проверка коробок по HU</small>
+          </div>
+        </div>
         <section className="toolbar">
-          <h1>Входной контроль</h1>
+          <span className="f7plan__filters-label">ПОСТАВКИ</span>
           <div className="controls">
             <button type="button" className="primary" onClick={() => setShowCreate(true)}>
               Новая поставка
@@ -189,7 +197,7 @@ export function IncomingInspectionScreen({
               </thead>
               <tbody>
                 {deliveries.map((d) => (
-                  <tr key={d.id} onClick={() => setSelectedId(d.id)} style={{ cursor: 'pointer' }}>
+                  <tr key={d.id} className={d.status === 'VerifiedWithIssues' ? 'row-ncp-open' : d.status === 'Verified' ? 'row-fok' : 'row-waiting'} onClick={() => setSelectedId(d.id)} style={{ cursor: 'pointer' }}>
                     <td>{d.supplierName}</td>
                     <td>{d.invoiceNumber}</td>
                     <td>{formatDate(d.invoiceDate)}</td>
@@ -223,7 +231,7 @@ export function IncomingInspectionScreen({
 
   // --- Карточка поставки --------------------------------------------------
   return (
-    <div className="app">
+    <div className="app f7plan">
       <AppHeader screen="incoming" onNavigate={onNavigate} session={authSession} onLogout={onLogout} />
       <section className="toolbar">
         <div>
@@ -402,7 +410,7 @@ export function IncomingInspectionScreen({
             </thead>
             <tbody>
               {delivery.packages.map((p) => (
-                <tr key={p.id} onClick={() => setOpenPackage(p)} style={{ cursor: 'pointer' }}>
+                <tr key={p.id} className={p.status === 'Closed' ? (p.hasIssues ? 'row-ncp-open' : 'row-fok') : 'row-waiting'} onClick={() => setOpenPackage(p)} style={{ cursor: 'pointer' }}>
                   <td>{p.huNumber}</td>
                   <td>{p.rows.length}</td>
                   <td>
