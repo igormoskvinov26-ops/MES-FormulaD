@@ -12,6 +12,7 @@ import { useColumnPrefs } from './useColumnPrefs';
 import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } from './StatIcons';
 import { JobCardDialog } from './JobCardDialog';
 import { NcpPrintDialog } from './NcpPrintDialog';
+import './f7-components.css';
 
 const FIRST_BATCH_SIZE = 12;
 
@@ -33,6 +34,17 @@ const LEGEND = [
   { key: 'complete', label: 'Собрано' },
   { key: 'fok', label: 'ФОК пройден' },
 ];
+
+/** 1 … 4 5 6 … 50: первая, последняя и соседи текущей; null — многоточие. */
+function pageList(page: number, total: number): (number | null)[] {
+  const keep = new Set([1, total, page - 1, page, page + 1].filter((n) => n >= 1 && n <= total));
+  const out: (number | null)[] = [];
+  [...keep].sort((a, b) => a - b).forEach((n, i, arr) => {
+    if (i > 0 && n - arr[i - 1] > 1) out.push(null);
+    out.push(n);
+  });
+  return out;
+}
 
 export function PlanScreen({
   session,
@@ -183,8 +195,16 @@ export function PlanScreen({
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
-    <div className="app">
+    <div className="app f7plan">
       <AppHeader screen="plan" onNavigate={onNavigate} session={session} onLogout={onLogout} />
+
+      <div className="f7plan__title">
+        <span className="f7mes__slash" aria-hidden="true" />
+        <div>
+          <h1>ПРОИЗВОДСТВЕННЫЙ ПЛАН</h1>
+          <small>Очередь запуска изделий, статусы и порядок сборки</small>
+        </div>
+      </div>
 
       <section className="stat-tiles" aria-label="Сводка по статусам">
         <div className="stat-tile" role="button" tabIndex={0} aria-label="Показать все" onClick={() => { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); } }}>
@@ -212,12 +232,14 @@ export function PlanScreen({
       <section className="toolbar">
         <form
           className="controls"
+          aria-label="Фильтры"
           onSubmit={(event) => {
             event.preventDefault();
             const value = vin.trim();
             if (value) void openByVin(value);
           }}
         >
+          <span className="f7plan__filters-label">ФИЛЬТРЫ</span>
           <input
             ref={searchRef}
             className="search"
@@ -330,6 +352,7 @@ export function PlanScreen({
                       tabIndex={0}
                       className={
                         [
+                          `row-${row.key}`,
                           activeVin === item.vin || selected?.vin === item.vin ? 'selected' : '',
                           movedVin === item.vin ? 'moved' : '',
                         ]
@@ -422,16 +445,22 @@ export function PlanScreen({
           )}
 
           {state === 'ready' && data && data.total > data.pageSize && (
-            <nav className="pager" aria-label="Страницы">
-              <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                Назад
-              </button>
-              <span>
-                Страница {page} из {totalPages}
+            <nav className="pager f7plan__pager" aria-label="Страницы">
+              <span className="f7plan__shown">
+                Показано {(page - 1) * data.pageSize + 1}–{Math.min(page * data.pageSize, data.total)} из {data.total}
               </span>
-              <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                Вперёд
-              </button>
+              <div className="f7plan__pages">
+                <button type="button" aria-label="Назад" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>‹</button>
+                {pageList(page, totalPages).map((n, i) =>
+                  n === null ? (
+                    <span key={`gap${i}`} className="f7plan__gap">…</span>
+                  ) : (
+                    <button key={n} type="button" aria-label={`Страница ${n}`} aria-current={n === page ? 'page' : undefined}
+                      className={n === page ? 'is-current' : undefined} onClick={() => setPage(n)}>{n}</button>
+                  ),
+                )}
+                <button type="button" aria-label="Вперёд" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>›</button>
+              </div>
             </nav>
           )}
         </div>
