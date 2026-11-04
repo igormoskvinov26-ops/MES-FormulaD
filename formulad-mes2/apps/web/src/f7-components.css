@@ -639,3 +639,22 @@
 :root .f7plan .f7mes__scan-field { display: flex; flex-direction: column; flex: 1; }
 :root .f7plan .f7mes__scan-field input { border: 0; outline: 0; box-shadow: none; background: transparent; padding: 2px 0; width: 100%; font: 500 15px/1.4 Inter, sans-serif; color: var(--text); }
 .f7plan .pending-list .mono { white-space: nowrap; }
+
+/* ── Stations ───────────────────────────────────────────── */
+:root .f7plan .f7mes__scan button.primary { background: var(--f7-red, #e31e24); color: #fff; border: 0; border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 10px 20px; white-space: nowrap; }
+.f7plan__unit { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14px; margin: 0 24px; padding: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--f7-red, #e31e24); }
+.f7plan__unit .vin { font: 700 22px/1.2 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
+.f7plan .station-line { gap: 6px; }
+.f7plan .station-btn { border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); box-shadow: none !important; font-family: var(--f7-font, Rajdhani, sans-serif); font-weight: 700; min-width: 64px; }
+.f7plan .station-btn:hover:not([disabled]) { transform: none; filter: brightness(1.08); }
+.f7plan .station-btn[aria-pressed='true'] { outline: 3px solid var(--text); outline-offset: 2px; }
+.f7plan .station-detail { border-radius: 0; border-left: 3px solid var(--f7-red, #e31e24); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%); }
+.f7plan .station-detail-head h2 { font: 700 18px/1 var(--f7-font, Rajdhani, sans-serif); text-transform: uppercase; letter-spacing: .04em; }
+:root .f7plan .station-components button, :root .f7plan .ncp-actions button { border-radius: 0; white-space: nowrap; }
+:root .f7plan .station-btn.station-grey { background: linear-gradient(145deg, #b7bcc6, var(--stn-grey, #8b93a1)); color: #fff; border: 0; }
+:root .f7plan .station-btn.station-blue { background: linear-gradient(145deg, #4d8dff, var(--stn-blue, #2563eb)); color: #fff; border: 0; }
+:root .f7plan .station-btn.station-green { background: linear-gradient(145deg, #22c55e, var(--stn-green, #16a34a)); color: #fff; border: 0; }
+:root .f7plan .station-btn.station-yellow { background: linear-gradient(145deg, #fbbf24, var(--stn-yellow, #eab308)); color: #3a2e00; border: 0; }
+:root .f7plan .station-btn.station-red { background: linear-gradient(145deg, #ef4444, var(--stn-red, #dc2626)); color: #fff; border: 0; }
+.f7plan .station-component { flex-direction: row; align-items: center; }
+.f7plan .station-component input { width: 18px; height: 18px; margin: 0; flex: none; }

@@ -4,6 +4,7 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem } from './api';
 import { NcpCreateDialog } from './NcpCreateDialog';
 import { formatDate } from './format';
+import './f7-components.css';
 
 type StationState = 'grey' | 'blue' | 'green' | 'yellow' | 'red';
 
@@ -142,41 +143,54 @@ export function StationScreen({
   const selectedComponents = selectedStation ? componentsFor(selectedStation) : [];
 
   return (
-    <div className="app">
+    <div className="app f7plan">
       <AppHeader screen="stations" onNavigate={onNavigate} session={session} onLogout={onLogout} />
 
-      <section className="toolbar">
+      <div className="f7plan__scanbar">
+        <div className="f7plan__title f7plan__title--inline">
+          <span className="f7mes__slash" aria-hidden="true" />
+          <div>
+            <h1>СТАНЦИИ</h1>
+            <small>Отметки проверки компонентов по линии и фиксация расхождений</small>
+          </div>
+        </div>
         <form
-          className="controls"
+          className="f7mes__scan"
           onSubmit={(event) => {
             event.preventDefault();
             const value = vinInput.trim();
             if (value) void openVin(value);
           }}
         >
-          <input
-            className="search"
-            aria-label="VIN изделия"
-            placeholder="Сканируйте или введите VIN"
-            value={vinInput}
-            maxLength={50}
-            autoFocus
-            onChange={(event) => setVinInput(event.target.value)}
-          />
+          <span className="f7mes__scan-symbol" aria-hidden="true">▥</span>
+          <div className="f7mes__scan-field">
+            <span className="f7plan__scan-label" aria-hidden="true">ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</span>
+            <input
+              aria-label="VIN изделия"
+              placeholder="VIN / QR-код JobCard"
+              value={vinInput}
+              maxLength={50}
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setVinInput(event.target.value)}
+            />
+          </div>
           <button type="submit" className="primary">
             Открыть
           </button>
         </form>
+      </div>
 
-        {item && (
-          <div className="meta">
-            <strong className="mono vin">{item.vin}</strong>
-            <span className="muted">
-              {item.modelName ?? item.modelArticle ?? '—'} · {item.color ?? '—'}
-            </span>
-          </div>
-        )}
-      </section>
+      {item && (
+        <div className="f7plan__unit">
+          <span className="f7mes__label">ТЕКУЩЕЕ ИЗДЕЛИЕ</span>
+          <strong className="mono vin">{item.vin}</strong>
+          <span className="muted">
+            {item.modelName ?? item.modelArticle ?? '—'} · {item.color ?? '—'}
+          </span>
+        </div>
+      )}
 
       {lookupError && (
         <p role="alert" className="error" style={{ margin: '12px 18px 0' }}>
