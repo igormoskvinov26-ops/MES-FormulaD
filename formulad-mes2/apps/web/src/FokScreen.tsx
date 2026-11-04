@@ -106,9 +106,14 @@ export function FokScreen({
 
   function reset() { setFound(null); setMissing([]); setMessage(null); focusInput(); }
 
-  // Route rail: stations from API + FOK step
+  // Route rail: stations from API + FOK step (reference format: СТ-01)
   const routeSteps = [
-    ...stations.map((s, i) => ({ id: `st-${i}`, number: i + 1, title: s, state: 'done' as const })),
+    ...stations.map((s, i) => ({
+      id: `st-${i}`,
+      number: i + 1,
+      title: `СТ-${String(i + 1).padStart(2, '0')}`,
+      state: 'done' as const,
+    })),
     { id: 'fok', number: 'FOK', title: 'Контроль', state: 'current' as const },
   ];
 
@@ -147,6 +152,7 @@ export function FokScreen({
         <div className="f7mes__signal" data-type={signalType} role={blocked ? 'alert' : 'status'}>
           <span className="f7mes__signal-icon" aria-hidden="true">{blocked ? '⚠' : eligible ? '✓' : '▥'}</span>
           <span>{signalText}</span>
+          {blocked && <button type="button" onClick={() => onNavigate('ncp')}>Открыть NCP →</button>}
         </div>
 
         {/* Success banner */}

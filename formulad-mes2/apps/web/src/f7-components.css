@@ -151,7 +151,7 @@
   padding: 20px;
 }
 .f7mes__panel--cut {
-  /* ponytail: clip-path cut corner — upgrade to SVG mask if aliasing is bad */
+  border-radius: 0;
   clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
 }
 
