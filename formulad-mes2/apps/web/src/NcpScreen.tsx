@@ -5,7 +5,8 @@ import { ApiError, api, type ComponentItem, type NcpItem, type Paged } from './a
 import { NcpCreateDialog } from './NcpCreateDialog';
 import { NcpDetails } from './NcpDetails';
 import { NcpPrintDialog } from './NcpPrintDialog';
-import { formatDate } from './format';
+import { formatDate, pageList } from './format';
+import './f7-components.css';
 
 const PAGE_SIZE = 25;
 const ALL = '__all__';
@@ -114,11 +115,20 @@ export function NcpScreen({
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
-    <div className="app">
+    <div className="app f7plan">
       <AppHeader screen="ncp" onNavigate={onNavigate} session={session} onLogout={onLogout} />
+
+      <div className="f7plan__title">
+        <span className="f7mes__slash" aria-hidden="true" />
+        <div>
+          <h1>НЕСООТВЕТСТВИЯ / NCP</h1>
+          <small>Регистрация, контроль установки детали и закрытие заявок</small>
+        </div>
+      </div>
 
       <section className="toolbar">
         <div className="controls">
+          <span className="f7plan__filters-label">ФИЛЬТРЫ</span>
           <input
             className="search"
             aria-label="Поиск по VIN"
@@ -182,7 +192,7 @@ export function NcpScreen({
                   <tr
                     key={item.id}
                     tabIndex={0}
-                    className={selected?.id === item.id ? 'selected' : undefined}
+                    className={[item.status === 'Закрыто' ? 'row-fok' : 'row-ncp-open', selected?.id === item.id ? 'selected' : ''].filter(Boolean).join(' ')}
                     aria-label={`Строка ${item.number}`}
                     onClick={() => setSelected(item)}
                     onKeyDown={(event) => {
@@ -217,16 +227,22 @@ export function NcpScreen({
           )}
 
           {state === 'ready' && data && data.total > data.pageSize && (
-            <nav className="pager" aria-label="Страницы">
-              <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                Назад
-              </button>
-              <span>
-                Страница {page} из {totalPages}
+            <nav className="pager f7plan__pager" aria-label="Страницы">
+              <span className="f7plan__shown">
+                Показано {(page - 1) * data.pageSize + 1}–{Math.min(page * data.pageSize, data.total)} из {data.total}
               </span>
-              <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                Вперёд
-              </button>
+              <div className="f7plan__pages">
+                <button type="button" aria-label="Назад" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>‹</button>
+                {pageList(page, totalPages).map((p, i) =>
+                  p === null ? (
+                    <span key={`gap${i}`} className="f7plan__gap">…</span>
+                  ) : (
+                    <button key={p} type="button" aria-label={`Страница ${p}`} aria-current={p === page ? 'page' : undefined}
+                      className={p === page ? 'is-current' : undefined} onClick={() => setPage(p)}>{p}</button>
+                  ),
+                )}
+                <button type="button" aria-label="Вперёд" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>›</button>
+              </div>
             </nav>
           )}
         </div>

@@ -6,7 +6,7 @@ import { api, type ProductionPlanItem } from './api';
 import { MoveDialog } from './MoveDialog';
 import { COLUMNS } from './columns';
 import { ColumnPicker } from './ColumnPicker';
-import { rowState, statusCodeLabel } from './format';
+import { pageList, rowState, statusCodeLabel } from './format';
 import { ProductCard } from './ProductCard';
 import { useColumnPrefs } from './useColumnPrefs';
 import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } from './StatIcons';
@@ -34,17 +34,6 @@ const LEGEND = [
   { key: 'complete', label: 'Собрано' },
   { key: 'fok', label: 'ФОК пройден' },
 ];
-
-/** 1 … 4 5 6 … 50: первая, последняя и соседи текущей; null — многоточие. */
-function pageList(page: number, total: number): (number | null)[] {
-  const keep = new Set([1, total, page - 1, page, page + 1].filter((n) => n >= 1 && n <= total));
-  const out: (number | null)[] = [];
-  [...keep].sort((a, b) => a - b).forEach((n, i, arr) => {
-    if (i > 0 && n - arr[i - 1] > 1) out.push(null);
-    out.push(n);
-  });
-  return out;
-}
 
 export function PlanScreen({
   session,

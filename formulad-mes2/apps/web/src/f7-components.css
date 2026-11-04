@@ -611,3 +611,9 @@
 .f7plan .controls { flex-wrap: wrap; }
 .f7plan .controls button { white-space: nowrap; }
 .f7plan .search { min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+
+/* NCP rows: open = red tint/bar, closed uses .row-fok green-violet bar override */
+.f7plan tbody tr.row-ncp-open td:first-child { box-shadow: inset 3px 0 0 var(--f7-red, #e31e24); }
+.f7plan tbody tr.row-ncp-open { background: color-mix(in srgb, var(--f7-red, #e31e24) 7%, var(--surface)); }
+.f7plan tbody tr.row-fok td:first-child { box-shadow: inset 3px 0 0 var(--st-work, #16a34a); }
+.f7plan .badge { border-radius: 0; text-transform: uppercase; font-weight: 700; font-size: 11px; letter-spacing: .05em; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
