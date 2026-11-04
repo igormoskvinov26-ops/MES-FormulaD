@@ -184,4 +184,25 @@ describe('ImportScreen', () => {
 
     expect(await screen.findByText(/Добавлено изделий: 1/)).toBeInTheDocument();
   });
+
+  it('шаги импорта показывают, на каком этапе оператор', async () => {
+    mockFetch((url, method) => {
+      if (url.includes('/plan-import/reference')) return { body: REFERENCE };
+      if (url.endsWith('/plan-import/sessions') && method === 'POST') {
+        return { body: { id: 's1', createdAt: '2026-10-27T10:00:00', createdBy: 'demo-operator', source: 'paste', rows: [{ rowNumber: 1, row: RAW_ROW_BAD, errors: ['VIN обязателен'] }], totalCount: 1, errorCount: 1 } };
+      }
+      return undefined;
+    });
+
+    render(<ImportScreen session={session} onNavigate={noop} onLogout={noop} />);
+    const steps = await screen.findByRole('list', { name: 'Шаги импорта' });
+    expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent('Загрузка');
+
+    await userEvent.type(screen.getByLabelText('Вставка диапазона из Excel'), pasteBlock());
+    await userEvent.click(screen.getByRole('button', { name: 'Проверить' }));
+    await screen.findByText('Строк: 1 · Ошибок: 1');
+
+    expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent('Проверка и исправление');
+    expect(screen.getByText('Исправьте ошибки — публикация недоступна')).toBeInTheDocument();
+  });
 });

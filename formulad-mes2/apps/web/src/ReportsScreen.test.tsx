@@ -75,4 +75,24 @@ describe('ReportsScreen', () => {
     expect(within(incomingCard).getAllByText('1').length).toBeGreaterThanOrEqual(3);
     expect(within(incomingCard).getByText('с замеч.')).toBeInTheDocument();
   });
+
+  it('полосы распределения описаны текстом для скринридера и не дублируют цифры в тексте карточки', async () => {
+    mockFetch((url) => {
+      if (url.includes('/production-plan?') && url.includes('statusId=4')) return { body: { items: [], page: 1, pageSize: 1, total: 1 } };
+      if (url.includes('/production-plan?') && url.includes('statusId=0')) return { body: { items: [], page: 1, pageSize: 1, total: 2 } };
+      if (url.includes('/production-plan?') && url.includes('statusId=1')) return { body: { items: [], page: 1, pageSize: 1, total: 1 } };
+      if (url.includes('/production-plan?') && url.includes('statusId=2')) return { body: { items: [], page: 1, pageSize: 1, total: 0 } };
+      if (url.includes('/production-plan?') && url.includes('statusId=3')) return { body: { items: [], page: 1, pageSize: 1, total: 0 } };
+      if (url.includes('/production-plan?') && !url.includes('statusId')) return { body: { items: [], page: 1, pageSize: 1, total: 4 } };
+      if (url.includes('/api/v1/ncp?')) return { body: { items: NCP_ITEMS, page: 1, pageSize: 100, total: 2 } };
+      if (url.includes('/incoming-inspection/deliveries?')) return { body: { items: DELIVERIES, page: 1, pageSize: 100, total: 1 } };
+      return undefined;
+    });
+
+    render(<ReportsScreen session={session} onNavigate={noop} onLogout={noop} />);
+    const bar = await screen.findByRole('img', { name: /Распределение плана по статусам/ });
+    expect(bar).toHaveAttribute('aria-label', expect.stringContaining('Запланировано 2'));
+    expect(bar).toHaveAttribute('aria-label', expect.stringContaining('Rework 1'));
+    expect(bar.textContent).toBe('');
+  });
 });

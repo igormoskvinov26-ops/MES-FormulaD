@@ -36,6 +36,41 @@ function summarizeIncoming(deliveries: Delivery[]): IncomingSummary {
   return summary;
 }
 
+type StackPart = { key: string; name: string; value: number; tone: string };
+
+/**
+ * Полоса распределения: доли видны сразу, без библиотеки графиков. Цифры остаются в списках рядом, а сама полоса
+ * для скринридера — одна картинка с текстовым описанием (в сегментах нет текста).
+ */
+function StackBar({ label, parts }: { label: string; parts: StackPart[] }) {
+  const total = parts.reduce((sum, p) => sum + p.value, 0);
+  const description = parts.map((p) => `${p.name} ${p.value}`).join(', ');
+  return (
+    <div className="rep-stack" role="img" aria-label={`${label}: ${description}`}>
+      {total === 0 ? (
+        <i className="rep-seg rep-seg--empty" style={{ flexGrow: 1 }} />
+      ) : (
+        parts.filter((p) => p.value > 0).map((p) => (
+          <i key={p.key} className={`rep-seg rep-seg--${p.tone}`} style={{ flexGrow: p.value }} title={`${p.name}: ${p.value}`} />
+        ))
+      )}
+    </div>
+  );
+}
+
+/** Строка «подпись — полоса — число»: длина полосы пропорциональна максимуму в группе. */
+function BarLine({ label, value, max, tone, alert = false }: { label: string; value: number; max: number; tone?: string; alert?: boolean }) {
+  return (
+    <div className={`rep-line${alert ? ' rep-line--alert' : ''}`}>
+      <dt>{label}</dt>
+      <span className="rep-line__track" aria-hidden="true">
+        <i className={tone ? `rep-line__fill rep-seg--${tone}` : 'rep-line__fill'} style={{ width: `${max > 0 ? (value / max) * 100 : 0}%` }} />
+      </span>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
 /**
  * Отчётность (раздел 26, Этап 10): сводки по тем срезам, которые реально существуют в системе.
  * «Сколько изделий на каждой станции» из [П] сознательно не делаю — в модели нет поля «изделие
@@ -71,32 +106,59 @@ export function ReportsScreen({
       .catch(() => setError('Нет связи с сервером'));
   }, []);
 
+  const planStatuses: { id: 0 | 1 | 2 | 3; tone: string }[] = [
+    { id: 0, tone: 'waiting' },
+    { id: 1, tone: 'in-work' },
+    { id: 2, tone: 'complete' },
+    { id: 3, tone: 'fok' },
+  ];
+  const typeEntries = ncp ? Object.entries(ncp.byType).sort((a, b) => b[1] - a[1]) : [];
+  const typeMax = typeEntries.reduce((m, [, n]) => Math.max(m, n), 0);
+  const incomingMax = incoming ? Math.max(incoming.defect, incoming.mismatch, incoming.shortage) : 0;
+
   return (
-    <div className="app">
+    <div className="app f7plan">
       <AppHeader screen="reports" onNavigate={onNavigate} session={session} onLogout={onLogout} />
-      <section className="toolbar">
-        <h1>Отчётность</h1>
-      </section>
+
+      <div className="f7plan__title">
+        <span className="f7mes__slash" aria-hidden="true" />
+        <div>
+          <h1>ОТЧЁТНОСТЬ</h1>
+          <small>Сводки по плану, несоответствиям и входному контролю</small>
+        </div>
+      </div>
 
       {error && (
-        <p role="alert" className="error" style={{ margin: '12px 18px 0' }}>
+        <p role="alert" className="error" style={{ margin: '12px 24px 0' }}>
           {error}
         </p>
       )}
 
-      <main className="content content-wide reports-grid">
-        <article className="card">
+      <main className="rep-grid">
+        <article className="rep-card">
           <h2>Производственный план</h2>
           {planCounts ? (
             <>
-              <p className="report-hero">{planCounts.all}</p>
-              <p className="muted" style={{ marginTop: -8 }}>изделий в плане</p>
-              <dl>
-                <div><dt>{statusCodeLabel(0)}</dt><dd className="state-waiting">{planCounts[0]}</dd></div>
-                <div><dt>{statusCodeLabel(1)}</dt><dd className="state-in-work">{planCounts[1]}</dd></div>
-                <div><dt>{statusCodeLabel(2)}</dt><dd className="state-complete">{planCounts[2]}</dd></div>
-                <div><dt>{statusCodeLabel(3)}</dt><dd className="state-fok">{planCounts[3]}</dd></div>
-                <div><dt>{statusCodeLabel(4)}</dt><dd>{reworkCount ?? '—'}</dd></div>
+              <p className="rep-hero">{planCounts.all}</p>
+              <p className="rep-caption">изделий в плане</p>
+              <StackBar
+                label="Распределение плана по статусам"
+                parts={[
+                  ...planStatuses.map((st) => ({ key: String(st.id), name: statusCodeLabel(st.id), value: planCounts[st.id], tone: st.tone })),
+                  { key: '4', name: statusCodeLabel(4), value: reworkCount ?? 0, tone: 'rework' },
+                ]}
+              />
+              <dl className="rep-lines">
+                {planStatuses.map((st) => (
+                  <div key={st.id} className="rep-line">
+                    <dt><i className={`rep-dot rep-seg--${st.tone}`} aria-hidden="true" />{statusCodeLabel(st.id)}</dt>
+                    <dd className={`state-${st.tone}`}>{planCounts[st.id]}</dd>
+                  </div>
+                ))}
+                <div className="rep-line">
+                  <dt><i className="rep-dot rep-seg--rework" aria-hidden="true" />{statusCodeLabel(4)}</dt>
+                  <dd>{reworkCount ?? '—'}</dd>
+                </div>
               </dl>
             </>
           ) : (
@@ -104,19 +166,26 @@ export function ReportsScreen({
           )}
         </article>
 
-        <article className="card">
+        <article className="rep-card">
           <h2>Несоответствия (NCP)</h2>
           {ncp ? (
             <>
-              <div className="report-row">
-                <div className="report-mini"><strong>{ncp.total}</strong><span>всего</span></div>
-                <div className="report-mini report-mini-warn"><strong>{ncp.open}</strong><span>открыто</span></div>
-                <div className="report-mini report-mini-ok"><strong>{ncp.closed}</strong><span>закрыто</span></div>
+              <div className="rep-kpis">
+                <div className="rep-kpi"><strong>{ncp.total}</strong><span>всего</span></div>
+                <div className="rep-kpi rep-kpi--warn"><strong>{ncp.open}</strong><span>открыто</span></div>
+                <div className="rep-kpi rep-kpi--ok"><strong>{ncp.closed}</strong><span>закрыто</span></div>
               </div>
+              <StackBar
+                label="Несоответствия по состоянию"
+                parts={[
+                  { key: 'open', name: 'Открыто', value: ncp.open, tone: 'waiting' },
+                  { key: 'closed', name: 'Закрыто', value: ncp.closed, tone: 'in-work' },
+                ]}
+              />
               <h3>По типу</h3>
-              <dl>
-                {Object.entries(ncp.byType).map(([type, count]) => (
-                  <div key={type}><dt>{type}</dt><dd>{count}</dd></div>
+              <dl className="rep-lines">
+                {typeEntries.map(([type, count]) => (
+                  <BarLine key={type} label={type} value={count} max={typeMax} tone="complete" />
                 ))}
               </dl>
             </>
@@ -125,20 +194,28 @@ export function ReportsScreen({
           )}
         </article>
 
-        <article className="card">
+        <article className="rep-card">
           <h2>Входной контроль</h2>
           {incoming ? (
             <>
-              <div className="report-row">
-                <div className="report-mini"><strong>{incoming.deliveries}</strong><span>поставок</span></div>
-                <div className="report-mini report-mini-ok"><strong>{incoming.verified}</strong><span>проверено</span></div>
-                <div className="report-mini report-mini-warn"><strong>{incoming.verifiedWithIssues}</strong><span>с замеч.</span></div>
+              <div className="rep-kpis">
+                <div className="rep-kpi"><strong>{incoming.deliveries}</strong><span>поставок</span></div>
+                <div className="rep-kpi rep-kpi--ok"><strong>{incoming.verified}</strong><span>проверено</span></div>
+                <div className="rep-kpi rep-kpi--warn"><strong>{incoming.verifiedWithIssues}</strong><span>с замеч.</span></div>
               </div>
-              <dl>
-                <div><dt>В работе</dt><dd>{incoming.open}</dd></div>
-                <div><dt>Брак (шт.)</dt><dd style={incoming.defect > 0 ? { color: 'var(--f7-red)' } : undefined}>{incoming.defect}</dd></div>
-                <div><dt>Пересорт (шт.)</dt><dd>{incoming.mismatch}</dd></div>
-                <div><dt>Недостача (шт.)</dt><dd>{incoming.shortage}</dd></div>
+              <StackBar
+                label="Поставки по состоянию"
+                parts={[
+                  { key: 'verified', name: 'Проверено', value: incoming.verified, tone: 'in-work' },
+                  { key: 'issues', name: 'С замечаниями', value: incoming.verifiedWithIssues, tone: 'waiting' },
+                  { key: 'open', name: 'В работе', value: incoming.open, tone: 'complete' },
+                ]}
+              />
+              <dl className="rep-lines">
+                <div className="rep-line"><dt>В работе</dt><dd>{incoming.open}</dd></div>
+                <BarLine label="Брак (шт.)" value={incoming.defect} max={incomingMax} tone="rework" alert={incoming.defect > 0} />
+                <BarLine label="Пересорт (шт.)" value={incoming.mismatch} max={incomingMax} tone="waiting" />
+                <BarLine label="Недостача (шт.)" value={incoming.shortage} max={incomingMax} tone="waiting" />
               </dl>
             </>
           ) : (

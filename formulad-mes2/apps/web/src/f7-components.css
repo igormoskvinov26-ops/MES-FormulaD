@@ -908,3 +908,104 @@
 /* Rework: карточки NCP не сжимаются во flex-контейнере (раньше обрезались), прокручивается сам список */
 .rework-ncp > * { flex-shrink: 0; }
 .scan-found--split .rework-ncp { margin-top: 0; padding-top: 0; border-top: 0; max-height: 62vh; }
+
+/* ── Отчётность ─────────────────────────────────────────── */
+.rep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--page-gutter, 24px); align-items: start; padding: 16px var(--page-gutter, 24px) 40px; }
+.rep-card {
+  position: relative; padding: 22px 24px 24px; background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong); box-shadow: var(--shadow-md); --cut: 22px;
+}
+.rep-card::after {
+  content: ''; position: absolute; top: -1px; right: -1px; width: var(--cut); height: var(--cut); pointer-events: none;
+  background: linear-gradient(to bottom left, var(--bg) calc(50% - .5px), var(--border-strong) calc(50% - .5px), var(--border-strong) calc(50% + .5px), transparent calc(50% + .5px));
+}
+.rep-card h2 { margin: 0 0 14px; font: 700 15px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
+.rep-card h3 { margin: 18px 0 6px; font: 700 12px/1 Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rep-hero { margin: 0; font: 700 64px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .01em; color: var(--text); }
+.rep-caption { margin: 4px 0 14px; font: 400 14px/1.3 Inter, sans-serif; color: var(--muted); }
+
+.rep-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.rep-kpi { padding: 12px 8px; text-align: center; background: color-mix(in srgb, var(--muted) 7%, var(--surface)); border-bottom: 3px solid var(--border-strong); }
+.rep-kpi strong { display: block; font: 700 30px/1.1 var(--f7-font, Rajdhani, sans-serif); color: var(--text); }
+.rep-kpi span { font: 500 12px/1.2 Inter, sans-serif; color: var(--muted); }
+.rep-kpi--ok { border-bottom-color: var(--st-work, #16a34a); }
+.rep-kpi--ok strong { color: var(--st-work, #16a34a); }
+.rep-kpi--warn { border-bottom-color: var(--st-wait, #f59e0b); }
+.rep-kpi--warn strong { color: var(--st-wait, #b45309); }
+
+/* полоса распределения */
+.rep-stack { display: flex; gap: 2px; height: 14px; margin-bottom: 16px; }
+.rep-seg { display: block; min-width: 4px; background: color-mix(in srgb, var(--muted) 40%, transparent); }
+.rep-seg--empty { background: color-mix(in srgb, var(--muted) 18%, transparent); }
+.rep-seg--waiting { background: var(--st-wait, #f59e0b); }
+.rep-seg--in-work { background: var(--st-work, #16a34a); }
+.rep-seg--complete { background: var(--st-plan, #2e7cf6); }
+.rep-seg--fok { background: var(--st-control, #7c3aed); }
+.rep-seg--rework { background: var(--st-reject, #dc2626); }
+
+/* строки «подпись — число» и «подпись — полоса — число» */
+.rep-lines { margin: 0; }
+.rep-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.rep-line:last-child { border-bottom: 0; }
+.rep-line dt { display: flex; align-items: center; gap: 8px; margin: 0; font: 400 14px/1.3 Inter, sans-serif; color: var(--text); }
+.rep-line dd { margin: 0; font: 700 16px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; color: var(--text); text-align: right; }
+.rep-dot { display: inline-block; width: 10px; height: 10px; flex: none; }
+.rep-line:has(.rep-line__track) { grid-template-columns: minmax(0, 1.1fr) minmax(60px, 1fr) auto; }
+.rep-line__track { display: block; height: 8px; background: color-mix(in srgb, var(--muted) 14%, transparent); }
+.rep-line__fill { display: block; height: 100%; background: var(--muted); }
+.rep-line--alert dd { color: var(--f7-red); }
+
+/* ── Импорт плана ───────────────────────────────────────── */
+.f7imp__steps { list-style: none; display: flex; gap: 6px; margin: 4px var(--page-gutter, 24px) 8px; padding: 0; flex-wrap: wrap; }
+.f7imp__steps li {
+  display: flex; align-items: center; gap: 10px; padding: 10px 22px 10px 16px;
+  background: color-mix(in srgb, var(--muted) 10%, var(--surface)); color: var(--muted);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+}
+.f7imp__steps b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font: 700 12px/1 Inter, sans-serif; background: color-mix(in srgb, var(--muted) 22%, transparent); }
+.f7imp__steps span { font: 600 14px/1 Inter, sans-serif; }
+.f7imp__steps li[data-state="current"] { background: var(--f7-red); color: #fff; }
+.f7imp__steps li[data-state="current"] b { background: rgba(255, 255, 255, .24); }
+.f7imp__steps li[data-state="done"] { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, var(--surface)); color: var(--st-work, #16a34a); }
+.f7imp__steps li[data-state="done"] b { background: color-mix(in srgb, var(--st-work, #16a34a) 25%, transparent); }
+
+.f7imp__banner { margin: 12px var(--page-gutter, 24px) 0; }
+.f7imp__grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--page-gutter, 24px); align-items: start; padding: 12px var(--page-gutter, 24px) 40px; }
+@media (max-width: 1100px) { .f7imp__grid { grid-template-columns: 1fr; } }
+.f7imp__card { padding: 22px 24px 24px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); box-shadow: var(--shadow-md); margin: 0; }
+.f7imp__card h2 { margin: 0 0 14px; font: 700 15px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .06em; text-transform: uppercase; }
+.f7imp__card textarea { width: 100%; min-height: 220px; font: 500 14px/1.5 'JetBrains Mono', ui-monospace, Menlo, monospace; resize: vertical; }
+.f7imp__card .modal-actions { margin-top: 14px; }
+.f7imp__dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 16px; text-align: center;
+  border: 2px dashed var(--border-strong); background: color-mix(in srgb, var(--muted) 4%, var(--surface)); color: var(--muted);
+  transition: border-color .15s, background-color .15s;
+}
+.f7imp__dropzone p { margin: 0; font: 600 16px/1.3 Inter, sans-serif; color: var(--text); }
+.f7imp__drop[data-drag="true"] .f7imp__dropzone { border-color: var(--f7-red); background: color-mix(in srgb, var(--f7-red) 7%, var(--surface)); }
+.f7imp__hint { margin: 14px 0 8px; font: 400 14px/1.4 Inter, sans-serif; color: var(--muted); }
+.f7imp__cols { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.f7imp__cols li { display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; font: 500 12px/1 Inter, sans-serif; background: color-mix(in srgb, var(--muted) 10%, var(--surface)); color: var(--text); }
+.f7imp__cols b { display: grid; place-items: center; min-width: 18px; height: 18px; font: 700 11px/1 Inter, sans-serif; background: color-mix(in srgb, var(--muted) 24%, transparent); color: var(--text); }
+
+.f7imp__result { padding: 12px var(--page-gutter, 24px) 40px; display: flex; flex-direction: column; gap: 12px; }
+.f7imp__summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--st-work, #16a34a); box-shadow: var(--shadow-sm); }
+.f7imp__summary strong { font: 700 18px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; color: var(--text); }
+.f7imp__summary strong[data-errors="true"] { color: var(--f7-red); }
+.f7imp__verdict { font: 600 14px/1 Inter, sans-serif; color: var(--st-work, #16a34a); }
+.f7imp__verdict[data-ok="false"] { color: var(--f7-red); }
+.f7imp__summary .controls { margin-left: auto; }
+.f7imp__summary:has(strong[data-errors="true"]) { border-left-color: var(--f7-red); }
+
+/* строки с ошибками: полоса слева вместо заливки */
+:root .f7plan tbody tr.import-row-error,
+:root .f7plan tbody tr.import-row-error:hover,
+:root[data-theme="dark"] .f7plan tbody tr.import-row-error,
+:root[data-theme="dark"] .f7plan tbody tr.import-row-error:hover { background: var(--surface); }
+.f7plan tbody tr.import-row-error td:first-child { box-shadow: inset 3px 0 0 var(--f7-red); }
+.f7plan .import-errors { font-size: 14px; }
+.f7plan tbody td input, .f7plan tbody td select { border-radius: 4px; }
+/* Импорт: колонка проверки сразу после номера, поля не обрезают VIN и двигатель */
+.f7imp__result tbody td:nth-child(2) { min-width: 200px; }
+.f7imp__result tbody td input:not([type="checkbox"]) { min-width: 160px; }
+.f7imp__result .badge.status-ok { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, transparent); color: var(--st-work, #16a34a); border-color: transparent; }
