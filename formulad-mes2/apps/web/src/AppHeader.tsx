@@ -44,6 +44,8 @@ const TABS: Tab[] = [
     в один ряд — оправдано было, пока раздел всего два; сейчас их пять, и боковое меню читается
     быстрее. Боковая панель позиционирована фиксированно, `.app` компенсирует отступом в CSS —
     экраны (PlanScreen/NcpScreen/ScanTransitionScreen) не меняются. */
+const SIDEBAR_KEY = 'f7-sidebar';
+
 export function AppHeader({
   screen,
   onNavigate,
@@ -56,6 +58,14 @@ export function AppHeader({
   onLogout: () => void;
 }) {
   const current = TABS.find((tab) => tab.key === screen);
+  const [collapsed, setCollapsed] = useState(() => document.documentElement.getAttribute('data-sidebar') === 'collapsed');
+  function toggleSidebar() {
+    const next = !collapsed;
+    setCollapsed(next);
+    if (next) document.documentElement.setAttribute('data-sidebar', 'collapsed');
+    else document.documentElement.removeAttribute('data-sidebar');
+    try { localStorage.setItem(SIDEBAR_KEY, next ? 'collapsed' : 'expanded'); } catch {}
+  }
   return (
     <>
       <nav className="sidebar" aria-label="Разделы">
@@ -63,26 +73,38 @@ export function AppHeader({
         <ul className="sidebar-nav">
           {TABS.map((tab) => (
             <li key={tab.key}>
-              {tab.group && <span className="sidebar-group">{tab.group}</span>}
+              {tab.group && <span className="sidebar-group"><span className="sidebar-label">{tab.group}</span></span>}
               <button
                 type="button"
                 className={tab.key === screen ? 'sidebar-link active' : 'sidebar-link'}
                 aria-current={tab.key === screen ? 'page' : undefined}
+                title={tab.label}
                 onClick={() => onNavigate(tab.key)}
               >
                 <tab.Icon className="sidebar-icon" />
-                {tab.label}
+                <span className="sidebar-label">{tab.label}</span>
               </button>
             </li>
           ))}
         </ul>
-        <button type="button" className="theme-switch" onClick={() => {
+        <button
+          type="button"
+          className="sidebar-toggle"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+          title={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
+          onClick={toggleSidebar}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="sidebar-toggle-icon"><path d="M10 3 5 8l5 5" /></svg>
+          <span className="sidebar-label">Свернуть</span>
+        </button>
+        <button type="button" className="theme-switch" title="Тема" onClick={() => {
           const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
           document.documentElement.setAttribute('data-theme', next);
           try { localStorage.setItem('f7-theme', next); } catch {}
         }} aria-label="Переключить тему">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1v2m0 10v2m-5-7H1m14 0h-2m-1.5-4.5L10 5m-4-1.5L4.5 5m7 7L10 11m-4 1.5L4.5 11"/></svg>
-          Тема
+          <span className="sidebar-label">Тема</span>
         </button>
         <span className="badge badge-demo" title="Синтетические данные, не производственные">
           DEMO

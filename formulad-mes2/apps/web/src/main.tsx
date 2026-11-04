@@ -4,6 +4,7 @@ import { App } from './App';
 import './styles.css';
 
 try { const t = localStorage.getItem('f7-theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch {}
+try { if (localStorage.getItem('f7-sidebar') === 'collapsed') document.documentElement.setAttribute('data-sidebar', 'collapsed'); } catch {}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

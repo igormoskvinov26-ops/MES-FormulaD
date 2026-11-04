@@ -1019,3 +1019,35 @@ thead th {
 .stat-tile { cursor: pointer; }
 
 .sidebar-logo { display: block; width: 168px; max-width: 100%; height: auto; }
+
+/* ── Collapsible sidebar: icons only ↔ icons + labels ─────── */
+.sidebar { overflow-x: hidden; transition: width .25s ease, padding .25s ease; }
+.app { transition: margin-left .25s ease; }
+.sidebar-label { min-width: 0; }
+:root .sidebar .sidebar-toggle {
+  background: transparent;
+  border: 1px solid #4a4f5c;
+  color: #9aa2b1;
+  padding: 6px 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none;
+}
+:root .sidebar .sidebar-toggle:hover { background: rgba(255, 255, 255, .1); color: #f2f3f6; }
+.sidebar-toggle-icon { transition: transform .25s ease; flex-shrink: 0; }
+
+:root[data-sidebar="collapsed"] { --sidebar-w: 72px; }
+:root[data-sidebar="collapsed"] .sidebar { padding: 18px 10px; }
+:root[data-sidebar="collapsed"] .sidebar-label { display: none; }
+:root[data-sidebar="collapsed"] .sidebar-link { justify-content: center; padding: 11px 0; }
+:root[data-sidebar="collapsed"] .sidebar-group { padding: 6px 0 0; margin-top: 8px; }
+:root[data-sidebar="collapsed"] .sidebar-logo { width: 46px; height: 32px; object-fit: cover; object-position: left center; margin: 0 auto; }
+:root[data-sidebar="collapsed"] .sidebar-toggle-icon { transform: rotate(180deg); }
+:root[data-sidebar="collapsed"] .sidebar .sidebar-toggle,
+:root[data-sidebar="collapsed"] .sidebar .theme-switch { justify-content: center; padding: 8px 0; }
+:root[data-sidebar="collapsed"] .sidebar .badge-demo { align-self: center; padding: 2px 5px; font-size: 9px; }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .app, .sidebar-toggle-icon { transition: none; }
+}
