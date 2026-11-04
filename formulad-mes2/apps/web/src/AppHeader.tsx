@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import { api } from './api';
-import { QuadMark } from './QuadMark';
 import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports, IconAdmin } from './SidebarIcons';
 
 export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'reports' | 'admin';
@@ -60,11 +59,7 @@ export function AppHeader({
   return (
     <>
       <nav className="sidebar" aria-label="Разделы">
-        <span className="logo" aria-label="F7 MES">
-          <QuadMark className="logo-icon" />
-          F<span className="logo-mark">7</span>
-          <span className="logo-suffix">MES</span>
-        </span>
+        <img className="sidebar-logo" src="/f7-logo.png" alt="F7 MES" />
         <ul className="sidebar-nav">
           {TABS.map((tab) => (
             <li key={tab.key}>

@@ -132,11 +132,9 @@ export function FokScreen({
       <div className="f7mes">
         <div className="f7mes__intro">
           <div className="f7mes__heading">
-            <span className="f7mes__slash" aria-hidden="true" />
-            <div>
-              <h1>FINAL OK</h1>
-              <small>Финальный контроль и подтверждение готовности изделия</small>
-            </div>
+            <h1 className="f7mes__sr">FINAL OK — финальный контроль и подтверждение готовности изделия</h1>
+            <img className="f7mes__title-img f7mes__title-img--light" src="/f7-final-ok-light.png" alt="" />
+            <img className="f7mes__title-img f7mes__title-img--dark" src="/f7-final-ok-dark.png" alt="" />
           </div>
           <form className="f7mes__scan" onSubmit={onSubmit}>
             <span className="f7mes__scan-symbol" aria-hidden="true">▥</span>
@@ -214,6 +212,7 @@ export function FokScreen({
 
           {/* Right: queue */}
           <aside className="f7mes__panel f7mes__panel--cut f7mes__queue">
+            <div className="f7mes__metric"><span>Изделий в очереди</span><b>{pending.length}</b></div>
             <div className="f7mes__queue-head"><h2>Ожидают FOK</h2><b>{pending.length}</b></div>
             <div className="f7mes__queue-list">
               {pending.length === 0 && <p className="f7mes__hint">Нет ожидающих изделий</p>}

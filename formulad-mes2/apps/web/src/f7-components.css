@@ -507,3 +507,52 @@
   padding: 12px 20px 16px;
   border-top: 1px solid var(--f7-border);
 }
+
+/* ── Reference-sheet elements ───────────────────────────── */
+.f7mes__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.f7mes__title-img { height: 64px; width: auto; max-width: 100%; display: none; }
+.f7mes__title-img--light { display: block; }
+:root[data-theme="dark"] .f7mes__title-img--light { display: none; }
+:root[data-theme="dark"] .f7mes__title-img--dark { display: block; }
+
+/* scan field: red frame with cut corner */
+.f7mes__scan {
+  border: 1px solid var(--f7-accent);
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  border-top: 3px solid var(--f7-accent);
+}
+.f7mes__scan-symbol { color: var(--f7-accent); }
+
+/* status pills (reference: ПЛАНОВОЕ / В РАБОТЕ / FINAL OK / ДОРАБОТКА) */
+.f7mes__tag {
+  border-radius: 0;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  padding: 5px 14px;
+}
+
+/* buttons: skewed like reference */
+.f7mes__btn { border-radius: 0; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); padding: 12px 26px; }
+.f7mes__btn--secondary { border: none; }
+
+/* metric tile */
+.f7mes__metric {
+  position: relative;
+  border: 1px solid var(--f7-border);
+  border-left: 3px solid var(--f7-accent);
+  background: var(--f7-surface);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.f7mes__metric span { font: 600 10px/1 Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--f7-muted); }
+.f7mes__metric b { display: block; font: 700 34px/1.1 var(--f7-font); color: var(--f7-text); }
+
+/* robustness: win over :root[data-theme="dark"] button */
+:root .f7mes button.f7mes__btn { white-space: nowrap; padding: 12px 22px; border: 0; }
+:root .f7mes button.f7mes__btn--accent, :root .f7mes button.f7mes__btn--accent:hover:not([disabled]) { background: var(--f7-accent); color: #fff; }
+:root .f7mes button.f7mes__btn--accent:hover:not([disabled]) { background: var(--f7-accent-dark); }
+:root .f7mes button.f7mes__btn--secondary { background: color-mix(in srgb, var(--f7-muted) 18%, var(--f7-surface)); color: var(--f7-text); }
+:root .f7mes button.f7mes__btn--warn { background: color-mix(in srgb, var(--st-wait, #f59e0b) 18%, var(--f7-surface)); color: var(--st-wait, #b45309); }
+:root .f7mes .f7mes__scan { padding: 12px 18px 14px; }
+:root .f7mes .f7mes__scan-field label { margin-bottom: 4px; }
+:root .f7mes .f7mes__scan-field input { box-shadow: none; border: 0; outline: 0; }
