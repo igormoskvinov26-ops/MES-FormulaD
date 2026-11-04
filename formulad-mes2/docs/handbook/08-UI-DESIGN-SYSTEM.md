@@ -241,9 +241,10 @@
 
 | Компонент | Классы | Заметки |
 |---|---|---|
-| Очередь (FOK) | `.f7mes__queue`, `.f7mes__queue-entry[data-selected]`, `.f7mes__queue-chevron` | шеврон `›` краснеет при hover/выборе |
+| Очередь (FOK) | `.f7mes__strip`, `.f7mes__chip[data-selected]` | лента чипов над рабочей зоной; выбранное изделие заливка + полоса слева, `aria-current` |
 | Очередь (скан-экраны) | `.pending-list button` + `.f7mes__queue-chevron` | красная полоса слева |
-| Сцена с квадроциклом | `.f7mes__stage`, `img.f7mes__atv`, `.f7mes__vehicle-label/-footer` | тёмный блок; **всегда одна и та же картинка** (П17) |
+| Условия FOK | `.f7mes__conds li[data-state=ok\|fail\|warn\|idle]`, `.f7mes__cond-action` | чек-лист реальных проверок; блокируют только статус и обязательные детали |
+| Схема готовности | `.twin`, `.twin__ring`, `.twin__seg--{grey\|blue\|green\|yellow\|red}`, `.twin__car`, `.twin__lamp`, `[data-mode=idle\|ready\|blocked\|done]` | кольцо станций + фары как сигнал; подложка по теме (`--twin-bg`), анимации только при `prefers-reduced-motion: no-preference` |
 | Заголовок «FINAL OK» | `img.f7mes__title-img--light\|--dark` + `.f7mes__sr` (скрытый h1) | переключается CSS по `data-theme` |
 
 ### Модальные окна

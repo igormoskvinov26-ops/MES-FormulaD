@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
-import { ApiError, api, type NcpItem, type ProductionPlanItem } from './api';
+import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
+import { ReadinessTwin, type TwinMode } from './ReadinessTwin';
+import { readinessSummary } from './stationReadiness';
 import './f7-components.css';
 
 export function FokScreen({
@@ -22,6 +24,10 @@ export function FokScreen({
   const [pending, setPending] = useState<ProductionPlanItem[]>([]);
   const [stations, setStations] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [components, setComponents] = useState<ComponentItem[]>([]);
+  const [checks, setChecks] = useState<Record<string, ComponentCheck>>({});
+  const [ncpItems, setNcpItems] = useState<NcpItem[]>([]);
+  const [doneKind, setDoneKind] = useState<'fok' | 'rework' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
   const scanId = useId();
@@ -35,19 +41,35 @@ export function FokScreen({
 
   useEffect(reloadPending, [reloadPending]);
   useEffect(() => { api.ncpStations().then(setStations).catch(() => {}); }, []);
+  useEffect(() => { api.ncpComponents().then(setComponents).catch(() => {}); }, []);
   useEffect(() => { focusInput(); }, []);
 
   function focusInput() {
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
+  // Отметки станций и NCP нужны только для схемы готовности: их сбой не мешает самой операции FOK.
+  async function loadReadiness(vin: string, id: number) {
+    const [c, n] = await Promise.all([
+      api.stationChecks(vin).catch(() => ({}) as Record<string, ComponentCheck>),
+      api.ncpList({ vin, status: null, page: 1, pageSize: 100 }).then((r) => r.items).catch(() => [] as NcpItem[]),
+    ]);
+    if (id !== requestId.current) return;
+    setChecks(c);
+    setNcpItems(n);
+  }
+
+  function clearUnit() { setFound(null); setMissing([]); setChecks({}); setNcpItems([]); }
+
   async function lookup(vin: string) {
     const id = ++requestId.current;
     setBusy(true);
+    setDoneKind(null);
     try {
       const item = await api.byVin(vin);
       if (id !== requestId.current) return;
       setFound(item);
+      void loadReadiness(item.vin, id);
 
       if (item.statusId !== 2) {
         setMissing([]);
@@ -60,7 +82,7 @@ export function FokScreen({
       }
     } catch (e) {
       if (id !== requestId.current) return;
-      setFound(null); setMissing([]);
+      clearUnit();
       setMessage({ kind: 'error', text: e instanceof ApiError && e.status === 404 ? `VIN ${vin} не найден` : 'Нет связи с сервером' });
     } finally {
       if (id === requestId.current) { setBusy(false); focusInput(); }
@@ -71,11 +93,12 @@ export function FokScreen({
     setBusy(true);
     try {
       await api.fok(vin);
-      setFound(null); setMissing([]);
+      clearUnit();
+      setDoneKind('fok');
       setMessage({ kind: 'ok', text: `Готово: ${vin} → «${statusCodeLabel(3)}»` });
       reloadPending();
     } catch {
-      setFound(null); setMissing([]);
+      clearUnit();
       setMessage({ kind: 'error', text: 'Не удалось выполнить переход — отсканируйте VIN ещё раз' });
     } finally { setBusy(false); setInput(''); focusInput(); }
   }
@@ -84,11 +107,12 @@ export function FokScreen({
     setBusy(true);
     try {
       await api.sendToRework(vin);
-      setFound(null); setMissing([]);
+      clearUnit();
+      setDoneKind('rework');
       setMessage({ kind: 'ok', text: `Готово: ${vin} → «${statusCodeLabel(4)}»` });
       reloadPending();
     } catch {
-      setFound(null); setMissing([]);
+      clearUnit();
       setMessage({ kind: 'error', text: 'Не удалось выполнить переход — отсканируйте VIN ещё раз' });
     } finally { setBusy(false); setInput(''); focusInput(); }
   }
@@ -105,18 +129,35 @@ export function FokScreen({
     }
   }
 
-  function reset() { setFound(null); setMissing([]); setMessage(null); focusInput(); }
+  function reset() { clearUnit(); setMessage(null); setDoneKind(null); focusInput(); }
 
-  // Route rail: stations from API + FOK step (reference format: СТ-01)
-  const routeSteps = [
-    ...stations.map((s, i) => ({
-      id: `st-${i}`,
-      number: i + 1,
-      title: `СТ-${String(i + 1).padStart(2, '0')}`,
-      state: 'done' as const,
-    })),
-    { id: 'fok', number: 'FOK', title: 'Контроль', state: 'current' as const },
+  const summary = readinessSummary(stations, { components, checks, ncpItems });
+  const statusOk = found?.statusId === 2;
+  const twinMode: TwinMode = doneKind === 'fok' ? 'done'
+    : !found ? 'idle'
+    : blocked || !statusOk ? 'blocked'
+    : eligible ? 'ready' : 'idle';
+  const twinStates = doneKind === 'fok' ? stations.map(() => 'green' as const)
+    : found ? summary.states : stations.map(() => 'grey' as const);
+
+  // Только первые два условия блокируют FOK (так считает сервер); остальные — справочные.
+  type Condition = { key: string; label: string; detail: string; state: 'ok' | 'fail' | 'warn' | 'idle'; action?: { label: string; run: () => void } };
+  const conditions: Condition[] = [
+    { key: 'status', label: 'Статус «Производство завершено»',
+      detail: found ? statusCodeLabel(found.statusId) : 'ожидает скана',
+      state: !found ? 'idle' : statusOk ? 'ok' : 'fail' },
+    { key: 'parts', label: 'Обязательные детали установлены',
+      detail: !found || !statusOk ? 'не проверялось' : blocked ? `не хватает: ${missing.length}` : 'все на месте',
+      state: !found || !statusOk ? 'idle' : blocked ? 'fail' : 'ok' },
+    { key: 'ncp', label: 'Открытые несоответствия',
+      detail: !found ? '—' : summary.openNcp ? `${summary.openNcp} шт. · FOK не блокируют` : 'нет',
+      state: !found ? 'idle' : summary.openNcp ? 'warn' : 'ok',
+      action: found && summary.openNcp ? { label: 'К несоответствиям', run: () => onNavigate('ncp') } : undefined },
+    { key: 'stations', label: 'Станции проверены',
+      detail: !found ? '—' : summary.total ? `${summary.green} из ${summary.total} · FOK не блокируют` : 'нет данных',
+      state: !found ? 'idle' : summary.total > 0 && summary.green === summary.total ? 'ok' : 'warn' },
   ];
+  const CONDITION_ICON = { ok: '✓', fail: '✕', warn: '!', idle: '–' } as const;
 
   const signalType = !found ? 'idle' : blocked ? 'blocked' : eligible ? 'ready' : 'idle';
   const signalText = blocked
@@ -154,8 +195,23 @@ export function FokScreen({
           {blocked && <button type="button" onClick={() => onNavigate('ncp')}>Открыть NCP →</button>}
         </div>
 
+        <section className="f7mes__strip" aria-label="Очередь FOK">
+          <div className="f7mes__strip-head"><h2>Очередь</h2><b>{pending.length}</b></div>
+          <div className="f7mes__strip-list">
+            {pending.length === 0 && <p className="f7mes__hint">Очередь пуста</p>}
+            {pending.map((unit) => (
+              <button type="button" key={unit.vin} className="f7mes__chip"
+                data-selected={String(found?.vin === unit.vin)}
+                aria-current={found?.vin === unit.vin ? 'true' : undefined}
+                onClick={() => { setInput(''); void lookup(unit.vin); }}>
+                <strong>{unit.vin}</strong>
+                <small>{dash(unit.modelName)} · {dash(unit.color)}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <div className="f7mes__body">
-          {/* Left: identity panel */}
           <section className="f7mes__panel f7mes__panel--cut f7mes__identity" aria-label={found ? `Найдено изделие ${found.vin}` : undefined}>
             <div className="f7mes__ident-head">
               <span className="f7mes__label">ТЕКУЩЕЕ ИЗДЕЛИЕ</span>
@@ -169,6 +225,16 @@ export function FokScreen({
               <div><dt>Цвет</dt><dd>{dash(found?.color ?? null)}</dd></div>
               <div><dt>Текущий статус</dt><dd>{found ? statusCodeLabel(found.statusId) : '—'}</dd></div>
             </dl>
+
+            <ul className="f7mes__conds" aria-label="Условия FOK">
+              {conditions.map((c) => (
+                <li key={c.key} data-state={c.state}>
+                  <span className="f7mes__cond-icon" aria-hidden="true">{CONDITION_ICON[c.state]}</span>
+                  <span className="f7mes__cond-text"><strong>{c.label}</strong><small>{c.detail}</small></span>
+                  {c.action && <button type="button" className="f7mes__cond-action" onClick={c.action.run}>{c.action.label}</button>}
+                </li>
+              ))}
+            </ul>
 
             {missing.length > 0 && (
               <div className="f7mes__ncp-section">
@@ -188,58 +254,20 @@ export function FokScreen({
                 <button className="f7mes__btn f7mes__btn--warn" type="button" disabled={busy}
                   onClick={() => void sendToRework(found.vin)}>Отправить в Rework</button>
               )}
-              <button className="f7mes__btn f7mes__btn--accent" type="button"
+              <button className="f7mes__btn f7mes__btn--accent f7mes__btn--grow" type="button"
                 disabled={!eligible || busy} onClick={() => setShowModal(true)}>
                 <span aria-hidden="true">✓ </span>Подтвердить FOK
               </button>
             </div>
           </section>
 
-          {/* Center: vehicle stage */}
-          <div className="f7mes__stage">
-            <div className="f7mes__vehicle-label"><strong>FORMULA 7 / ATV</strong><small>ENGINEERED FOR THE LINE</small></div>
-            <img className="f7mes__atv" src="/atv-hero.png" alt="Квадроцикл F7 ATV" />
-            <div className="f7mes__vehicle-footer"><span>MES / QC MONITOR</span></div>
-          </div>
-
-          {/* Right: queue */}
-          <aside className="f7mes__panel f7mes__panel--cut f7mes__queue">
-            <div className="f7mes__metric"><span>Изделий в очереди</span><b>{pending.length}</b></div>
-            <div className="f7mes__queue-head"><h2>Ожидают FOK</h2><b>{pending.length}</b></div>
-            <div className="f7mes__queue-list">
-              {pending.length === 0 && <p className="f7mes__hint">Нет ожидающих изделий</p>}
-              {pending.map((unit, i) => (
-                <button type="button" key={unit.vin} className="f7mes__queue-entry"
-                  data-selected={String(found?.vin === unit.vin)}
-                  onClick={() => { setInput(''); void lookup(unit.vin); }}>
-                  <div className="f7mes__queue-entry-body">
-                    <span className="f7mes__label">ИЗДЕЛИЕ {String(i + 1).padStart(2, '0')}</span>
-                    <strong>{unit.vin}</strong>
-                    <small>{dash(unit.modelName)} · {dash(unit.color)}</small>
-                  </div>
-                  <span className="f7mes__queue-chevron" aria-hidden="true">›</span>
-                </button>
-              ))}
-            </div>
+          <aside className="f7mes__twin-col" aria-label="Схема готовности">
+            <ReadinessTwin stations={stations} states={twinStates}
+              percent={doneKind === 'fok' ? 100 : found ? summary.percent : 0}
+              green={doneKind === 'fok' ? summary.total : found ? summary.green : 0}
+              total={summary.total} mode={twinMode} />
           </aside>
         </div>
-
-        {/* Route rail */}
-        {routeSteps.length > 1 && (
-          <section className="f7mes__route">
-            <div className="f7mes__route-heading">
-              <h2>Сборочная линия / контрольные точки</h2>
-              <span>Шаги и статусы передаются MES</span>
-            </div>
-            <div className="f7mes__route-steps">
-              {routeSteps.map(step => (
-                <div key={step.id} className="f7mes__route-step" data-state={step.state}>
-                  <b>{step.number}</b><small>{step.title}</small>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* FOK confirmation modal */}
         {showModal && found && (

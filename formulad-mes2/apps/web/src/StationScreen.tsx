@@ -4,19 +4,8 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem } from './api';
 import { NcpCreateDialog } from './NcpCreateDialog';
 import { formatDate } from './format';
+import { STATION_STATE_LABEL, stationState as computeStationState, type StationState } from './stationReadiness';
 import './f7-components.css';
-
-type StationState = 'grey' | 'blue' | 'green' | 'yellow' | 'red';
-
-/** Раздел 11.1 спецификации: своя цветовая схема станции, отдельная от бейджей состояния
-    изделия на плане (docs/DESIGN_DIRECTION.md — специально не путаем две палитры). */
-const STATE_LABEL: Record<StationState, string> = {
-  grey: 'не начата',
-  blue: 'выбрана',
-  green: 'выполнено',
-  yellow: 'частично',
-  red: 'есть несоответствие',
-};
 
 export function StationScreen({
   session,
@@ -84,22 +73,9 @@ export function StationScreen({
     return components.filter((c) => c.station === station);
   }
 
-  function hasOpenNcp(station: string): boolean {
-    return ncpItems.some((n) => n.station === station && n.status !== 'Закрыто');
-  }
-
-  // Раздел 11.1 + мой ответ по умолчанию на В-15 (docs/DEVELOPMENT_PLAN.md, Этап 5):
-  // станция завершена, когда все привязанные компоненты отмечены и нет новой незакрытой NCP
-  // с этой станции. Незакрытая NCP важнее хода проверки — показываем красным в любом случае,
-  // кроме случая, когда станция сейчас открыта оператором (это тоже должно быть видно).
+  // Расчёт состояния станции общий с экраном FOK: см. stationReadiness.ts.
   function stationState(station: string): StationState {
-    if (hasOpenNcp(station)) return 'red';
-    if (selectedStation === station) return 'blue';
-    const list = componentsFor(station);
-    if (list.length === 0) return 'grey';
-    const checkedCount = list.filter((c) => checks[c.code]?.checked).length;
-    if (checkedCount === 0) return 'grey';
-    return checkedCount === list.length ? 'green' : 'yellow';
+    return computeStationState(station, { components, checks, ncpItems }, selectedStation);
   }
 
   async function toggleCheck(code: string, value: boolean) {
@@ -218,8 +194,8 @@ export function StationScreen({
                     type="button"
                     className={`station-btn station-${state}`}
                     aria-pressed={selectedStation === s}
-                    aria-label={`Станция ${s} — ${STATE_LABEL[state]}`}
-                    title={`Станция ${s} — ${STATE_LABEL[state]}`}
+                    aria-label={`Станция ${s} — ${STATION_STATE_LABEL[state]}`}
+                    title={`Станция ${s} — ${STATION_STATE_LABEL[state]}`}
                     onClick={() => setSelectedStation(s)}
                   >
                     {s}
@@ -230,10 +206,10 @@ export function StationScreen({
           </ul>
 
           <ul className="legend station-legend">
-            {(Object.keys(STATE_LABEL) as StationState[]).map((key) => (
+            {(Object.keys(STATION_STATE_LABEL) as StationState[]).map((key) => (
               <li key={key}>
                 <i className={`swatch station-${key}`} aria-hidden="true" />
-                {STATE_LABEL[key]}
+                {STATION_STATE_LABEL[key]}
               </li>
             ))}
           </ul>
