@@ -4,7 +4,8 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
 import { ReadinessTwin, type TwinMode } from './ReadinessTwin';
-import { readinessSummary } from './stationReadiness';
+import { StationDetailCard } from './StationDetailCard';
+import { readinessSummary, stationState } from './stationReadiness';
 import './f7-components.css';
 
 export function FokScreen({
@@ -28,6 +29,7 @@ export function FokScreen({
   const [checks, setChecks] = useState<Record<string, ComponentCheck>>({});
   const [ncpItems, setNcpItems] = useState<NcpItem[]>([]);
   const [doneKind, setDoneKind] = useState<'fok' | 'rework' | null>(null);
+  const [selectedStation, setSelectedStation] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
   const scanId = useId();
@@ -43,6 +45,12 @@ export function FokScreen({
   useEffect(() => { api.ncpStations().then(setStations).catch(() => {}); }, []);
   useEffect(() => { api.ncpComponents().then(setComponents).catch(() => {}); }, []);
   useEffect(() => { focusInput(); }, []);
+  useEffect(() => {
+    if (!selectedStation || showModal) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedStation(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedStation, showModal]);
 
   function focusInput() {
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -59,12 +67,13 @@ export function FokScreen({
     setNcpItems(n);
   }
 
-  function clearUnit() { setFound(null); setMissing([]); setChecks({}); setNcpItems([]); }
+  function clearUnit() { setFound(null); setMissing([]); setChecks({}); setNcpItems([]); setSelectedStation(null); }
 
   async function lookup(vin: string) {
     const id = ++requestId.current;
     setBusy(true);
     setDoneKind(null);
+    setSelectedStation(null);
     try {
       const item = await api.byVin(vin);
       if (id !== requestId.current) return;
@@ -265,7 +274,14 @@ export function FokScreen({
             <ReadinessTwin stations={stations} states={twinStates}
               percent={doneKind === 'fok' ? 100 : found ? summary.percent : 0}
               green={doneKind === 'fok' ? summary.total : found ? summary.green : 0}
-              total={summary.total} mode={twinMode} />
+              total={summary.total} mode={twinMode}
+              selected={selectedStation} onSelect={found ? setSelectedStation : undefined} />
+            {found && selectedStation && (
+              <StationDetailCard station={selectedStation}
+                state={stationState(selectedStation, { components, checks, ncpItems })}
+                components={components} checks={checks} ncpItems={ncpItems}
+                onClose={() => setSelectedStation(null)} onOpenNcp={() => onNavigate('ncp')} />
+            )}
           </aside>
         </div>
 

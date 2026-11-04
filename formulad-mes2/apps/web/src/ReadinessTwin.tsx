@@ -33,6 +33,8 @@ export function ReadinessTwin({
   green,
   total,
   mode,
+  selected = null,
+  onSelect,
 }: {
   stations: string[];
   states: StationState[];
@@ -40,6 +42,9 @@ export function ReadinessTwin({
   green: number;
   total: number;
   mode: TwinMode;
+  /** Выбранная станция и обработчик выбора; без onSelect сегменты не интерактивны (нет изделия). */
+  selected?: string | null;
+  onSelect?: (station: string | null) => void;
 }) {
   const n = stations.length;
   const span = n > 0 ? 360 / n : 360;
@@ -47,17 +52,36 @@ export function ReadinessTwin({
 
   return (
     <figure className="twin" data-mode={mode} aria-label={summary}>
-      <svg className="twin__ring" viewBox="0 0 360 360" role="img" aria-label={summary}>
+      <svg className="twin__ring" viewBox="0 0 360 360" role={onSelect ? 'group' : 'img'} aria-label={summary}>
         {n === 0 && <circle className="twin__seg twin__seg--grey" cx={CX} cy={CY} r={R} fill="none" />}
         {stations.map((station, i) => {
           const start = i * span + GAP_DEG / 2;
           const end = (i + 1) * span - GAP_DEG / 2;
           const mid = polar(LABEL_R, (start + end) / 2);
           const state = states[i] ?? 'grey';
+          const label = `Станция ${station} — ${STATION_STATE_LABEL[state]}`;
+          const isSelected = selected === station;
+          const toggle = () => onSelect?.(isSelected ? null : station);
+          const interactive = onSelect
+            ? {
+                role: 'button' as const,
+                tabIndex: 0,
+                'aria-pressed': isSelected,
+                'aria-label': label,
+                onClick: toggle,
+                onKeyDown: (e: React.KeyboardEvent) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle();
+                  }
+                },
+              }
+            : {};
           return (
-            <g key={station}>
+            <g key={station} className={`twin__stn${onSelect ? ' twin__stn--interactive' : ''}${isSelected ? ' twin__stn--selected' : ''}`} {...interactive}>
+              {onSelect && <path className="twin__hit" d={arc(start, end)} fill="none" />}
               <path className={`twin__seg twin__seg--${state}`} d={arc(start, end)} fill="none">
-                <title>{`Станция ${station} — ${STATION_STATE_LABEL[state]}`}</title>
+                <title>{label}</title>
               </path>
               <text className="twin__label" x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central">
                 {station}

@@ -165,3 +165,54 @@ describe('FokScreen', () => {
     expect(screen.queryByRole('button', { name: 'Отправить в Rework' })).not.toBeInTheDocument();
   });
 });
+
+describe('FokScreen — схема готовности', () => {
+  it('нажатие на сегмент станции показывает её компоненты и открытые NCP, Esc закрывает', async () => {
+    mockFetch((url) => {
+      if (url.includes('statusId=2')) return { body: { items: [BLOCKED], page: 1, pageSize: 25, total: 1 } };
+      if (url.endsWith('/production-plan/DEMO-VIN-00001')) return { body: BLOCKED };
+      if (url.includes('/ncp/missing-parts')) return { body: [] };
+      if (url.endsWith('/ncp/stations')) return { body: ['3', '4'] };
+      if (url.endsWith('/ncp/components')) {
+        return { body: [
+          { code: 'DEMO-CMP-014', name: 'Рычаг подвески передний · ДЕМО', station: '3' },
+          { code: 'DEMO-CMP-031', name: 'Диск тормозной передний · ДЕМО', station: '3' },
+        ] };
+      }
+      if (url.endsWith('/stations/DEMO-VIN-00001/checks')) {
+        return { body: { 'DEMO-CMP-031': { componentCode: 'DEMO-CMP-031', checked: true, checkedBy: 'demo-operator', checkedAt: '2026-10-21T09:30:00' } } };
+      }
+      if (url.includes('/api/v1/ncp?')) return { body: { items: [NCP], page: 1, pageSize: 100, total: 1 } };
+      return undefined;
+    });
+
+    render(<FokScreen session={session} onNavigate={noop} onLogout={noop} />);
+    await userEvent.type(screen.getByLabelText('Сканирование VIN'), 'DEMO-VIN-00001{Enter}');
+
+    const segment = await screen.findByRole('button', { name: 'Станция 3 — есть несоответствие' });
+    expect(screen.queryByRole('region', { name: 'Станция 3' })).not.toBeInTheDocument();
+
+    await userEvent.click(segment);
+    const card = await screen.findByRole('region', { name: 'Станция 3' });
+    expect(card).toHaveTextContent('Рычаг подвески передний');
+    expect(card).toHaveTextContent('не отмечено');
+    expect(card).toHaveTextContent('demo-operator');
+    expect(card).toHaveTextContent('Отмечено 1 из 2');
+    expect(card).toHaveTextContent('NC-2026-0001');
+    expect(segment).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('region', { name: 'Станция 3' })).not.toBeInTheDocument();
+  });
+
+  it('без найденного изделия сегменты не интерактивны', async () => {
+    mockFetch((url) => {
+      if (url.includes('statusId=2')) return { body: { items: [], page: 1, pageSize: 25, total: 0 } };
+      if (url.endsWith('/ncp/stations')) return { body: ['3', '4'] };
+      return undefined;
+    });
+    render(<FokScreen session={session} onNavigate={noop} onLogout={noop} />);
+    await screen.findByLabelText('Готовность станций: 0 из 0').catch(() => undefined);
+    expect(screen.queryByRole('button', { name: /^Станция 3/ })).not.toBeInTheDocument();
+  });
+});
