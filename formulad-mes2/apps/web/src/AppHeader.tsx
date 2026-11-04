@@ -58,6 +58,12 @@ export function AppHeader({
   onLogout: () => void;
 }) {
   const current = TABS.find((tab) => tab.key === screen);
+  // Название экрана уже стоит крупным заголовком на странице — в верхней полосе показываем только раздел.
+  let crumb = 'Планирование';
+  for (const tab of TABS) {
+    if (tab.group) crumb = tab.group;
+    if (tab.key === screen) break;
+  }
   const [collapsed, setCollapsed] = useState(() => document.documentElement.getAttribute('data-sidebar') === 'collapsed');
   function toggleSidebar() {
     const next = !collapsed;
@@ -111,7 +117,7 @@ export function AppHeader({
         </span>
       </nav>
       <header className="topbar">
-        <span className="topbar-title">{current?.label}</span>
+        <span className="topbar-crumb" title={current?.label}>{crumb}</span>
         <span className="spacer" />
         <Clock />
         <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>

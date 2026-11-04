@@ -183,7 +183,7 @@ button.link {
   display: block;
   padding: 14px 12px 4px;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -221,7 +221,7 @@ button.link {
 
 h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
 
-.topbar-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+.topbar-crumb { font: 600 12px/1 Inter, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .topbar-user { font-variant-numeric: tabular-nums; }
 .spacer { flex: 1; }
 
@@ -850,9 +850,10 @@ td input, td select { width: 100%; min-width: 120px; }
 
 /* Better focus for search inputs */
 input.search:focus-visible {
-  outline-color: var(--f7-red);
-  border-color: var(--f7-red);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--f7-red) 15%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--text) 70%, transparent);
+  outline-offset: 0;
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 /* Badge micro-improvement */
@@ -888,7 +889,7 @@ input.search:focus-visible {
   border-radius: 3px;
   background: var(--bg);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   vertical-align: 1px;
 }
@@ -1047,7 +1048,14 @@ thead th {
 :root[data-sidebar="collapsed"] .sidebar-toggle-icon { transform: rotate(180deg); }
 :root[data-sidebar="collapsed"] .sidebar .sidebar-toggle,
 :root[data-sidebar="collapsed"] .sidebar .theme-switch { justify-content: center; padding: 8px 0; }
-:root[data-sidebar="collapsed"] .sidebar .badge-demo { align-self: center; padding: 2px 5px; font-size: 9px; }
+:root[data-sidebar="collapsed"] .sidebar .badge-demo { align-self: center; padding: 2px 5px; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .app, .sidebar-toggle-icon { transition: none; }
 }
+
+
+/* Этап 1 дизайн-аудита */
+:root { --state-in-work: var(--st-work); }
+/* «Выход» был рассчитан на тёмную шапку (светлый текст) и пропадал на светлой. */
+.topbar button.ghost { background: transparent; border-color: var(--border-strong); color: var(--text); }
+.topbar button.ghost:hover { background: color-mix(in srgb, var(--muted) 12%, var(--surface)); }

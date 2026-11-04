@@ -66,6 +66,9 @@ export function PlanScreen({
   const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
   const { data, state, error, reload } = usePlan(vin.trim(), filterStatusId !== null ? null : statusFilter, page, PAGE_SIZE, filterStatusId ?? undefined);
   const columns = COLUMNS.filter((c) => c.locked || visible.includes(c.key));
+  // VIN — главный идентификатор: сразу после чекбокса, затем «Состояние», затем остальные колонки.
+  const vinColumn = columns.find((c) => c.key === 'vin');
+  const otherColumns = columns.filter((c) => c.key !== 'vin');
   const counts = usePlanCounts();
 
   useEffect(() => {
@@ -324,8 +327,9 @@ export function PlanScreen({
                     <span className="sr-only">Выбор для печати</span>
                   </th>
                   {editOrder && <th scope="col">Перемещение</th>}
+                  {vinColumn && <th scope="col">{vinColumn.label}</th>}
                   <th scope="col">Состояние</th>
-                  {columns.map((column) => (
+                  {otherColumns.map((column) => (
                     <th key={column.key} scope="col">
                       {column.label}
                     </th>
@@ -407,18 +411,20 @@ export function PlanScreen({
                           </button>
                         </td>
                       )}
+                      {vinColumn && (
+                        <td className="mono vin" title={item.vin}>{item.vin}</td>
+                      )}
                       <td className="state-cell">
                         <span className={`state-badge state-${row.key}`}>
                           <i className="swatch" aria-hidden="true" />
                           {row.label}
                         </span>
                       </td>
-                      {columns.map((column) => {
+                      {otherColumns.map((column) => {
                         const value = column.value(item);
                         return (
                           <td
                             key={column.key}
-                            className={column.key === 'vin' ? 'mono vin' : undefined}
                             // Длинная «Комплектация» обрезается многоточием, полный текст — в подсказке и в карточке.
                             title={value}
                           >

@@ -197,7 +197,7 @@ export function IncomingInspectionScreen({
               </thead>
               <tbody>
                 {deliveries.map((d) => (
-                  <tr key={d.id} className={d.status === 'VerifiedWithIssues' ? 'row-ncp-open' : d.status === 'Verified' ? 'row-fok' : 'row-waiting'} onClick={() => setSelectedId(d.id)} style={{ cursor: 'pointer' }}>
+                  <tr key={d.id} className={d.status === 'VerifiedWithIssues' ? 'row-ncp-open' : d.status === 'Verified' ? 'row-done' : 'row-waiting'} onClick={() => setSelectedId(d.id)} style={{ cursor: 'pointer' }}>
                     <td>{d.supplierName}</td>
                     <td>{d.invoiceNumber}</td>
                     <td>{formatDate(d.invoiceDate)}</td>
@@ -410,7 +410,7 @@ export function IncomingInspectionScreen({
             </thead>
             <tbody>
               {delivery.packages.map((p) => (
-                <tr key={p.id} className={p.status === 'Closed' ? (p.hasIssues ? 'row-ncp-open' : 'row-fok') : 'row-waiting'} onClick={() => setOpenPackage(p)} style={{ cursor: 'pointer' }}>
+                <tr key={p.id} className={p.status === 'Closed' ? (p.hasIssues ? 'row-ncp-open' : 'row-done') : 'row-waiting'} onClick={() => setOpenPackage(p)} style={{ cursor: 'pointer' }}>
                   <td>{p.huNumber}</td>
                   <td>{p.rows.length}</td>
                   <td>

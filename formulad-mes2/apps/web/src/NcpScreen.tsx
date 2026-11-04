@@ -192,7 +192,7 @@ export function NcpScreen({
                   <tr
                     key={item.id}
                     tabIndex={0}
-                    className={[item.status === 'Закрыто' ? 'row-fok' : 'row-ncp-open', selected?.id === item.id ? 'selected' : ''].filter(Boolean).join(' ')}
+                    className={[item.status === 'Закрыто' ? 'row-done' : 'row-ncp-open', selected?.id === item.id ? 'selected' : ''].filter(Boolean).join(' ')}
                     aria-label={`Строка ${item.number}`}
                     onClick={() => setSelected(item)}
                     onKeyDown={(event) => {
