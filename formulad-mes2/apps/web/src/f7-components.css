@@ -617,3 +617,25 @@
 .f7plan tbody tr.row-ncp-open { background: color-mix(in srgb, var(--f7-red, #e31e24) 7%, var(--surface)); }
 .f7plan tbody tr.row-fok td:first-child { box-shadow: inset 3px 0 0 var(--st-work, #16a34a); }
 .f7plan .badge { border-radius: 0; text-transform: uppercase; font-weight: 700; font-size: 11px; letter-spacing: .05em; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+
+/* ── Scan-transition screens (Start / Complete / Rework) ── */
+.f7plan__scanbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 16px 24px 12px; }
+.f7plan__title--inline { padding: 0; }
+.f7plan__scan-label { font: 600 10px/1 Inter, sans-serif; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+.f7plan .scan-banner { border-radius: 0; border-left: 4px solid currentColor; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+.f7plan .scan-found { border-radius: 0; border-left: 3px solid var(--st-work, #16a34a); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%); }
+.f7plan .scan-found-blocked { border-left-color: var(--f7-red, #e31e24); }
+.f7plan .scan-found h2 { font-family: var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
+.f7plan .scan-found dt { text-transform: uppercase; letter-spacing: .06em; font-size: 10px; font-weight: 600; }
+.f7plan .side-title { font: 700 14px/1 var(--f7-font, Rajdhani, sans-serif); text-transform: uppercase; letter-spacing: .04em; }
+.f7plan .pending-list button { border-radius: 0; display: flex; align-items: center; gap: 8px; text-align: left; border-left: 3px solid var(--f7-red, #e31e24); }
+.f7plan .pending-list button .f7mes__queue-chevron { margin-left: auto; }
+.f7plan .pending-list button:hover .f7mes__queue-chevron { color: var(--f7-red, #e31e24); }
+:root .f7plan .modal-actions button { border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 11px 22px; border: 0; white-space: nowrap; }
+:root .f7plan .modal-actions button.primary { background: var(--f7-red, #e31e24); color: #fff; }
+.f7plan .rework-ncp-summary strong { color: var(--f7-red, #e31e24); }
+:root .f7plan .f7mes__scan { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--f7-red, #e31e24); border-top: 3px solid var(--f7-red, #e31e24); border-radius: 0; padding: 10px 18px 12px; min-width: 320px; max-width: 460px; flex: 1 1 320px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); }
+:root .f7plan .f7mes__scan-symbol { color: var(--f7-red, #e31e24); font-size: 22px; }
+:root .f7plan .f7mes__scan-field { display: flex; flex-direction: column; flex: 1; }
+:root .f7plan .f7mes__scan-field input { border: 0; outline: 0; box-shadow: none; background: transparent; padding: 2px 0; width: 100%; font: 500 15px/1.4 Inter, sans-serif; color: var(--text); }
+.f7plan .pending-list .mono { white-space: nowrap; }

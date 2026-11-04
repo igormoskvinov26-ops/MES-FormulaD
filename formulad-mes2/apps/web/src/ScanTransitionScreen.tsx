@@ -3,6 +3,7 @@ import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
 import { ApiError, api, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
+import './f7-components.css';
 
 /**
  * Общая механика перехода по сканеру (раздел 9 спецификации): первое сканирование ищет
@@ -178,35 +179,42 @@ export function ScanTransitionScreen({
   }
 
   return (
-    <div className="app">
+    <div className="app f7plan">
       <AppHeader screen={screen} onNavigate={onNavigate} session={session} onLogout={onLogout} />
 
-      <section className="toolbar">
-        <div>
-          <h1>{title}</h1>
-          <p className="muted">
-            Отсканируйте JobCard или введите VIN. Повторное сканирование того же VIN или кнопка — подтверждение.
-          </p>
+      <div className="f7plan__scanbar">
+        <div className="f7plan__title f7plan__title--inline">
+          <span className="f7mes__slash" aria-hidden="true" />
+          <div>
+            <h1>{title}</h1>
+            <small>Отсканируйте JobCard или введите VIN. Повторный скан того же VIN или кнопка — подтверждение.</small>
+          </div>
         </div>
-        <form className="controls" onSubmit={onSubmit}>
-          <input
-            ref={inputRef}
-            className="search"
-            aria-label="Сканирование VIN"
-            placeholder="Отсканируйте или введите VIN"
-            value={input}
-            maxLength={50}
-            autoFocus
-            disabled={busy}
-            onChange={(event) => setInput(event.target.value)}
-          />
+        <form className="f7mes__scan" onSubmit={onSubmit}>
+          <span className="f7mes__scan-symbol" aria-hidden="true">▥</span>
+          <div className="f7mes__scan-field">
+            <span className="f7plan__scan-label" aria-hidden="true">ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</span>
+            <input
+              ref={inputRef}
+              aria-label="Сканирование VIN"
+              placeholder="VIN / QR-код JobCard"
+              value={input}
+              maxLength={50}
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              disabled={busy}
+              onChange={(event) => setInput(event.target.value)}
+            />
+          </div>
         </form>
-      </section>
+      </div>
 
       <main className="content scan-content">
         <div className="scan-panel">
           {message && (
             <p role="status" className={message.kind === 'ok' ? 'scan-banner scan-ok' : 'scan-banner scan-bad'}>
+              <span aria-hidden="true">{message.kind === 'ok' ? '✓ ' : '⚠ '}</span>
               {message.text}
             </p>
           )}
@@ -266,6 +274,7 @@ export function ScanTransitionScreen({
                   <button type="button" onClick={() => { setInput(''); void lookup(item.vin); }}>
                     <span className="mono">{item.vin}</span>
                     <span className="muted">{dash(item.modelName)}</span>
+                    <span className="f7mes__queue-chevron" aria-hidden="true">›</span>
                   </button>
                 </li>
               ))}
