@@ -251,7 +251,6 @@
   background: var(--f7-accent);
   color: #fff;
 }
-.f7mes__btn--accent:not(:disabled):hover { background: var(--f7-accent-dark); }
 .f7mes__btn--warn {
   background: color-mix(in srgb, var(--st-wait, #f59e0b) 15%, var(--f7-surface));
   color: var(--st-wait, #b45309);
@@ -550,7 +549,6 @@
 /* robustness: win over :root[data-theme="dark"] button */
 :root .f7mes button.f7mes__btn { white-space: nowrap; padding: 12px 22px; border: 0; }
 :root .f7mes button.f7mes__btn--accent, :root .f7mes button.f7mes__btn--accent:hover:not([disabled]) { background: var(--f7-accent); color: #fff; }
-:root .f7mes button.f7mes__btn--accent:hover:not([disabled]) { background: var(--f7-accent-dark); }
 :root .f7mes button.f7mes__btn--secondary { background: color-mix(in srgb, var(--f7-muted) 18%, var(--f7-surface)); color: var(--f7-text); }
 :root .f7mes button.f7mes__btn--warn { background: color-mix(in srgb, var(--st-wait, #f59e0b) 18%, var(--f7-surface)); color: var(--st-wait, #b45309); }
 :root .f7mes .f7mes__scan { padding: 12px 18px 14px; }
@@ -662,3 +660,68 @@
 /* ── Admin tabs ─────────────────────────────────────────── */
 :root .f7plan .f7plan__tabs button { border-radius: 0; border: 0; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); padding: 11px 24px; font-weight: 600; white-space: nowrap; background: color-mix(in srgb, var(--muted) 16%, var(--surface)); color: var(--text); box-shadow: none; }
 :root .f7plan .f7plan__tabs button.primary { background: var(--f7-red, #e31e24); color: #fff; }
+
+/* ── Button hover fill: colour sweeps in left → right ───────
+   Base colours stay as defined above; only the fill layer animates.
+   !important on the image/size longhands so older `background:` shorthands
+   (incl. the dark-theme global button rule) cannot reset the animation. */
+:root .f7mes button.f7mes__btn--accent,
+:root .f7plan .controls button.primary,
+:root .f7plan .modal-actions button.primary,
+:root .f7plan .f7mes__scan button.primary,
+:root .f7plan .f7plan__pages button.is-current {
+  --fill: var(--f7-accent-dark, #b8171c);
+}
+:root .f7mes button.f7mes__btn--secondary,
+:root .f7mes button.f7mes__btn--warn,
+:root .f7plan .controls button:not(.primary),
+:root .f7plan .f7plan__pages button:not(.is-current),
+:root .f7plan .modal-actions button:not(.primary),
+:root .f7plan .station-components button,
+:root .f7plan .ncp-actions button {
+  --fill: var(--f7-red, #e31e24);
+}
+
+:root .f7mes button.f7mes__btn,
+:root .f7plan .controls button,
+:root .f7plan .modal-actions button,
+:root .f7plan .f7mes__scan button.primary,
+:root .f7plan .f7plan__pages button,
+:root .f7plan .station-components button,
+:root .f7plan .ncp-actions button {
+  background-image: linear-gradient(var(--fill), var(--fill)) !important;
+  background-repeat: no-repeat !important;
+  background-position: left center !important;
+  background-size: 0% 100% !important;
+  transition: background-size .38s cubic-bezier(.22, .61, .36, 1), color .12s ease .17s, border-color .2s ease;
+}
+:root .f7mes button.f7mes__btn:hover:not(:disabled),
+:root .f7mes button.f7mes__btn:focus-visible:not(:disabled),
+:root .f7plan .controls button:hover:not(:disabled),
+:root .f7plan .controls button:focus-visible:not(:disabled),
+:root .f7plan .modal-actions button:hover:not(:disabled),
+:root .f7plan .modal-actions button:focus-visible:not(:disabled),
+:root .f7plan .f7mes__scan button.primary:hover:not(:disabled),
+:root .f7plan .f7plan__pages button:hover:not(:disabled),
+:root .f7plan .f7plan__pages button:focus-visible:not(:disabled),
+:root .f7plan .station-components button:hover:not(:disabled),
+:root .f7plan .ncp-actions button:hover:not(:disabled) {
+  background-size: 100% 100% !important;
+}
+/* neutral buttons turn white-on-red once filled */
+:root .f7mes button.f7mes__btn--secondary:hover:not(:disabled),
+:root .f7mes button.f7mes__btn--warn:hover:not(:disabled),
+:root .f7plan .controls button:not(.primary):hover:not(:disabled),
+:root .f7plan .f7plan__pages button:not(.is-current):hover:not(:disabled),
+:root .f7plan .modal-actions button:not(.primary):hover:not(:disabled),
+:root .f7plan .station-components button:hover:not(:disabled),
+:root .f7plan .ncp-actions button:hover:not(:disabled) {
+  color: #fff;
+  border-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .f7mes button.f7mes__btn,
+  :root .f7plan .controls button,
+  :root .f7plan .modal-actions button,
+  :root .f7plan .f7plan__pages button { transition: none; }
+}
