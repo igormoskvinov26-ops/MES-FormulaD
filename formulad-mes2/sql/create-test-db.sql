@@ -1,0 +1,90 @@
+-- =============================================================================
+-- FormulaD MES 2.0 — создание тестовой базы и логина на PROD-экземпляре
+-- Выполнять под sa1 (или любым логином с правами CREATE DATABASE / CREATE LOGIN)
+-- =============================================================================
+
+-- 1. База
+USE [master];
+GO
+
+IF DB_ID(N'FormulaD_TEST') IS NULL
+BEGIN
+    CREATE DATABASE [FormulaD_TEST];
+    PRINT 'База FormulaD_TEST создана.';
+END
+ELSE
+    PRINT 'База FormulaD_TEST уже существует.';
+GO
+
+-- 2. Логин + пользователь (только SELECT)
+USE [master];
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'mes_reader')
+BEGIN
+    CREATE LOGIN [mes_reader] WITH PASSWORD = N'MesTest2024!', DEFAULT_DATABASE = [FormulaD_TEST];
+    PRINT 'Логин mes_reader создан.';
+END
+ELSE
+    PRINT 'Логин mes_reader уже существует.';
+GO
+
+USE [FormulaD_TEST];
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'mes_reader')
+BEGIN
+    CREATE USER [mes_reader] FOR LOGIN [mes_reader];
+    PRINT 'Пользователь mes_reader создан в FormulaD_TEST.';
+END
+GO
+
+-- Только чтение, ничего больше
+ALTER ROLE [db_datareader] ADD MEMBER [mes_reader];
+GO
+
+-- 3. Копируем схему tblProductionPlan из PROD (без данных).
+--    SELECT TOP 0 создаёт таблицу с теми же колонками и типами, но без индексов/PK.
+--    PK добавляем отдельно.
+
+IF OBJECT_ID(N'FormulaD_TEST.dbo.tblProductionPlan', N'U') IS NULL
+BEGIN
+    SELECT TOP 0 * INTO [FormulaD_TEST].[dbo].[tblProductionPlan] FROM [FormulaD].[dbo].[tblProductionPlan];
+    ALTER TABLE [FormulaD_TEST].[dbo].[tblProductionPlan] ADD CONSTRAINT [PK_tblProductionPlan] PRIMARY KEY CLUSTERED ([VIN]);
+    PRINT 'Таблица tblProductionPlan скопирована из FormulaD (схема без данных).';
+END
+ELSE
+    PRINT 'Таблица tblProductionPlan уже существует в FormulaD_TEST.';
+GO
+
+-- 4. Полная копия данных из PROD.
+
+IF NOT EXISTS (SELECT 1 FROM [FormulaD_TEST].[dbo].[tblProductionPlan])
+BEGIN
+    SET IDENTITY_INSERT [FormulaD_TEST].[dbo].[tblProductionPlan] ON;
+
+    DECLARE @cols NVARCHAR(MAX), @sql NVARCHAR(MAX);
+    SELECT @cols = STRING_AGG(QUOTENAME(COLUMN_NAME), ', ')
+    FROM [FormulaD_TEST].INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'tblProductionPlan'
+      AND DATA_TYPE NOT IN ('timestamp', 'rowversion');
+
+    SET @sql = N'INSERT INTO [FormulaD_TEST].[dbo].[tblProductionPlan] (' + @cols + N')
+    SELECT ' + @cols + N' FROM [FormulaD].[dbo].[tblProductionPlan]';
+    EXEC sp_executesql @sql;
+
+    SET IDENTITY_INSERT [FormulaD_TEST].[dbo].[tblProductionPlan] OFF;
+    PRINT 'Все строки скопированы из FormulaD в FormulaD_TEST.';
+END
+ELSE
+    PRINT 'Данные уже есть — пропускаем копирование.';
+GO
+
+PRINT '';
+PRINT '=== Готово ===';
+PRINT 'Строка подключения для приложения:';
+PRINT 'Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=MesTest2024!;Encrypt=True;TrustServerCertificate=True';
+PRINT '';
+PRINT 'Запуск API:';
+PRINT 'DataSource=Sql Sql__IsTestEnvironment=true Sql__ConnectionString="Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=MesTest2024!;Encrypt=True;TrustServerCertificate=True" dotnet run';
+GO

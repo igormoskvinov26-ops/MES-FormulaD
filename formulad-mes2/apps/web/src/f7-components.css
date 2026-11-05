@@ -1,0 +1,1011 @@
+/* F7 MES — industrial HMI component styles.
+   Used inside the existing app shell (sidebar + topbar).
+   Dark/light follows :root[data-theme] from styles.css. */
+
+/* ── Root scope ─────────────────────────────────────────── */
+.f7mes {
+  --f7-accent: var(--f7-red, #e31e24);
+  --f7-accent-dark: var(--f7-red-dark, #b8171c);
+  --f7-bg: var(--bg);
+  --f7-surface: var(--surface);
+  --f7-border: var(--border);
+  --f7-text: var(--text);
+  --f7-muted: var(--muted);
+  --f7-radius: var(--radius-md, 14px);
+  --f7-font: var(--font-display, Rajdhani, Inter, sans-serif);
+  min-height: 100vh;
+  padding: 0 24px 32px;
+}
+
+/* ── Intro: heading + scan ──────────────────────────────── */
+.f7mes__intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.f7mes__heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.f7mes__slash {
+  display: block;
+  width: 8px;
+  height: 48px;
+  background: var(--f7-accent);
+  transform: skewX(-12deg);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.f7mes__heading h1 {
+  margin: 0;
+  font: 700 28px/1 var(--f7-font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--f7-text);
+}
+.f7mes__heading small {
+  display: block;
+  font: 400 14px/1.3 Inter, sans-serif;
+  color: var(--f7-muted);
+  margin-top: 2px;
+}
+
+/* ── Scan panel ─────────────────────────────────────────── */
+.f7mes__scan {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--f7-surface);
+  border: 1px solid var(--f7-border);
+  border-radius: var(--f7-radius);
+  padding: 8px 16px;
+  max-width: 420px;
+  flex: 1 1 280px;
+}
+.f7mes__scan-symbol {
+  font-size: 22px;
+  color: var(--f7-muted);
+  flex-shrink: 0;
+}
+.f7mes__scan-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.f7mes__scan-field label {
+  font: 600 12px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f7-muted);
+}
+.f7mes__scan-field input {
+  border: none;
+  background: transparent;
+  font: 500 16px/1.4 Inter, sans-serif;
+  color: var(--f7-text);
+  padding: 2px 0;
+  outline: none;
+  width: 100%;
+}
+
+/* ── Quality signal banner ──────────────────────────────── */
+.f7mes__signal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--f7-radius);
+  font: 600 14px/1.4 Inter, sans-serif;
+  margin-bottom: 16px;
+  transition: background .2s, color .2s;
+}
+.f7mes__signal[data-type="blocked"] {
+  background: color-mix(in srgb, var(--f7-accent) 12%, var(--f7-surface));
+  color: var(--f7-accent);
+  border: 1px solid color-mix(in srgb, var(--f7-accent) 30%, transparent);
+  border-left: 4px solid var(--f7-accent);
+}
+.f7mes__signal[data-type="ready"] {
+  background: color-mix(in srgb, var(--st-work, #16a34a) 12%, var(--f7-surface));
+  color: var(--st-work, #16a34a);
+  border: 1px solid color-mix(in srgb, var(--st-work, #16a34a) 30%, transparent);
+}
+.f7mes__signal[data-type="idle"] {
+  background: var(--f7-surface);
+  color: var(--f7-muted);
+  border: 1px solid var(--f7-border);
+}
+.f7mes__signal-icon { font-size: 20px; flex-shrink: 0; }
+.f7mes__signal button {
+  margin-left: auto;
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font: 600 12px/1 Inter, sans-serif;
+  white-space: nowrap;
+}
+
+/* ── FOK body: conditions + identity (left) | readiness schematic (right) ── */
+.f7mes__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .f7mes__body { grid-template-columns: 1fr; }
+}
+
+/* ── Panel (shared card base) ───────────────────────────── */
+.f7mes__panel {
+  background: var(--f7-surface);
+  border: 1px solid var(--f7-border);
+  border-radius: var(--f7-radius);
+  padding: 20px;
+}
+.f7mes__panel--cut {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+}
+
+/* ── Identity panel (left) ──────────────────────────────── */
+.f7mes__ident-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.f7mes__label {
+  font: 600 12px/1 Inter, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--f7-muted);
+}
+.f7mes__tag {
+  font: 700 12px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+.f7mes__tag[data-type="blocked"] { background: color-mix(in srgb, var(--f7-accent) 15%, transparent); color: var(--f7-accent); }
+.f7mes__tag[data-type="ready"]   { background: color-mix(in srgb, var(--st-work) 15%, transparent); color: var(--st-work); }
+.f7mes__tag[data-type="idle"]    { background: color-mix(in srgb, var(--f7-muted) 15%, transparent); color: var(--f7-muted); }
+
+.f7mes__vin {
+  font: 700 22px/1.2 var(--f7-font);
+  letter-spacing: 0.02em;
+  color: var(--f7-text);
+  margin-bottom: 12px;
+}
+
+.f7mes__spec {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+}
+.f7mes__spec div { display: flex; flex-direction: column; gap: 2px; }
+.f7mes__spec dt {
+  font: 600 12px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f7-muted);
+}
+.f7mes__spec dd { margin: 0; font: 500 14px/1.3 Inter, sans-serif; color: var(--f7-text); }
+
+/* ── NCP (missing parts) list ───────────────────────────── */
+.f7mes__ncp-section { margin-bottom: 16px; }
+.f7mes__ncp-title {
+  display: flex;
+  justify-content: space-between;
+  font: 700 12px/1 Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--f7-accent);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--f7-border);
+  margin-bottom: 8px;
+}
+.f7mes__ncp-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--f7-border) 50%, transparent);
+  font-size: 14px;
+}
+.f7mes__ncp-item strong { color: var(--f7-text); font-weight: 600; }
+.f7mes__ncp-item small { color: var(--f7-muted); display: block; font-size: 12px; }
+.f7mes__ncp-item b { color: var(--f7-accent); font-weight: 700; white-space: nowrap; }
+
+/* ── Action buttons ─────────────────────────────────────── */
+.f7mes__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.f7mes__btn {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  font: 600 14px/1 Inter, sans-serif;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+}
+.f7mes__btn:disabled { opacity: .4; cursor: default; }
+.f7mes__btn--secondary {
+  background: color-mix(in srgb, var(--f7-muted) 12%, var(--f7-surface));
+  color: var(--f7-text);
+  border: 1px solid var(--f7-border);
+}
+.f7mes__btn--accent {
+  background: var(--f7-accent);
+  color: #fff;
+}
+.f7mes__btn--warn {
+  background: color-mix(in srgb, var(--st-wait, #f59e0b) 15%, var(--f7-surface));
+  color: var(--st-wait, #b45309);
+  border: 1px solid color-mix(in srgb, var(--st-wait) 30%, transparent);
+}
+
+/* ── Hint ───────────────────────────────────────────────── */
+.f7mes__hint {
+  font: 400 12px/1.4 Inter, sans-serif;
+  color: var(--f7-muted);
+  margin: 16px 0 0;
+  text-align: center;
+}
+
+/* ── Confirmation modal ────────────────────────────────── */
+.f7mes__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: f7fade .15s ease-out;
+}
+@keyframes f7fade { from { opacity: 0; } }
+.f7mes__modal {
+  background: var(--f7-surface);
+  border: 1px solid var(--f7-border);
+  border-radius: var(--f7-radius);
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  animation: f7slide .2s ease-out;
+}
+@keyframes f7slide { from { transform: translateY(12px); opacity: 0; } }
+.f7mes__modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--f7-border);
+}
+.f7mes__modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--f7-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.f7mes__modal-body {
+  padding: 24px 20px;
+  text-align: center;
+}
+.f7mes__modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--st-work, #16a34a) 15%, var(--f7-surface));
+  color: var(--st-work, #16a34a);
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+.f7mes__modal-body h3 {
+  margin: 0 0 8px;
+  font: 700 18px/1.3 var(--f7-font);
+  color: var(--f7-text);
+}
+.f7mes__modal-body p {
+  margin: 0 0 4px;
+  font: 400 14px/1.5 Inter, sans-serif;
+  color: var(--f7-text);
+}
+.f7mes__modal-body p strong { font-weight: 600; }
+.f7mes__modal-hint {
+  color: var(--f7-muted) !important;
+  font-size: 12px !important;
+  margin-top: 8px !important;
+}
+.f7mes__modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--f7-border);
+}
+
+/* ── Reference-sheet elements ───────────────────────────── */
+.f7mes__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.f7mes__title-img { height: 64px; width: auto; max-width: 100%; display: none; }
+.f7mes__title-img--light { display: block; }
+:root[data-theme="dark"] .f7mes__title-img--light { display: none; }
+:root[data-theme="dark"] .f7mes__title-img--dark { display: block; }
+
+/* scan field: red frame with cut corner */
+.f7mes__scan {
+  border: 1px solid var(--border-strong, var(--f7-border));
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  border-top: 3px solid var(--border-strong, var(--f7-border));
+}
+.f7mes__scan-symbol { color: var(--f7-muted); }
+
+/* status pills (reference: ПЛАНОВОЕ / В РАБОТЕ / FINAL OK / ДОРАБОТКА) */
+.f7mes__tag {
+  border-radius: 0;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  padding: 5px 14px;
+}
+
+/* buttons: skewed like reference */
+.f7mes__btn { border-radius: 0; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); padding: 12px 26px; }
+.f7mes__btn--secondary { border: none; }
+
+/* robustness: win over :root[data-theme="dark"] button */
+:root .f7mes button.f7mes__btn { white-space: nowrap; padding: 12px 22px; border: 0; }
+:root .f7mes button.f7mes__btn--accent, :root .f7mes button.f7mes__btn--accent:hover:not([disabled]) { background: var(--f7-accent); color: #fff; }
+:root .f7mes button.f7mes__btn--secondary { background: color-mix(in srgb, var(--f7-muted) 18%, var(--f7-surface)); color: var(--f7-text); }
+:root .f7mes button.f7mes__btn--warn { background: color-mix(in srgb, var(--st-wait, #f59e0b) 18%, var(--f7-surface)); color: var(--st-wait, #b45309); }
+:root .f7mes .f7mes__scan { padding: 12px 18px 14px; }
+:root .f7mes .f7mes__scan-field label { margin-bottom: 4px; }
+:root .f7mes .f7mes__scan-field input { box-shadow: none; border: 0; outline: 0; }
+
+/* ── Plan screen (f7plan) ───────────────────────────────── */
+.f7plan__title { display: flex; align-items: center; gap: 14px; padding: 16px 24px 4px; }
+.f7plan__title h1 { margin: 0; font: 700 28px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .04em; color: var(--text); }
+.f7plan__title small { display: block; margin-top: 2px; font: 400 14px/1.3 Inter, sans-serif; color: var(--muted); }
+.f7plan__title .f7mes__slash { background: var(--f7-red, #e31e24); }
+
+/* stat tiles: cut corner + red left bar */
+.f7plan .stat-tile {
+  border-radius: 0;
+  border-left: 3px solid var(--border-strong, var(--border));
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  box-shadow: none;
+}
+.f7plan .stat-tile:hover { transform: none; background: color-mix(in srgb, var(--muted) 7%, var(--surface)); }
+
+/* filters panel */
+.f7plan .toolbar { border-radius: 0; border-left: 3px solid var(--border-strong, var(--border)); }
+.f7plan__filters-label { font: 700 14px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .08em; color: var(--text); padding-right: 6px; }
+.f7plan .search { min-width: 260px; font-size: 16px; border-radius: 0; }
+.f7plan select, .f7plan .search { border-radius: 0; }
+:root .f7plan .controls button.primary { background: var(--f7-red, #e31e24); color: #fff; border-color: transparent; }
+
+/* table */
+.f7plan table { border-collapse: separate; border-spacing: 0 4px; }
+.f7plan thead th {
+  text-transform: uppercase; letter-spacing: .06em; font-size: 12px; font-weight: 700;
+  background: color-mix(in srgb, var(--muted) 14%, var(--surface)); color: var(--text);
+}
+.f7plan tbody tr { background: var(--surface); }
+.f7plan tbody tr:nth-child(even) { background: var(--surface); }
+.f7plan tbody tr td:first-child { box-shadow: inset 3px 0 0 transparent; }
+.f7plan tbody tr.row-waiting td:first-child { box-shadow: inset 3px 0 0 var(--st-wait, #f59e0b); }
+.f7plan tbody tr.row-in-work td:first-child { box-shadow: inset 3px 0 0 var(--st-work, #16a34a); }
+.f7plan tbody tr.row-complete td:first-child { box-shadow: inset 3px 0 0 var(--st-plan, #2563eb); }
+.f7plan tbody tr.row-fok td:first-child { box-shadow: inset 3px 0 0 var(--st-control, #7c3aed); }
+.f7plan tbody tr.selected { background: color-mix(in srgb, var(--f7-red, #e31e24) 8%, var(--surface)); }
+.f7plan .state-badge {
+  border-radius: 0; padding: 4px 12px; text-transform: uppercase; font-weight: 700; font-size: 12px; letter-spacing: .05em;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+/* pager */
+.f7plan__pager { justify-content: space-between; border: 1px solid var(--border); background: var(--surface); margin-top: 8px; }
+.f7plan__shown { color: var(--muted); font-size: 14px; }
+.f7plan__pages { display: flex; align-items: center; gap: 6px; }
+.f7plan__gap { color: var(--muted); padding: 0 4px; }
+:root .f7plan__pages button { min-width: 36px; height: 34px; padding: 0 8px; border-radius: 0; font-weight: 700; }
+:root .f7plan__pages button.is-current { background: var(--f7-red, #e31e24); color: #fff; border-color: transparent; }
+.f7plan .controls { flex-wrap: wrap; }
+.f7plan .controls button { white-space: nowrap; }
+.f7plan .search { min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+
+/* NCP / входной контроль: состояние только цветной полосой слева и бейджем, без заливки строки.
+   row-fok (план) — фиолетовая, row-done (NCP закрыто, поставка проверена) — зелёная. */
+.f7plan tbody tr.row-ncp-open td:first-child { box-shadow: inset 3px 0 0 var(--f7-red, #e31e24); }
+.f7plan tbody tr.row-done td:first-child { box-shadow: inset 3px 0 0 var(--st-work, #16a34a); }
+.f7plan .badge { border-radius: 0; text-transform: uppercase; font-weight: 700; font-size: 12px; letter-spacing: .05em; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+
+/* ── Scan-transition screens (Start / Complete / Rework) ── */
+.f7plan__scanbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 16px 24px 12px; }
+.f7plan__title--inline { padding: 0; }
+.f7plan__scan-label { font: 600 12px/1 Inter, sans-serif; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+.f7plan .scan-banner { border-radius: 0; border-left: 4px solid currentColor; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+.f7plan .scan-found { border-radius: 0; border-left: 3px solid var(--st-work, #16a34a); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%); }
+.f7plan .scan-found-blocked { border-left-color: var(--f7-red, #e31e24); }
+.f7plan .scan-found h2 { font-family: var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
+.f7plan .scan-found dt { text-transform: uppercase; letter-spacing: .06em; font-size: 12px; font-weight: 600; }
+.f7plan .side-title { font: 700 14px/1 var(--f7-font, Rajdhani, sans-serif); text-transform: uppercase; letter-spacing: .04em; }
+.f7plan .pending-list button { border-radius: 0; display: flex; align-items: center; gap: 8px; text-align: left; border-left: 3px solid var(--border-strong, var(--border)); }
+.f7plan .pending-list button .f7mes__queue-chevron { margin-left: auto; }
+.f7plan .pending-list button:hover .f7mes__queue-chevron { color: var(--f7-red, #e31e24); }
+:root .f7plan .modal-actions button { border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 11px 22px; border: 0; white-space: nowrap; }
+:root .f7plan .modal-actions button.primary { background: var(--f7-red, #e31e24); color: #fff; }
+.f7plan .rework-ncp-summary strong { color: var(--f7-red, #e31e24); }
+:root .f7plan .f7mes__scan { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border-strong); border-top: 3px solid var(--border-strong); border-radius: 0; padding: 10px 18px 12px; min-width: 320px; max-width: 460px; flex: 1 1 320px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); }
+:root .f7plan .f7mes__scan-symbol { color: var(--muted); font-size: 22px; }
+:root .f7plan .f7mes__scan-field { display: flex; flex-direction: column; flex: 1; }
+:root .f7plan .f7mes__scan-field input { border: 0; outline: 0; box-shadow: none; background: transparent; padding: 2px 0; width: 100%; font: 500 16px/1.4 Inter, sans-serif; color: var(--text); }
+.f7plan .pending-list .mono { white-space: nowrap; }
+
+/* ── Stations ───────────────────────────────────────────── */
+:root .f7plan .f7mes__scan button.primary { background: var(--f7-red, #e31e24); color: #fff; border: 0; border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 10px 20px; white-space: nowrap; }
+.f7plan__unit { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14px; margin: 0 24px; padding: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); }
+.f7plan__unit .vin { font: 700 22px/1.2 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
+.f7plan .station-line { gap: 6px; }
+.f7plan .station-btn { border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); box-shadow: none !important; font-family: var(--f7-font, Rajdhani, sans-serif); font-weight: 700; min-width: 64px; }
+.f7plan .station-btn:hover:not([disabled]) { transform: none; filter: brightness(1.08); }
+.f7plan .station-btn[aria-pressed='true'] { outline: 3px solid var(--text); outline-offset: 2px; }
+.f7plan .station-detail { border-radius: 0; border-left: 3px solid var(--border-strong); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%); }
+.f7plan .station-detail-head h2 { font: 700 18px/1 var(--f7-font, Rajdhani, sans-serif); text-transform: uppercase; letter-spacing: .04em; }
+:root .f7plan .station-components button, :root .f7plan .ncp-actions button { border-radius: 0; white-space: nowrap; }
+:root .f7plan .station-btn.station-grey { background: linear-gradient(145deg, #b7bcc6, var(--stn-grey, #8b93a1)); color: #fff; border: 0; }
+:root .f7plan .station-btn.station-blue { background: linear-gradient(145deg, #4d8dff, var(--stn-blue, #2563eb)); color: #fff; border: 0; }
+:root .f7plan .station-btn.station-green { background: linear-gradient(145deg, #22c55e, var(--stn-green, #16a34a)); color: #fff; border: 0; }
+:root .f7plan .station-btn.station-yellow { background: linear-gradient(145deg, #fbbf24, var(--stn-yellow, #eab308)); color: #3a2e00; border: 0; }
+:root .f7plan .station-btn.station-red { background: linear-gradient(145deg, #ef4444, var(--stn-red, #dc2626)); color: #fff; border: 0; }
+.f7plan .station-component { flex-direction: row; align-items: center; }
+.f7plan .station-component input { width: 18px; height: 18px; margin: 0; flex: none; }
+
+/* ── Admin tabs ─────────────────────────────────────────── */
+:root .f7plan .f7plan__tabs button { border-radius: 0; border: 0; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); padding: 11px 24px; font-weight: 600; white-space: nowrap; background: color-mix(in srgb, var(--muted) 16%, var(--surface)); color: var(--text); box-shadow: none; }
+:root .f7plan .f7plan__tabs button.primary { background: var(--f7-red, #e31e24); color: #fff; }
+
+/* ── Button hover fill: colour sweeps in left → right ───────
+   Base colours stay as defined above; only the fill layer animates.
+   !important on the image/size longhands so older `background:` shorthands
+   (incl. the dark-theme global button rule) cannot reset the animation. */
+:root .f7mes button.f7mes__btn--accent,
+:root .f7plan .controls button.primary,
+:root .f7plan .modal-actions button.primary,
+:root .f7plan .f7mes__scan button.primary,
+:root .f7plan .f7plan__pages button.is-current {
+  --fill: var(--f7-accent-dark, #b8171c);
+}
+:root .f7mes button.f7mes__btn--secondary,
+:root .f7mes button.f7mes__btn--warn,
+:root .f7plan .controls button:not(.primary),
+:root .f7plan .f7plan__pages button:not(.is-current),
+:root .f7plan .modal-actions button:not(.primary),
+:root .f7plan .station-components button,
+:root .f7plan .ncp-actions button {
+  --fill: var(--f7-red, #e31e24);
+}
+
+:root .f7mes button.f7mes__btn,
+:root .f7plan .controls button,
+:root .f7plan .modal-actions button,
+:root .f7plan .f7mes__scan button.primary,
+:root .f7plan .f7plan__pages button,
+:root .f7plan .station-components button,
+:root .f7plan .ncp-actions button {
+  background-image: linear-gradient(var(--fill), var(--fill)) !important;
+  background-repeat: no-repeat !important;
+  background-position: left center !important;
+  background-size: 0% 100% !important;
+  transition: background-size .38s cubic-bezier(.22, .61, .36, 1), color .12s ease .17s, border-color .2s ease;
+}
+:root .f7mes button.f7mes__btn:hover:not(:disabled),
+:root .f7mes button.f7mes__btn:focus-visible:not(:disabled),
+:root .f7plan .controls button:hover:not(:disabled),
+:root .f7plan .controls button:focus-visible:not(:disabled),
+:root .f7plan .modal-actions button:hover:not(:disabled),
+:root .f7plan .modal-actions button:focus-visible:not(:disabled),
+:root .f7plan .f7mes__scan button.primary:hover:not(:disabled),
+:root .f7plan .f7plan__pages button:hover:not(:disabled),
+:root .f7plan .f7plan__pages button:focus-visible:not(:disabled),
+:root .f7plan .station-components button:hover:not(:disabled),
+:root .f7plan .ncp-actions button:hover:not(:disabled) {
+  background-size: 100% 100% !important;
+}
+/* neutral buttons turn white-on-red once filled */
+:root .f7mes button.f7mes__btn--secondary:hover:not(:disabled),
+:root .f7mes button.f7mes__btn--warn:hover:not(:disabled),
+:root .f7plan .controls button:not(.primary):hover:not(:disabled),
+:root .f7plan .f7plan__pages button:not(.is-current):hover:not(:disabled),
+:root .f7plan .modal-actions button:not(.primary):hover:not(:disabled),
+:root .f7plan .station-components button:hover:not(:disabled),
+:root .f7plan .ncp-actions button:hover:not(:disabled) {
+  color: #fff;
+  border-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .f7mes button.f7mes__btn,
+  :root .f7plan .controls button,
+  :root .f7plan .modal-actions button,
+  :root .f7plan .f7plan__pages button { transition: none; }
+}
+
+
+/* ── FOK: queue strip, conditions list, readiness schematic ───────────── */
+.f7mes {
+  --twin-bg: radial-gradient(circle at 50% 42%, #ffffff 0%, #f1f4f9 62%, #e5e9f0 100%);
+  --twin-grid: rgba(20, 30, 50, .06);
+}
+:root[data-theme="dark"] .f7mes {
+  --twin-bg: radial-gradient(circle at 50% 42%, #212939 0%, #161b26 65%, #11151d 100%);
+  --twin-grid: rgba(255, 255, 255, .05);
+}
+
+.f7mes__queue-chevron { font: 700 20px/1 var(--f7-font); color: var(--f7-muted); flex-shrink: 0; transition: color .15s; }
+
+.f7mes__strip {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 14px; padding: 10px 14px;
+  background: var(--f7-surface); border: 1px solid var(--f7-border);
+  border-left: 3px solid var(--f7-muted);
+}
+.f7mes__strip-head { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.f7mes__strip-head h2 { margin: 0; font: 700 14px/1 var(--f7-font); text-transform: uppercase; letter-spacing: .06em; color: var(--f7-text); }
+.f7mes__strip-head b { font: 700 12px/1 Inter, sans-serif; padding: 3px 8px; background: color-mix(in srgb, var(--f7-muted) 16%, transparent); color: var(--f7-muted); }
+.f7mes__strip-list { display: flex; gap: 8px; overflow-x: auto; flex: 1; min-width: 0; padding-bottom: 2px; }
+.f7mes__strip-list .f7mes__hint { margin: 0; text-align: left; }
+:root .f7mes button.f7mes__chip {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-height: 48px; padding: 8px 14px; border: 1px solid var(--f7-border); border-radius: 0;
+  background: transparent; color: var(--f7-text); text-align: left; cursor: pointer; box-shadow: none;
+  transition: border-color .15s, background-color .15s, box-shadow .15s;
+}
+:root .f7mes button.f7mes__chip:hover { border-color: var(--f7-accent); background: color-mix(in srgb, var(--f7-accent) 5%, var(--f7-surface)); }
+:root .f7mes button.f7mes__chip[data-selected="true"] {
+  border-color: var(--f7-accent);
+  background: color-mix(in srgb, var(--f7-accent) 11%, var(--f7-surface));
+  box-shadow: inset 3px 0 0 var(--f7-accent);
+}
+.f7mes__chip strong { font: 700 14px/1.2 Inter, sans-serif; letter-spacing: .01em; }
+.f7mes__chip small { font: 400 12px/1.2 Inter, sans-serif; color: var(--f7-muted); }
+
+.f7mes__conds { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.f7mes__conds li {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--f7-border); border-left: 3px solid var(--f7-muted);
+  background: color-mix(in srgb, var(--f7-muted) 5%, var(--f7-surface));
+}
+.f7mes__cond-icon {
+  width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%;
+  font: 700 14px/1 Inter, sans-serif; background: color-mix(in srgb, var(--f7-muted) 18%, transparent); color: var(--f7-muted);
+}
+.f7mes__cond-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.f7mes__cond-text strong { font: 600 14px/1.25 Inter, sans-serif; color: var(--f7-text); }
+.f7mes__cond-text small { font: 400 12px/1.25 Inter, sans-serif; color: var(--f7-muted); }
+.f7mes__conds li[data-state="ok"] { border-left-color: var(--st-work, #16a34a); }
+.f7mes__conds li[data-state="ok"] .f7mes__cond-icon { background: color-mix(in srgb, var(--st-work, #16a34a) 18%, transparent); color: var(--st-work, #16a34a); }
+.f7mes__conds li[data-state="fail"] { border-left-color: var(--f7-accent); background: color-mix(in srgb, var(--f7-accent) 6%, var(--f7-surface)); }
+.f7mes__conds li[data-state="fail"] .f7mes__cond-icon { background: color-mix(in srgb, var(--f7-accent) 18%, transparent); color: var(--f7-accent); }
+.f7mes__conds li[data-state="warn"] { border-left-color: var(--st-wait, #f59e0b); }
+.f7mes__conds li[data-state="warn"] .f7mes__cond-icon { background: color-mix(in srgb, var(--st-wait, #f59e0b) 22%, transparent); color: var(--st-wait, #b45309); }
+:root .f7mes button.f7mes__cond-action {
+  padding: 7px 12px; border: 1px solid var(--f7-border); border-radius: 0; background: transparent;
+  color: var(--f7-text); font: 600 12px/1 Inter, sans-serif; cursor: pointer; white-space: nowrap; box-shadow: none;
+}
+:root .f7mes button.f7mes__cond-action:hover { border-color: var(--f7-accent); color: var(--f7-accent); }
+
+:root .f7mes button.f7mes__btn { min-height: 52px; font-size: 16px; }
+.f7mes__btn--grow { flex: 1; }
+
+.f7mes__twin-col { position: sticky; top: 16px; }
+.twin {
+  margin: 0; position: relative; aspect-ratio: 1; overflow: hidden;
+  background:
+    linear-gradient(var(--twin-grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, var(--twin-grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--twin-bg);
+  border: 1px solid var(--f7-border);
+  clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+  transition: box-shadow .4s ease;
+}
+.twin__ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.twin__seg { stroke-width: 13; stroke-linecap: butt; transition: stroke .35s ease; }
+.twin__seg--grey { stroke: color-mix(in srgb, var(--f7-muted) 38%, transparent); }
+.twin__seg--blue { stroke: var(--stn-blue, #2563eb); }
+.twin__seg--green { stroke: var(--stn-green, #16a34a); }
+.twin__seg--yellow { stroke: var(--stn-yellow, #eab308); }
+.twin__seg--red { stroke: var(--stn-red, #dc2626); }
+.twin__label { font: 700 12px Inter, sans-serif; fill: var(--f7-muted); }
+
+.twin__car { position: absolute; left: 50%; top: 42%; width: 58%; transform: translate(-50%, -50%); }
+.twin__car img { display: block; width: 100%; height: auto; user-select: none; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .22)); }
+.twin__lamp {
+  position: absolute; width: 22%; aspect-ratio: 1; border-radius: 50%; opacity: 0; pointer-events: none;
+  transform: translate(-50%, -50%) scale(.6);
+  background: radial-gradient(circle, rgba(255, 252, 232, .98) 0 12%, rgba(255, 219, 110, .6) 34%, rgba(255, 219, 110, 0) 70%);
+  transition: opacity .45s ease, transform .45s ease;
+}
+.twin__lamp--l { left: 58%; top: 37%; }
+.twin__lamp--r { left: 82%; top: 34%; }
+
+.twin__caption { position: absolute; left: 0; right: 0; bottom: 17%; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.twin__caption b { font: 700 34px/1 var(--f7-font); color: var(--f7-text); }
+.twin__caption span { font: 500 12px/1.2 Inter, sans-serif; color: var(--f7-muted); }
+
+.twin[data-mode="ready"] .twin__lamp,
+.twin[data-mode="done"] .twin__lamp { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.twin[data-mode="done"] .twin__caption b { color: var(--st-work, #16a34a); }
+.twin[data-mode="blocked"] { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--f7-accent) 55%, transparent); }
+.twin[data-mode="blocked"] .twin__lamp {
+  opacity: 1; transform: translate(-50%, -50%) scale(1);
+  background: radial-gradient(circle, rgba(255, 190, 190, .98) 0 12%, rgba(227, 30, 36, .6) 34%, rgba(227, 30, 36, 0) 70%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .twin[data-mode="ready"] .twin__lamp { animation: twin-breathe 2.6s ease-in-out infinite; }
+  .twin[data-mode="blocked"] .twin__lamp { animation: twin-alert 1.1s ease-in-out infinite; }
+  .twin[data-mode="blocked"] { animation: twin-frame 1.1s ease-in-out infinite; }
+  .twin[data-mode="done"] .twin__lamp { animation: twin-flash 1s ease-out 1; }
+  .twin__seg--red { animation: twin-seg-alert 1.1s ease-in-out infinite; }
+}
+@keyframes twin-breathe { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
+@keyframes twin-alert { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes twin-frame { 0%, 100% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--f7-accent) 25%, transparent); } 50% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--f7-accent) 75%, transparent); } }
+@keyframes twin-flash { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 35% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes twin-seg-alert { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* ── Clickable ring segments + station detail card ────────── */
+.twin__hit { stroke: transparent; stroke-width: 34; pointer-events: stroke; }
+.twin__stn { outline: none; }
+.twin__stn--interactive { cursor: pointer; }
+.twin__stn--interactive .twin__seg { transition: stroke .35s ease, stroke-width .15s ease; }
+.twin__stn--interactive:hover .twin__seg,
+.twin__stn--interactive:focus-visible .twin__seg { stroke-width: 18; }
+.twin__stn--selected .twin__seg { stroke-width: 20; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--f7-text) 45%, transparent)); }
+.twin__stn--selected .twin__label,
+.twin__stn--interactive:hover .twin__label,
+.twin__stn--interactive:focus-visible .twin__label { fill: var(--f7-text); font-weight: 800; }
+
+.stn-detail {
+  margin-top: 12px; padding: 14px 16px;
+  background: var(--f7-surface); border: 1px solid var(--f7-border); border-left: 3px solid var(--f7-muted);
+  animation: stn-detail-in .18s ease-out;
+}
+.stn-detail[data-state="green"] { border-left-color: var(--stn-green, #16a34a); }
+.stn-detail[data-state="yellow"] { border-left-color: var(--stn-yellow, #eab308); }
+.stn-detail[data-state="red"] { border-left-color: var(--stn-red, #dc2626); }
+.stn-detail__head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.stn-detail__head h3 { margin: 0; font: 700 16px/1 var(--f7-font); text-transform: uppercase; letter-spacing: .05em; color: var(--f7-text); }
+.stn-detail__badge { font: 600 12px/1 Inter, sans-serif; text-transform: uppercase; letter-spacing: .05em; padding: 4px 8px; background: color-mix(in srgb, var(--f7-muted) 16%, transparent); color: var(--f7-muted); }
+.stn-detail[data-state="green"] .stn-detail__badge { background: color-mix(in srgb, var(--stn-green, #16a34a) 18%, transparent); color: var(--stn-green, #16a34a); }
+.stn-detail[data-state="yellow"] .stn-detail__badge { background: color-mix(in srgb, var(--stn-yellow, #eab308) 22%, transparent); color: var(--st-wait, #b45309); }
+.stn-detail[data-state="red"] .stn-detail__badge { background: color-mix(in srgb, var(--stn-red, #dc2626) 16%, transparent); color: var(--stn-red, #dc2626); }
+:root .f7mes button.stn-detail__close {
+  margin-left: auto; width: 32px; height: 32px; padding: 0; display: grid; place-items: center;
+  border: 0; border-radius: 0; background: transparent; color: var(--f7-muted); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: none;
+}
+:root .f7mes button.stn-detail__close:hover { color: var(--f7-accent); background: color-mix(in srgb, var(--f7-accent) 8%, transparent); }
+.stn-detail__empty, .stn-detail__count { margin: 0 0 8px; font: 400 14px/1.4 Inter, sans-serif; color: var(--f7-muted); }
+.stn-detail__count b { color: var(--f7-text); }
+.stn-detail__list, .stn-detail__ncp ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.stn-detail__list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--f7-border) 60%, transparent); }
+.stn-detail__mark { font: 700 14px/1.3 Inter, sans-serif; color: var(--f7-muted); }
+.stn-detail__list li[data-checked="true"] .stn-detail__mark { color: var(--stn-green, #16a34a); }
+.stn-detail__name { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.stn-detail__name strong, .stn-detail__ncp strong { font: 600 14px/1.3 Inter, sans-serif; color: var(--f7-text); }
+.stn-detail__name small, .stn-detail__ncp small { font: 400 12px/1.3 Inter, sans-serif; color: var(--f7-muted); }
+.stn-detail__ncp { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--f7-border); }
+.stn-detail__ncp-title { margin-bottom: 6px; font: 700 12px/1 Inter, sans-serif; text-transform: uppercase; letter-spacing: .06em; color: var(--stn-red, #dc2626); }
+.stn-detail__ncp li { display: flex; flex-direction: column; gap: 1px; }
+:root .f7mes button.stn-detail__action {
+  margin-top: 10px; padding: 8px 14px; border: 1px solid var(--f7-border); border-radius: 0; background: transparent;
+  color: var(--f7-text); font: 600 12px/1 Inter, sans-serif; cursor: pointer; box-shadow: none;
+}
+:root .f7mes button.stn-detail__action:hover { border-color: var(--f7-accent); color: var(--f7-accent); }
+@keyframes stn-detail-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .stn-detail { animation: none; } }
+
+
+/* ── Этап 1 дизайн-аудита: спокойный фокус вместо «красной рамки ошибки» ── */
+.f7mes__scan:focus-within,
+:root .f7plan .f7mes__scan:focus-within {
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+/* ── Этап 2: срез угла без clip-path, фокус, цели касания ──────────────────
+   clip-path обрезал тени и кольцо фокуса. Срез делается угловой заплаткой цвета подложки (::after),
+   поэтому тень карточек возвращается, а фокус с клавиатуры виден. */
+:root .f7mes__panel--cut,
+:root .twin,
+:root .f7plan .stat-tile,
+:root .f7plan .scan-found,
+:root .f7plan .station-detail { clip-path: none; position: relative; }
+:root .f7mes__panel--cut,
+:root .f7plan .stat-tile,
+:root .f7plan .scan-found,
+:root .f7plan .station-detail { box-shadow: var(--shadow-md); }
+
+:root .f7mes__panel--cut::after,
+:root .twin::after,
+:root .f7plan .stat-tile::after,
+:root .f7plan .scan-found::after,
+:root .f7plan .station-detail::after {
+  content: ''; position: absolute; top: -1px; right: -1px; width: var(--cut, 24px); height: var(--cut, 24px); pointer-events: none;
+  background: linear-gradient(to bottom left, var(--cut-bg, var(--bg)) calc(50% - .5px), var(--border-strong) calc(50% - .5px), var(--border-strong) calc(50% + .5px), transparent calc(50% + .5px));
+}
+:root .f7plan .stat-tile { --cut: 16px; }
+:root .f7plan .scan-found, :root .f7plan .station-detail { --cut: 20px; }
+:root .f7plan .scan-found { --cut-bg: var(--surface); }
+
+/* поле скана и баннер: срез снизу справа */
+:root .f7mes__scan,
+:root .f7plan .f7mes__scan,
+:root .f7plan .scan-banner { clip-path: none; position: relative; --cut: 12px; }
+:root .f7plan .scan-banner { --cut-bg: var(--surface); }
+:root .f7mes__scan::after,
+:root .f7plan .f7mes__scan::after,
+:root .f7plan .scan-banner::after {
+  content: ''; position: absolute; bottom: -1px; right: -1px; width: var(--cut, 12px); height: var(--cut, 12px); pointer-events: none;
+  background: linear-gradient(to top left, var(--cut-bg, var(--bg)) calc(50% - .5px), var(--border-strong) calc(50% - .5px), var(--border-strong) calc(50% + .5px), transparent calc(50% + .5px));
+}
+
+/* скошенные кнопки/вкладки/плитки: при фокусе форма снимается, чтобы кольцо было видно целиком */
+:root .f7mes :focus-visible,
+:root .f7plan :focus-visible { clip-path: none; outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+/* закреплённая панель действий: главная кнопка не уходит за нижний край экрана */
+.f7mes__identity .f7mes__actions {
+  position: sticky; bottom: 0; z-index: 2; margin-top: 16px; padding-top: 12px; background: var(--surface);
+  box-shadow: 0 -10px 12px -10px rgba(16, 18, 22, .2);
+}
+
+/* сенсорный терминал: цели касания ≥ 48 px, главные действия 56 px */
+@media (pointer: coarse) {
+  :root .f7mes button, :root .f7plan button,
+  :root .f7plan input:not([type="checkbox"]), :root .f7plan select { min-height: 48px; }
+  :root .f7mes button.f7mes__btn { min-height: 56px; }
+  :root .f7plan input[type="checkbox"] { width: 26px; height: 26px; }
+  .f7plan tbody td { padding-top: 14px; padding-bottom: 14px; }
+  .sidebar-link { min-height: 48px; }
+}
+
+/* ── Вспышка результата скана ───────────────────────────── */
+.result-flash { position: fixed; inset: 0; z-index: 2000; pointer-events: none; display: grid; place-items: center; animation: flash-life 1.8s ease-out forwards; }
+.result-flash[data-kind="ok"] { --flash: var(--st-work, #16a34a); }
+.result-flash[data-kind="error"] { --flash: var(--f7-red, #e31e24); }
+.result-flash::before {
+  content: ''; position: absolute; inset: 0;
+  box-shadow: inset 0 0 0 10px var(--flash), inset 0 0 180px 24px color-mix(in srgb, var(--flash) 40%, transparent);
+}
+.result-flash__card {
+  position: relative; max-width: min(900px, 86vw); padding: 26px 44px; text-align: center;
+  background: var(--flash); color: #fff; box-shadow: var(--shadow-lg);
+  font: 700 clamp(24px, 4vw, 44px)/1.2 var(--font-display, Rajdhani, sans-serif);
+  animation: flash-pop .28s cubic-bezier(.2, .9, .3, 1.2);
+}
+.result-flash[data-kind="ok"] .result-flash__card::before { content: '✓  '; }
+.result-flash[data-kind="error"] .result-flash__card::before { content: '✕  '; }
+.result-flash__card::after { content: attr(data-text); }
+@keyframes flash-life { 0% { opacity: 0; } 8% { opacity: 1; } 72% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes flash-pop { from { transform: scale(.85); } }
+@media (prefers-reduced-motion: reduce) { .result-flash, .result-flash__card { animation: none; } }
+
+/* поле поиска: одно кольцо фокуса вместо двойной рамки */
+:root .f7plan input.search:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; box-shadow: none; }
+
+/* ── Экраны скана (Старт / Завершение / Rework): единая сетка ───────────────
+   Левая грань заголовка, поля скана и карточки совпадает с отступом страницы (--page-gutter, как у верхней
+   полосы), правая грань поля скана — с правой гранью очереди. Очередь сворачивается в рейку. */
+:root { --page-gutter: 24px; --queue-w: 320px; }
+:root[data-queue="collapsed"] { --queue-w: 64px; }
+
+.scanx {
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--queue-w);
+  column-gap: var(--page-gutter); row-gap: 16px; align-items: start;
+  padding: 16px var(--page-gutter) 40px; transition: grid-template-columns .25s ease;
+}
+.scanx__title { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
+.scanx__title h1 { margin: 0; font: 700 24px/1.1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .03em; color: var(--text); }
+.scanx__title small { display: block; margin-top: 3px; font: 400 14px/1.35 Inter, sans-serif; color: var(--muted); }
+.scanx__main { grid-column: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* поле скана — главный элемент экрана */
+.scanx__scan {
+  position: relative; display: flex; align-items: center; gap: 16px; min-height: 80px; padding: 12px 24px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-top: 3px solid var(--border-strong);
+  box-shadow: var(--shadow-md); --cut: 14px;
+}
+.scanx__scan::after {
+  content: ''; position: absolute; bottom: -1px; right: -1px; width: var(--cut); height: var(--cut); pointer-events: none;
+  background: linear-gradient(to top left, var(--bg) calc(50% - .5px), var(--border-strong) calc(50% - .5px), var(--border-strong) calc(50% + .5px), transparent calc(50% + .5px));
+}
+.scanx__scan:focus-within { border-color: var(--text); box-shadow: var(--shadow-md), 0 0 0 3px color-mix(in srgb, var(--text) 12%, transparent); }
+.scanx__scan-symbol { font-size: 32px; line-height: 1; color: var(--muted); }
+.scanx__scan-field { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.scanx__scan-label { margin-bottom: 6px; font: 600 12px/1 Inter, sans-serif; letter-spacing: .08em; color: var(--muted); }
+:root .scanx .scanx__scan input {
+  width: 100%; min-height: 0; padding: 0; border: 0; outline: 0; box-shadow: none; background: transparent;
+  font: 600 24px/1.25 'JetBrains Mono', ui-monospace, Menlo, monospace; color: var(--text);
+}
+:root .scanx .scanx__scan input::placeholder { color: color-mix(in srgb, var(--muted) 70%, transparent); font-weight: 500; }
+
+.scanx__placeholder {
+  display: grid; place-items: center; min-height: 320px;
+  border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--muted) 4%, var(--surface));
+}
+
+/* карточка найденного изделия: на всю ширину главной колонки */
+:root .f7plan .scan-found { max-width: none; width: 100%; padding: 24px 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; --cut-bg: var(--bg); }
+.scan-found__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.f7plan .scan-found .scan-found__head h2 { margin: 0; font: 700 34px/1.1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
+.scan-found__tag { font: 700 12px/1 Inter, sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 6px 10px; background: color-mix(in srgb, var(--f7-red) 14%, transparent); color: var(--f7-red); }
+.scan-found__tag[data-ok="true"] { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, transparent); color: var(--st-work, #16a34a); }
+:root .f7plan .scan-found dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 28px; margin: 0; }
+:root .f7plan .scan-found dl > div { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+:root .f7plan .scan-found dd { margin: 0; font: 500 18px/1.3 Inter, sans-serif; color: var(--text); text-align: left; }
+.scan-found__actions { display: flex; gap: 12px; margin-top: 4px; }
+:root .f7plan .scan-found__actions button { min-height: 52px; font-size: 16px; }
+:root .f7plan .scan-found__actions button.primary { flex: 1; }
+.scan-found__extra { min-width: 0; }
+@media (min-width: 1280px) {
+  :root .f7plan .scan-found--split { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: repeat(3, auto) 1fr; column-gap: 32px; }
+  .scan-found--split > :not(.scan-found__extra) { grid-column: 1; }
+  .scan-found--split .scan-found__extra { grid-column: 2; grid-row: 1 / -1; align-self: start; }
+}
+
+/* очередь */
+.scanx__queue { position: relative; grid-column: 2; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-md); min-width: 0; }
+.scanx__queue-body { padding: 16px 16px 18px; min-width: 0; }
+.scanx__queue-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 12px; }
+.scanx__queue-head .side-title { margin: 0; }
+.scanx__queue-head b, .scanx__queue-rail b { font: 700 12px/1 Inter, sans-serif; padding: 3px 8px; background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); }
+.scanx__queue-head small { flex-basis: 100%; font: 400 12px/1.3 Inter, sans-serif; color: var(--muted); }
+.scanx__queue-note { margin: 0 0 10px; padding: 6px 10px; font: 500 12px/1.3 Inter, sans-serif; color: var(--st-wait, #b45309); background: color-mix(in srgb, var(--st-wait, #f59e0b) 14%, transparent); }
+.scanx__queue-rail { display: none; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0; }
+.scanx__queue-rail span { writing-mode: vertical-rl; letter-spacing: .18em; font: 700 12px/1 Inter, sans-serif; color: var(--muted); }
+.scanx__queue[data-collapsed="true"] .scanx__queue-body { display: none; }
+.scanx__queue[data-collapsed="true"] .scanx__queue-rail { display: flex; }
+
+/* кнопка-язычок на середине левой грани очереди */
+:root .scanx button.scanx__queue-toggle {
+  position: absolute; z-index: 3; left: -15px; top: 50%; transform: translateY(-50%); width: 30px; height: 60px; padding: 0;
+  display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); cursor: pointer;
+}
+:root .scanx button.scanx__queue-toggle:hover { border-color: var(--f7-red); color: var(--f7-red); }
+.scanx__queue-toggle svg { transition: transform .25s ease; transform: rotate(0deg); }
+.scanx__queue[data-collapsed="true"] .scanx__queue-toggle svg { transform: rotate(180deg); }
+@media (pointer: coarse) { :root .scanx button.scanx__queue-toggle { width: 36px; left: -18px; } }
+
+/* выбранное (найденное) изделие отмечено в очереди цветом */
+:root .f7plan .pending-list button[data-selected="true"] {
+  background: color-mix(in srgb, var(--f7-red) 11%, var(--surface)); border-color: var(--f7-red); box-shadow: inset 3px 0 0 var(--f7-red);
+}
+:root .f7plan .pending-list button[data-selected="true"] .mono { font-weight: 800; }
+:root .f7plan .pending-list button[data-selected="true"] .f7mes__queue-chevron { color: var(--f7-red); }
+
+@media (max-width: 1100px) { .scanx { column-gap: 20px; } }
+@media (prefers-reduced-motion: reduce) { .scanx, .scanx__queue-toggle svg { transition: none; } }
+.scanx__title .f7mes__slash { background: var(--f7-red, #e31e24); }
+/* Rework: карточки NCP не сжимаются во flex-контейнере (раньше обрезались), прокручивается сам список */
+.rework-ncp > * { flex-shrink: 0; }
+.scan-found--split .rework-ncp { margin-top: 0; padding-top: 0; border-top: 0; max-height: 62vh; }
+
+/* ── Отчётность ─────────────────────────────────────────── */
+.rep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--page-gutter, 24px); align-items: start; padding: 16px var(--page-gutter, 24px) 40px; }
+.rep-card {
+  position: relative; padding: 22px 24px 24px; background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong); box-shadow: var(--shadow-md); --cut: 22px;
+}
+.rep-card::after {
+  content: ''; position: absolute; top: -1px; right: -1px; width: var(--cut); height: var(--cut); pointer-events: none;
+  background: linear-gradient(to bottom left, var(--bg) calc(50% - .5px), var(--border-strong) calc(50% - .5px), var(--border-strong) calc(50% + .5px), transparent calc(50% + .5px));
+}
+.rep-card h2 { margin: 0 0 14px; font: 700 15px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .06em; text-transform: uppercase; color: var(--text); }
+.rep-card h3 { margin: 18px 0 6px; font: 700 12px/1 Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rep-hero { margin: 0; font: 700 64px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .01em; color: var(--text); }
+.rep-caption { margin: 4px 0 14px; font: 400 14px/1.3 Inter, sans-serif; color: var(--muted); }
+
+.rep-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.rep-kpi { padding: 12px 8px; text-align: center; background: color-mix(in srgb, var(--muted) 7%, var(--surface)); border-bottom: 3px solid var(--border-strong); }
+.rep-kpi strong { display: block; font: 700 30px/1.1 var(--f7-font, Rajdhani, sans-serif); color: var(--text); }
+.rep-kpi span { font: 500 12px/1.2 Inter, sans-serif; color: var(--muted); }
+.rep-kpi--ok { border-bottom-color: var(--st-work, #16a34a); }
+.rep-kpi--ok strong { color: var(--st-work, #16a34a); }
+.rep-kpi--warn { border-bottom-color: var(--st-wait, #f59e0b); }
+.rep-kpi--warn strong { color: var(--st-wait, #b45309); }
+
+/* полоса распределения */
+.rep-stack { display: flex; gap: 2px; height: 14px; margin-bottom: 16px; }
+.rep-seg { display: block; min-width: 4px; background: color-mix(in srgb, var(--muted) 40%, transparent); }
+.rep-seg--empty { background: color-mix(in srgb, var(--muted) 18%, transparent); }
+.rep-seg--waiting { background: var(--st-wait, #f59e0b); }
+.rep-seg--in-work { background: var(--st-work, #16a34a); }
+.rep-seg--complete { background: var(--st-plan, #2e7cf6); }
+.rep-seg--fok { background: var(--st-control, #7c3aed); }
+.rep-seg--rework { background: var(--st-reject, #dc2626); }
+
+/* строки «подпись — число» и «подпись — полоса — число» */
+.rep-lines { margin: 0; }
+.rep-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.rep-line:last-child { border-bottom: 0; }
+.rep-line dt { display: flex; align-items: center; gap: 8px; margin: 0; font: 400 14px/1.3 Inter, sans-serif; color: var(--text); }
+.rep-line dd { margin: 0; font: 700 16px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; color: var(--text); text-align: right; }
+.rep-dot { display: inline-block; width: 10px; height: 10px; flex: none; }
+.rep-line:has(.rep-line__track) { grid-template-columns: minmax(0, 1.1fr) minmax(60px, 1fr) auto; }
+.rep-line__track { display: block; height: 8px; background: color-mix(in srgb, var(--muted) 14%, transparent); }
+.rep-line__fill { display: block; height: 100%; background: var(--muted); }
+.rep-line--alert dd { color: var(--f7-red); }
+
+/* ── Импорт плана ───────────────────────────────────────── */
+.f7imp__steps { list-style: none; display: flex; gap: 6px; margin: 4px var(--page-gutter, 24px) 8px; padding: 0; flex-wrap: wrap; }
+.f7imp__steps li {
+  display: flex; align-items: center; gap: 10px; padding: 10px 22px 10px 16px;
+  background: color-mix(in srgb, var(--muted) 10%, var(--surface)); color: var(--muted);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+}
+.f7imp__steps b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font: 700 12px/1 Inter, sans-serif; background: color-mix(in srgb, var(--muted) 22%, transparent); }
+.f7imp__steps span { font: 600 14px/1 Inter, sans-serif; }
+.f7imp__steps li[data-state="current"] { background: var(--f7-red); color: #fff; }
+.f7imp__steps li[data-state="current"] b { background: rgba(255, 255, 255, .24); }
+.f7imp__steps li[data-state="done"] { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, var(--surface)); color: var(--st-work, #16a34a); }
+.f7imp__steps li[data-state="done"] b { background: color-mix(in srgb, var(--st-work, #16a34a) 25%, transparent); }
+
+.f7imp__banner { margin: 12px var(--page-gutter, 24px) 0; }
+.f7imp__grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--page-gutter, 24px); align-items: start; padding: 12px var(--page-gutter, 24px) 40px; }
+@media (max-width: 1100px) { .f7imp__grid { grid-template-columns: 1fr; } }
+.f7imp__card { padding: 22px 24px 24px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); box-shadow: var(--shadow-md); margin: 0; }
+.f7imp__card h2 { margin: 0 0 14px; font: 700 15px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .06em; text-transform: uppercase; }
+.f7imp__card textarea { width: 100%; min-height: 220px; font: 500 14px/1.5 'JetBrains Mono', ui-monospace, Menlo, monospace; resize: vertical; }
+.f7imp__card .modal-actions { margin-top: 14px; }
+.f7imp__dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 16px; text-align: center;
+  border: 2px dashed var(--border-strong); background: color-mix(in srgb, var(--muted) 4%, var(--surface)); color: var(--muted);
+  transition: border-color .15s, background-color .15s;
+}
+.f7imp__dropzone p { margin: 0; font: 600 16px/1.3 Inter, sans-serif; color: var(--text); }
+.f7imp__drop[data-drag="true"] .f7imp__dropzone { border-color: var(--f7-red); background: color-mix(in srgb, var(--f7-red) 7%, var(--surface)); }
+.f7imp__hint { margin: 14px 0 8px; font: 400 14px/1.4 Inter, sans-serif; color: var(--muted); }
+.f7imp__cols { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.f7imp__cols li { display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; font: 500 12px/1 Inter, sans-serif; background: color-mix(in srgb, var(--muted) 10%, var(--surface)); color: var(--text); }
+.f7imp__cols b { display: grid; place-items: center; min-width: 18px; height: 18px; font: 700 11px/1 Inter, sans-serif; background: color-mix(in srgb, var(--muted) 24%, transparent); color: var(--text); }
+
+.f7imp__result { padding: 12px var(--page-gutter, 24px) 40px; display: flex; flex-direction: column; gap: 12px; }
+.f7imp__summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--st-work, #16a34a); box-shadow: var(--shadow-sm); }
+.f7imp__summary strong { font: 700 18px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; color: var(--text); }
+.f7imp__summary strong[data-errors="true"] { color: var(--f7-red); }
+.f7imp__verdict { font: 600 14px/1 Inter, sans-serif; color: var(--st-work, #16a34a); }
+.f7imp__verdict[data-ok="false"] { color: var(--f7-red); }
+.f7imp__summary .controls { margin-left: auto; }
+.f7imp__summary:has(strong[data-errors="true"]) { border-left-color: var(--f7-red); }
+
+/* строки с ошибками: полоса слева вместо заливки */
+:root .f7plan tbody tr.import-row-error,
+:root .f7plan tbody tr.import-row-error:hover,
+:root[data-theme="dark"] .f7plan tbody tr.import-row-error,
+:root[data-theme="dark"] .f7plan tbody tr.import-row-error:hover { background: var(--surface); }
+.f7plan tbody tr.import-row-error td:first-child { box-shadow: inset 3px 0 0 var(--f7-red); }
+.f7plan .import-errors { font-size: 14px; }
+.f7plan tbody td input, .f7plan tbody td select { border-radius: 4px; }
+/* Импорт: колонка проверки сразу после номера, поля не обрезают VIN и двигатель */
+.f7imp__result tbody td:nth-child(2) { min-width: 200px; }
+.f7imp__result tbody td input:not([type="checkbox"]) { min-width: 160px; }
+.f7imp__result .badge.status-ok { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, transparent); color: var(--st-work, #16a34a); border-color: transparent; }

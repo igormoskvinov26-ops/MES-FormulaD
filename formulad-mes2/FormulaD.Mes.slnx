@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FormulaD.Mes.Api/FormulaD.Mes.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FormulaD.Mes.Api.Tests/FormulaD.Mes.Api.Tests.csproj" />
+  </Folder>
+</Solution>

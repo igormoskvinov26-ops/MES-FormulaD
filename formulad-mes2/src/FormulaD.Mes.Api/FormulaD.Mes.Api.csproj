@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>formulad-mes2-api</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="FormulaD.Mes.Api.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../fixtures/production-plan.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/production-plan.demo.json" />
+    <Content Include="../../fixtures/ncp.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/ncp.demo.json" />
+    <Content Include="../../fixtures/components.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/components.demo.json" />
+    <Content Include="../../fixtures/models.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/models.demo.json" />
+    <Content Include="../../fixtures/colors.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/colors.demo.json" />
+    <Content Include="../../fixtures/specifications.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/specifications.demo.json" />
+    <Content Include="../../fixtures/suppliers.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/suppliers.demo.json" />
+    <Content Include="../../fixtures/inspection-quotas.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/inspection-quotas.demo.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,5 @@
+[
+  { "code": "DEMO-SUP-01", "name": "ООО Деталь-Трейд · ДЕМО", "isParentPlant": false },
+  { "code": "DEMO-SUP-02", "name": "Formula 7 Rus (материнский завод) · ДЕМО", "isParentPlant": true },
+  { "code": "DEMO-SUP-03", "name": "ТехКомплект Поставка · ДЕМО", "isParentPlant": false }
+]
