@@ -14,83 +14,26 @@ builder.Host.UseWindowsService();
 var eventLog = new InMemoryEventLog();
 builder.Services.AddSingleton<IEventLog>(eventLog);
 
-// --- Источник данных -------------------------------------------------------
-// Demo по умолчанию. Sql допускается только к отдельному TEST-экземпляру с
-// read-only учётной записью (см. SqlOptions): любая неполная или похожая на PROD
-// настройка — контролируемая ошибка запуска, без fallback на Demo и без fallback на PROD.
-var dataSource = builder.Configuration["DataSource"] ?? "Demo";
-switch (dataSource.ToLowerInvariant())
-{
-    case "demo":
-        var fixturePath = builder.Configuration["Demo:FixturePath"]
-                          ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "production-plan.demo.json");
-        var demoReader = new DemoProductionPlanReader(fixturePath, eventLog);
-        builder.Services.AddSingleton<IProductionPlanReader>(demoReader);
-        // Правка порядка и переходы по статусам существуют только у демо-источника.
-        builder.Services.AddSingleton<IPlanOrderEditor>(demoReader);
-        builder.Services.AddSingleton<IPlanTransitions>(demoReader);
-        builder.Services.AddSingleton<IJobCardPrinter>(demoReader);
-        builder.Services.AddSingleton<IPlanPublisher>(demoReader);
-
-        // NCP — демо-режим (см. Ncp.cs).
-        var ncpPath = builder.Configuration["Demo:NcpFixturePath"]
-                     ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "ncp.demo.json");
-        var componentsPath = builder.Configuration["Demo:ComponentsFixturePath"]
-                            ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "components.demo.json");
-        var ncpStore = new DemoNcpStore(ncpPath, componentsPath, demoReader, eventLog);
-        builder.Services.AddSingleton<INcpReader>(ncpStore);
-        builder.Services.AddSingleton<INcpWriter>(ncpStore);
-
-        // Отметки проверки компонентов по станциям (Этап 5) — тоже только демо.
-        builder.Services.AddSingleton<IStationChecks>(new DemoStationChecks(demoReader, ncpStore, eventLog));
-
-        // Импорт плана (Этап 8) — справочники модели/цвета/комплектации свои, не связаны с NCP.
-        var modelsPath = builder.Configuration["Demo:ModelsFixturePath"]
-                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "models.demo.json");
-        var colorsPath = builder.Configuration["Demo:ColorsFixturePath"]
-                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "colors.demo.json");
-        var specificationsPath = builder.Configuration["Demo:SpecificationsFixturePath"]
-                                ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "specifications.demo.json");
-        builder.Services.AddSingleton<IPlanImport>(
-            new DemoPlanImport(modelsPath, colorsPath, specificationsPath, demoReader, demoReader, eventLog));
-
-        // Входной контроль (Этап 9) — свои справочники поставщиков/нормативов, своя (мутируемая)
-        // копия каталога компонентов, не связана со справочником NCP/станций (см. IncomingInspection.cs).
-        var suppliersPath = builder.Configuration["Demo:SuppliersFixturePath"]
-                           ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "suppliers.demo.json");
-        var quotasPath = builder.Configuration["Demo:InspectionQuotasFixturePath"]
-                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "inspection-quotas.demo.json");
-        var incomingInspection = new DemoIncomingInspectionStore(suppliersPath, quotasPath, componentsPath, eventLog);
-        builder.Services.AddSingleton<IIncomingInspectionReader>(incomingInspection);
-        builder.Services.AddSingleton<IIncomingInspectionWriter>(incomingInspection);
-        break;
-
-    case "sql":
-        var sqlOptions = SqlOptions.Create(builder.Configuration);
-        builder.Services.AddSingleton(sqlOptions);
-        builder.Services.AddSingleton<IProductionPlanReader>(sp => new SqlProductionPlanReader(sp.GetRequiredService<SqlOptions>()));
-        builder.Services.AddSingleton<IPlanTransitions>(sp => new SqlPlanTransitions(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-        builder.Services.AddSingleton<IPlanOrderEditor>(sp => new SqlPlanOrderEditor(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-        builder.Services.AddSingleton<IJobCardPrinter>(sp => new SqlJobCardPrinter(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-        builder.Services.AddSingleton<IPlanPublisher>(sp => new SqlPlanPublisher(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-        var sqlNcp = new SqlNcpStore(sqlOptions, eventLog);
-        builder.Services.AddSingleton<INcpReader>(sqlNcp);
-        builder.Services.AddSingleton<INcpWriter>(sqlNcp);
-        builder.Services.AddSingleton<IStationChecks>(new SqlStationChecks(sqlOptions, eventLog));
-        builder.Services.AddSingleton<IPlanImport>(sp => new SqlPlanImport(
-            sp.GetRequiredService<SqlOptions>(),
-            sp.GetRequiredService<IProductionPlanReader>(),
-            sp.GetRequiredService<IPlanPublisher>(),
-            sp.GetRequiredService<IEventLog>()));
-        var sqlIncoming = new SqlIncomingInspection(sqlOptions, eventLog);
-        builder.Services.AddSingleton<IIncomingInspectionReader>(sqlIncoming);
-        builder.Services.AddSingleton<IIncomingInspectionWriter>(sqlIncoming);
-        break;
-
-    default:
-        throw new InvalidOperationException(
-            $"DataSource='{dataSource}' не поддерживается. Допустимо 'Demo' или 'Sql' (только TEST-экземпляр).");
-}
+// --- Источник данных: SQL Server -------------------------------------------
+var sqlOptions = SqlOptions.Create(builder.Configuration);
+builder.Services.AddSingleton(sqlOptions);
+builder.Services.AddSingleton<IProductionPlanReader>(sp => new SqlProductionPlanReader(sp.GetRequiredService<SqlOptions>()));
+builder.Services.AddSingleton<IPlanTransitions>(sp => new SqlPlanTransitions(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+builder.Services.AddSingleton<IPlanOrderEditor>(sp => new SqlPlanOrderEditor(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+builder.Services.AddSingleton<IJobCardPrinter>(sp => new SqlJobCardPrinter(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+builder.Services.AddSingleton<IPlanPublisher>(sp => new SqlPlanPublisher(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+var sqlNcp = new SqlNcpStore(sqlOptions, eventLog);
+builder.Services.AddSingleton<INcpReader>(sqlNcp);
+builder.Services.AddSingleton<INcpWriter>(sqlNcp);
+builder.Services.AddSingleton<IStationChecks>(new SqlStationChecks(sqlOptions, eventLog));
+builder.Services.AddSingleton<IPlanImport>(sp => new SqlPlanImport(
+    sp.GetRequiredService<SqlOptions>(),
+    sp.GetRequiredService<IProductionPlanReader>(),
+    sp.GetRequiredService<IPlanPublisher>(),
+    sp.GetRequiredService<IEventLog>()));
+var sqlIncoming = new SqlIncomingInspection(sqlOptions, eventLog);
+builder.Services.AddSingleton<IIncomingInspectionReader>(sqlIncoming);
+builder.Services.AddSingleton<IIncomingInspectionWriter>(sqlIncoming);
 
 // --- Dev-аутентификация ----------------------------------------------------
 // Включается только явно, только в Development и только при заданном секрете
@@ -128,8 +71,7 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
-// Имя источника безопасно: хост, база и учётка в логи не попадают.
-app.Logger.LogInformation("Источник данных: {DataSource}", dataSource);
+app.Logger.LogInformation("Источник данных: SQL Server");
 
 if (!devAuth.CanLogIn)
 {
@@ -198,7 +140,7 @@ plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, Cancellat
         : Results.Ok(item);
 });
 
-// Переходы по статусам: работают и в Demo, и в SQL (IPlanTransitions зарегистрирован в обоих).
+// Переходы по статусам.
 {
     plan.MapPost("/{vin}/start", async (
         string vin, IPlanTransitions transitions, ClaimsPrincipal user, CancellationToken ct) =>
@@ -328,7 +270,7 @@ plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, Cancellat
     });
 }
 
-// Перемещение и печать: работают и в Demo, и в SQL.
+// Перемещение и печать.
 plan.MapPost("/{vin}/move", async (
     string vin,
     MoveRequest request,
@@ -374,7 +316,7 @@ plan.MapPost("/{vin}/print", async (
         : Results.Ok(item);
 });
 
-// NCP — чтение и запись (работает и с Demo, и с SQL).
+// NCP — чтение и запись.
 var ncp = api.MapGroup("/ncp").RequireAuthorization();
 
 ncp.MapGet("/types", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetTypesAsync(ct)));
@@ -453,7 +395,7 @@ ncp.MapPost("/{id:int}/close", async (
     };
 });
 
-// Станции (Этап 5) — работает и с Demo, и с SQL.
+// Станции (Этап 5).
 var stations = api.MapGroup("/stations").RequireAuthorization();
 
 stations.MapGet("/{vin}/checks", async (string vin, IStationChecks checks, IProductionPlanReader reader, CancellationToken ct) =>
@@ -484,7 +426,7 @@ stations.MapPost("/{vin}/components/{code}/check", async (
     };
 });
 
-// Импорт плана (раздел 6, Этап 8) — работает и с Demo, и с SQL.
+// Импорт плана (раздел 6, Этап 8).
 var planImport = api.MapGroup("/plan-import").RequireAuthorization();
 
 planImport.MapGet("/reference", async (IPlanImport import, CancellationToken ct) =>
@@ -699,7 +641,6 @@ api.MapGet("/auth/me", (ClaimsPrincipal user, DevAuthOptions opts) => Results.Ok
 {
     userName = user.Identity?.Name,
     mode = opts.CanLogIn ? "dev" : "closed",
-    demo = true
 })).RequireAuthorization();
 
 api.MapPost("/auth/logout", async (HttpContext ctx) =>

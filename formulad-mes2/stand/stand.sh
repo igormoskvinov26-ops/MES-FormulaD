@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Тестовый (демонстрационный) стенд FormulaD MES: API + собранный UI на синтетических данных.
-# Подключения к SQL/PROD нет: источник данных жёстко Demo, SQL-переменные окружения сбрасываются.
+# Тестовый стенд FormulaD MES: API + собранный UI на базе FormulaD_TEST (Docker).
+# Требует запущенный Docker-контейнер с SQL Server и базой FormulaD_TEST (см. docker/README.md).
 #
 #   ./stand/stand.sh up       сборка UI и API, запуск, ожидание готовности, печать входа
 #   ./stand/stand.sh smoke    быстрая проверка живого стенда (health, 401 без входа, вход, данные, статика)
@@ -8,6 +8,7 @@
 #   ./stand/stand.sh down     остановка
 #
 # Переменные: PORT (по умолчанию 5080), STAND_USER (demo-operator), STAND_PASSWORD (иначе случайный).
+# SQL: Sql__ConnectionString — обязательна (задайте через переменную среды или .env).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,6 +28,12 @@ up() {
   mkdir -p "$RUN"
   if is_up; then echo "Стенд уже запущен: $URL"; return; fi
 
+  if [ -z "${Sql__ConnectionString:-}" ]; then
+    echo "Не задана Sql__ConnectionString. Пример:" >&2
+    echo '  Sql__ConnectionString="Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_reader;Password=...;TrustServerCertificate=True" ./stand/stand.sh up' >&2
+    exit 1
+  fi
+
   echo "▸ UI: сборка"
   (cd "$ROOT/apps/web" && { [ -d node_modules ] || npm ci --no-audit --no-fund; } \
     && npx vite build --outDir "$API_DIR/wwwroot" --emptyOutDir >/dev/null)
@@ -38,13 +45,11 @@ up() {
   printf '%s\n%s\n' "$USER_NAME" "$password" > "$RUN/credentials"
   chmod 600 "$RUN/credentials"
 
-  echo "▸ Запуск на $URL (Demo, без SQL)"
-  # Любые SQL-настройки из окружения оператора намеренно сбрасываются.
+  echo "▸ Запуск на $URL (SQL: FormulaD_TEST)"
   # `&` стоит на самой команде: так $! — это сам dotnet (лидер новой группы, её и гасит down),
   # а канал вывода вызывающего не удерживается.
   cd "$API_DIR"
-  env -u Sql__ConnectionString -u Sql__IsTestEnvironment \
-    DataSource=Demo ASPNETCORE_ENVIRONMENT=Development \
+  ASPNETCORE_ENVIRONMENT=Development \
     DevAuth__Enabled=true DevAuth__Username="$USER_NAME" DevAuth__Password="$password" \
     "${NEWSESSION[@]}" nohup dotnet run --no-build -c Release --no-launch-profile --urls "$URL" \
     > "$RUN/stand.log" 2>&1 < /dev/null &
@@ -103,7 +108,7 @@ smoke() {
 
   local rows
   rows="$(curl -s -b "$jar" "$URL/api/v1/production-plan?page=1&pageSize=25" | grep -o '"vin"' | wc -l | tr -d ' ')"
-  [ "$rows" -gt 0 ] && echo "  ✓ в плане демо-записей: $rows" || { echo "  ✗ план пуст"; fails=$((fails+1)); }
+  [ "$rows" -gt 0 ] && echo "  ✓ записей в плане: $rows" || { echo "  ✗ план пуст"; fails=$((fails+1)); }
 
   [ "$fails" -eq 0 ] && echo "Итог: всё в порядке" || { echo "Итог: провалено проверок — $fails" >&2; return 1; }
 }

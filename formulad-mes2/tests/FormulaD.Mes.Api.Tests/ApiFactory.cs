@@ -2,35 +2,68 @@ using System.Net.Http.Json;
 using FormulaD.Mes.Api;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace FormulaD.Mes.Api.Tests;
 
-/// <summary>Поднимает API в памяти. Никаких SQL-подключений: только DEMO-фикстура.</summary>
+/// <summary>Поднимает API в памяти. SQL не используется: сервисы заменяются in-memory реализациями.</summary>
 public sealed class ApiFactory(bool devAuthEnabled) : WebApplicationFactory<Program>
 {
     public const string Login = "demo-operator";
     public const string Password = "test-only-secret";
 
-    private static string FixturePath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "fixtures", "production-plan.demo.json"));
+    private static string FixtureDir =>
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "fixtures"));
+
+    private static string FixturePath => Path.Combine(FixtureDir, "production-plan.demo.json");
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Development);
-        // ponytail: каждый тест поднимает свой WebApplicationFactory — без этого каждый из них
-        // заводит FileSystemWatcher на appsettings.json (reloadOnChange по умолчанию), и при
-        // десятках тестов это упирается в лимит inotify-инстансов песочницы (128). Конфигурация
-        // в тестах не меняется на лету, следить за файлом незачем.
         builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
-        builder.UseSetting("Demo:FixturePath", FixturePath);
+        // ponytail: dummy SQL config so Program.cs doesn't throw; overridden by test services below
+        builder.UseSetting("Sql:ConnectionString", "Server=test;Database=FormulaD_TEST;User ID=test;Password=test");
         builder.UseSetting("DevAuth:Enabled", devAuthEnabled ? "true" : "false");
         if (devAuthEnabled)
         {
             builder.UseSetting("DevAuth:Username", Login);
             builder.UseSetting("DevAuth:Password", Password);
         }
+
+        builder.ConfigureTestServices(services =>
+        {
+            var eventLog = new InMemoryEventLog();
+            services.AddSingleton<IEventLog>(eventLog);
+
+            var demoReader = new DemoProductionPlanReader(FixturePath, eventLog);
+            services.AddSingleton<IProductionPlanReader>(demoReader);
+            services.AddSingleton<IPlanOrderEditor>(demoReader);
+            services.AddSingleton<IPlanTransitions>(demoReader);
+            services.AddSingleton<IJobCardPrinter>(demoReader);
+            services.AddSingleton<IPlanPublisher>(demoReader);
+
+            var ncpPath = Path.Combine(FixtureDir, "ncp.demo.json");
+            var componentsPath = Path.Combine(FixtureDir, "components.demo.json");
+            var ncpStore = new DemoNcpStore(ncpPath, componentsPath, demoReader, eventLog);
+            services.AddSingleton<INcpReader>(ncpStore);
+            services.AddSingleton<INcpWriter>(ncpStore);
+
+            services.AddSingleton<IStationChecks>(new DemoStationChecks(demoReader, ncpStore, eventLog));
+
+            var modelsPath = Path.Combine(FixtureDir, "models.demo.json");
+            var colorsPath = Path.Combine(FixtureDir, "colors.demo.json");
+            var specificationsPath = Path.Combine(FixtureDir, "specifications.demo.json");
+            services.AddSingleton<IPlanImport>(
+                new DemoPlanImport(modelsPath, colorsPath, specificationsPath, demoReader, demoReader, eventLog));
+
+            var suppliersPath = Path.Combine(FixtureDir, "suppliers.demo.json");
+            var quotasPath = Path.Combine(FixtureDir, "inspection-quotas.demo.json");
+            var incomingInspection = new DemoIncomingInspectionStore(suppliersPath, quotasPath, componentsPath, eventLog);
+            services.AddSingleton<IIncomingInspectionReader>(incomingInspection);
+            services.AddSingleton<IIncomingInspectionWriter>(incomingInspection);
+        });
     }
 
     /// <summary>Клиент с cookie-сессией после dev-входа.</summary>

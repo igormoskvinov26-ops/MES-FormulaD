@@ -200,8 +200,6 @@ button.link {
   border-top: 1px solid var(--graphite-line);
 }
 
-.sidebar .badge-demo { align-self: flex-start; }
-
 .logo {
   display: inline-flex;
   align-items: center;
@@ -403,7 +401,6 @@ td.vin { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; 
   border: 1px solid transparent;
 }
 
-.badge-demo { background: var(--warn-bg); color: var(--warn); border-color: #d9b864; font-weight: 700; }
 .status-info, .status-progress, .status-done, .status-ok, .status-none, .status-unknown {
   background: #e8eaf0;
   color: #3a4052;
@@ -966,7 +963,6 @@ thead th {
   border-color: var(--border);
 }
 
-:root[data-theme="dark"] .badge-demo { background: #1c1500; color: var(--warn); border-color: #5c4a00; }
 :root[data-theme="dark"] .ncp-missing {
   background: color-mix(in srgb, var(--f7-red) 15%, #161b22);
   color: #ff6b6b;
@@ -1044,7 +1040,6 @@ thead th {
 :root[data-sidebar="collapsed"] .sidebar-toggle-icon { transform: rotate(180deg); }
 :root[data-sidebar="collapsed"] .sidebar .sidebar-toggle,
 :root[data-sidebar="collapsed"] .sidebar .theme-switch { justify-content: center; padding: 8px 0; }
-:root[data-sidebar="collapsed"] .sidebar .badge-demo { align-self: center; padding: 2px 5px; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .app, .sidebar-toggle-icon { transition: none; }
 }
@@ -1069,9 +1064,6 @@ thead th {
 /* ── Этап 3 дизайн-аудита ───────────────────────────────── */
 /* Знак F7 для свёрнутого меню */
 .sidebar-mark { display: none; width: 36px; height: 36px; margin: 2px auto 0; flex-shrink: 0; }
-
-/* Тема и DEMO — в верхней полосе */
-.topbar .badge-demo { align-self: center; }
 
 /* Скелетоны */
 :root { --skel-a: color-mix(in srgb, var(--muted) 12%, var(--surface)); --skel-b: color-mix(in srgb, var(--muted) 26%, var(--surface)); }

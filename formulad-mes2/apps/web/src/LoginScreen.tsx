@@ -39,7 +39,7 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: (userName: string) => 
         <form onSubmit={submit} className="card">
           <h1>Вход в систему</h1>
           <p className="muted">
-            Локальный демонстрационный вход. Учётные данные задаются через переменные среды или user-secrets.
+            Учётные данные задаются через переменные среды или user-secrets.
           </p>
           <label>
             Пользователь

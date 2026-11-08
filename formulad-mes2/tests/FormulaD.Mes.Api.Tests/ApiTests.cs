@@ -190,24 +190,9 @@ public sealed class ApiTests
         Assert.Equal("2026-10-20T09:00:00", startDate);
     }
 
-    [Fact]
-    public void Sql_DataSource_Without_Test_Marker_Fails_Closed()
-    {
-        using var factory = new SqlAttemptFactory();
-        var error = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
-        Assert.Contains("IsTestEnvironment", error.Message);
-    }
-
-    [Fact]
-    public void Unknown_DataSource_Fails_Closed()
-    {
-        using var factory = new SqlAttemptFactory("Oracle");
-        var error = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
-        Assert.Contains("Oracle", error.Message);
-    }
 }
 
-/// <summary>Перестановка порядка — только на демо-данных. В SQL-режиме маршрута нет.</summary>
+/// <summary>Перестановка порядка.</summary>
 public sealed class MoveTests
 {
     private static async Task<List<(string Vin, int? Seqn)>> OrderAsync(HttpClient client)

@@ -162,7 +162,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  me: () => request<{ userName: string | null; mode: string; demo: boolean }>('/api/v1/auth/me'),
+  me: () => request<{ userName: string | null; mode: string }>('/api/v1/auth/me'),
 
   login: (username: string, password: string) =>
     request<{ userName: string }>('/api/v1/dev-auth/login', {
@@ -183,7 +183,6 @@ export const api = {
     return request<Paged<ProductionPlanItem>>(`/api/v1/production-plan?${query}`);
   },
 
-  /** Перестановка порядка. Существует только в демо-режиме сервера. */
   move: (vin: string, toPosition: number) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/move`, {
       method: 'POST',
@@ -193,15 +192,12 @@ export const api = {
 
   byVin: (vin: string) => request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}`),
 
-  /** Печать JobCard — отмечает PrintDate, статус не меняет. Существует только в демо-режиме сервера. */
   print: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/print`, { method: 'POST' }),
 
-  /** Запуск в производство (0 → 1). Существует только в демо-режиме сервера. */
   start: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/start`, { method: 'POST' }),
 
-  /** Завершение сборки (1 → 2). Существует только в демо-режиме сервера. */
   complete: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/complete`, { method: 'POST' }),
 
@@ -209,7 +205,6 @@ export const api = {
   fok: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/fok`, { method: 'POST' }),
 
-  /** Отправка в Rework (2 → 4). Существует только в демо-режиме сервера. */
   sendToRework: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/rework`, { method: 'POST' }),
 
@@ -219,7 +214,6 @@ export const api = {
 
   planImportReference: () => request<PlanReference>('/api/v1/plan-import/reference'),
 
-  /** Загружает сырые строки на проверку — временная область (раздел 6.1). Существует только в демо-режиме. */
   stageImport: (rows: ImportRawRow[], source: string) =>
     request<ImportSession>('/api/v1/plan-import/sessions', {
       method: 'POST',
@@ -255,7 +249,6 @@ export const api = {
     return request<Paged<NcpItem>>(`/api/v1/ncp?${query}`);
   },
 
-  /** Регистрация несоответствия. Существует только в демо-режиме сервера. */
   ncpCreate: (data: {
     vin: string;
     station: string;
@@ -273,7 +266,6 @@ export const api = {
   /** Отметки проверки компонентов по изделию (Этап 5), ключ — код компонента. */
   stationChecks: (vin: string) => request<Record<string, ComponentCheck>>(`/api/v1/stations/${encodeURIComponent(vin)}/checks`),
 
-  /** Отметить/снять проверку компонента. Существует только в демо-режиме сервера. */
   setStationCheck: (vin: string, componentCode: string, checked: boolean) =>
     request<ComponentCheck>(`/api/v1/stations/${encodeURIComponent(vin)}/components/${encodeURIComponent(componentCode)}/check`, {
       method: 'POST',

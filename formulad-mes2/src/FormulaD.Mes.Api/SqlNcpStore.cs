@@ -121,8 +121,8 @@ public sealed class SqlNcpStore(SqlOptions options, IEventLog eventLog) : INcpRe
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
             stations.Add(reader.GetString(0));
-        // ponytail: StationID all NULL in current data — return fallback list if empty
-        return stations.Count > 0 ? stations : DemoNcpStore.Stations;
+        // ponytail: StationID all NULL in current data — fallback list until data populated
+        return stations.Count > 0 ? stations : ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
     }
 
     public async Task<IReadOnlyList<NcpItem>> GetMissingRequiredPartsAsync(string vin, CancellationToken ct)

@@ -324,7 +324,7 @@ export function PlanScreen({
           {state === 'ready' && data && data.items.length === 0 && <EmptyState title="Ничего не найдено" hint="Измените фильтр или проверьте VIN" />}
           {state === 'ready' && data && data.items.length > 0 && (
             <table>
-              <caption className="sr-only">Производственный план (демо-данные), сортировка по порядку запуска</caption>
+              <caption className="sr-only">Производственный план, сортировка по порядку запуска</caption>
               <thead>
                 <tr>
                   <th scope="col">

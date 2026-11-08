@@ -121,7 +121,6 @@ export function AppHeader({
       <header className="topbar">
         <span className="topbar-crumb" title={current?.label}>{crumb}</span>
         <span className="spacer" />
-        <span className="badge badge-demo" title="Синтетические данные, не производственные">DEMO</span>
         <ThemeToggle />
         <SoundToggle />
         <Clock />

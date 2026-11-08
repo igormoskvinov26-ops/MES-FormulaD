@@ -175,7 +175,7 @@ export function NcpScreen({
           {state === 'ready' && data && data.items.length === 0 && <EmptyState title="Ничего не найдено" hint="Измените фильтр или зарегистрируйте несоответствие" />}
           {state === 'ready' && data && data.items.length > 0 && (
             <table>
-              <caption className="sr-only">Несоответствия (демо-данные), новые сверху</caption>
+              <caption className="sr-only">Несоответствия, новые сверху</caption>
               <thead>
                 <tr>
                   <th scope="col">№</th>
