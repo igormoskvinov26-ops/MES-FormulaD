@@ -134,7 +134,9 @@ export function PlanScreen({
 
   // Раздел 8: «первые 12 строк актуальной очереди» — очередь целиком, не только текущая
   // страница/фильтр, поэтому запрашиваем первую страницу плана заново, без фильтров.
+  // ponytail: toggle — повторный клик снимает выделение
   async function selectFirstBatch() {
+    if (printSelection.size > 0) { setPrintSelection(new Set()); return; }
     setPrintError('');
     try {
       const page1 = await api.plan({ page: 1, pageSize: FIRST_BATCH_SIZE });
@@ -278,7 +280,7 @@ export function PlanScreen({
             {editOrder ? 'Готово' : 'Изменить порядок'}
           </button>
           <button type="button" onClick={() => void selectFirstBatch()}>
-            Выбрать первые {FIRST_BATCH_SIZE}
+            {printSelection.size > 0 ? 'Снять выделение' : `Выбрать первые ${FIRST_BATCH_SIZE}`}
           </button>
           <button type="button" disabled={printSelection.size === 0} onClick={() => void printSelected()}>
             Печать выбранных{printSelection.size > 0 ? ` (${printSelection.size})` : ''}

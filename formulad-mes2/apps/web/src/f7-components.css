@@ -402,10 +402,13 @@
 :root .f7plan .controls button.primary { background: var(--f7-red, #e31e24); color: #fff; border-color: transparent; }
 
 /* table */
+.f7plan .table-wrap { max-height: calc(100vh - 300px); overflow: auto; }
 .f7plan table { border-collapse: separate; border-spacing: 0 4px; }
 .f7plan thead th {
+  position: sticky; top: 0; z-index: 2;
   text-transform: uppercase; letter-spacing: .06em; font-size: 12px; font-weight: 700;
   background: color-mix(in srgb, var(--muted) 14%, var(--surface)); color: var(--text);
+  box-shadow: 0 2px 4px rgba(16, 18, 22, .08);
 }
 .f7plan tbody tr { background: var(--surface); }
 .f7plan tbody tr:nth-child(even) { background: var(--surface); }

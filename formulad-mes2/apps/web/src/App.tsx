@@ -14,6 +14,7 @@ import { LoginScreen } from './LoginScreen';
 import { ReportsScreen } from './ReportsScreen';
 import { AdminScreen } from './AdminScreen';
 import { BootScreen } from './Skeleton';
+import { CommandPalette } from './CommandPalette';
 
 type Session = { userName: string | null; mode: string } | null;
 
@@ -21,6 +22,8 @@ export function App() {
   const [session, setSession] = useState<Session>(null);
   const [checking, setChecking] = useState(true);
   const [screen, setScreen] = useState<Screen>('plan');
+
+  const handleVinSearch = useCallback((_vin: string) => { setScreen('plan'); }, []);
 
   useEffect(() => {
     api
@@ -40,30 +43,22 @@ export function App() {
 
   const onLogout = () => setSession(null);
 
+  const props = { session, onNavigate: setScreen, onLogout };
+  let content: React.ReactNode;
   switch (screen) {
-    case 'plan':
-      return <PlanScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'import':
-      return <ImportScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'start':
-      return <StartScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'stations':
-      return <StationScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'complete':
-      return <CompleteScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'fok':
-      return <FokScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'rework':
-      return <ReworkScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'ncp':
-      return <NcpScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'incoming':
-      return <IncomingInspectionScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'reports':
-      return <ReportsScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'admin':
-      return <AdminScreen session={session} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'plan': content = <PlanScreen {...props} />; break;
+    case 'import': content = <ImportScreen {...props} />; break;
+    case 'start': content = <StartScreen {...props} />; break;
+    case 'stations': content = <StationScreen {...props} />; break;
+    case 'complete': content = <CompleteScreen {...props} />; break;
+    case 'fok': content = <FokScreen {...props} />; break;
+    case 'rework': content = <ReworkScreen {...props} />; break;
+    case 'ncp': content = <NcpScreen {...props} />; break;
+    case 'incoming': content = <IncomingInspectionScreen {...props} />; break;
+    case 'reports': content = <ReportsScreen {...props} />; break;
+    case 'admin': content = <AdminScreen {...props} />; break;
   }
+  return <>{content}<CommandPalette onNavigate={setScreen} onVinSearch={handleVinSearch} /></>;
 }
 
 /** Загрузка страницы плана. Вынесено, чтобы PlanScreen оставался про разметку. */

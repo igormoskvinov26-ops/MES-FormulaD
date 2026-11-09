@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import { api } from './api';
 import { SoundToggle } from './resultSignal';
+import { SettingsDialog } from './SettingsDialog';
 import { isSidebarCollapsed, setSidebarCollapsed, subscribeSidebar } from './sidebarPref';
 import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports, IconAdmin } from './SidebarIcons';
 
@@ -106,6 +107,7 @@ export function AppHeader({
             </li>
           ))}
         </ul>
+        <span className="sidebar-version sidebar-label" title={`${__BUILD_HASH__} · ${__BUILD_DATE__}`}>{__BUILD_DATE__} · {__BUILD_HASH__.slice(0, 7)}</span>
         <button
           type="button"
           className="sidebar-toggle"
@@ -124,7 +126,9 @@ export function AppHeader({
         <ThemeToggle />
         <SoundToggle />
         <Clock />
+        <span className="topbar-version" title="Версия сборки">{import.meta.env.VITE_APP_VERSION || 'dev'}</span>
         <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
+        <SettingsButton />
         <button
           type="button"
           className="ghost"
@@ -136,6 +140,16 @@ export function AppHeader({
           Выход
         </button>
       </header>
+    </>
+  );
+}
+
+function SettingsButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="ghost" onClick={() => setOpen(true)} title="Настройки" aria-label="Настройки">⚙</button>
+      <SettingsDialog open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

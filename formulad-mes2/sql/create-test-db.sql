@@ -22,7 +22,7 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'mes_reader')
 BEGIN
-    CREATE LOGIN [mes_reader] WITH PASSWORD = N'MesTest2024!', DEFAULT_DATABASE = [FormulaD_TEST];
+    CREATE LOGIN [mes_reader] WITH PASSWORD = N'<ЗАДАЙТЕ_ПАРОЛЬ>', DEFAULT_DATABASE = [FormulaD_TEST];
     PRINT 'Логин mes_reader создан.';
 END
 ELSE
@@ -83,8 +83,8 @@ GO
 PRINT '';
 PRINT '=== Готово ===';
 PRINT 'Строка подключения для приложения:';
-PRINT 'Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=MesTest2024!;Encrypt=True;TrustServerCertificate=True';
+PRINT 'Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=<ПАРОЛЬ>;Encrypt=True;TrustServerCertificate=True';
 PRINT '';
 PRINT 'Запуск API:';
-PRINT 'DataSource=Sql Sql__IsTestEnvironment=true Sql__ConnectionString="Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=MesTest2024!;Encrypt=True;TrustServerCertificate=True" dotnet run';
+PRINT 'Sql__ConnectionString="Server=SQLACCESS;Database=FormulaD_TEST;User ID=mes_reader;Password=<ПАРОЛЬ>;Encrypt=True;TrustServerCertificate=True" dotnet run';
 GO

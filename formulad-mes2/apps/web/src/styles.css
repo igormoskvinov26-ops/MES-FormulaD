@@ -106,6 +106,7 @@ input:focus-visible, select:focus-visible, button:focus-visible, tr:focus-visibl
 
 button {
   padding: 9px 16px;
+  min-height: 40px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -225,6 +226,7 @@ button.link {
 }
 
 .topbar-clock { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.topbar-version { font-size: 11px; color: var(--muted); opacity: .5; font-variant-numeric: tabular-nums; }
 
 h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
 
@@ -355,13 +357,19 @@ th, td {
 th {
   position: sticky;
   top: 0;
+  z-index: 1;
   background: linear-gradient(180deg, #eef0f5, #e4e7ee);
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: .03em;
   color: #3a4052;
   border-bottom: 2px solid var(--border-strong);
+  /* T-084: тень при прокрутке — визуальный намёк, что шапка зафиксирована */
+  box-shadow: 0 2px 4px -2px rgba(16, 18, 22, .1);
 }
+
+/* T-077: чекбоксы 20px на десктопе, 26px на тач (f7-components.css) */
+input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
 
 tbody tr { cursor: pointer; }
 tbody tr:hover { background: #eef1f7; }
@@ -638,6 +646,16 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 
 .ncp-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 
+/* --- Touch targets: WCAG 2.5.8 — min 44px on touch, relaxed on mouse --- */
+@media (pointer: coarse) {
+  button { min-height: 48px; }
+  .select-cell input { width: 24px; height: 24px; }
+  .station-component input { width: 24px; height: 24px; }
+  .sidebar-link { min-height: 48px; }
+  .order-cell button { min-height: 44px; min-width: 44px; }
+  .pager button { min-height: 44px; min-width: 44px; }
+}
+
 /* --- Экран сканирования (Старт/Завершение/FOK — общая механика) --- */
 
 
@@ -813,6 +831,21 @@ td input, td select { width: 100%; min-width: 120px; }
 .pkg-row-action input, .pkg-row-action select { width: auto; min-width: 70px; }
 .pkg-row-error { font-size: 13px; margin: 4px 0 0; }
 
+/* --- Command palette (Ctrl+K) --- */
+.cmd-palette { width: 480px; max-width: calc(100vw - 32px); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; animation: modal-in .2s ease-out; }
+.cmd-input { width: 100%; padding: 14px 18px; border: 0; border-bottom: 1px solid var(--border); font-size: 16px; background: var(--surface); color: var(--text); outline: none; }
+.cmd-list { list-style: none; margin: 0; padding: 6px; max-height: 320px; overflow-y: auto; }
+.cmd-item { padding: 10px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 15px; }
+.cmd-item.active { background: color-mix(in srgb, var(--f7-red) 10%, var(--surface)); color: var(--f7-red); font-weight: 600; }
+.cmd-item:hover { background: color-mix(in srgb, var(--muted) 8%, var(--surface)); }
+.cmd-footer { padding: 8px 14px; font-size: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
+.cmd-footer kbd { padding: 1px 5px; border: 1px solid var(--border-strong); border-radius: 3px; background: var(--bg); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+
+/* Settings dialog */
+.settings-dialog { width: 380px; max-width: calc(100vw - 32px); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 24px; animation: modal-in .2s ease-out; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; cursor: default; }
+.settings-row button { min-width: 100px; }
+
 /* --- Micro-animations and polish --- */
 @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .card, .stat-tile { animation: fade-in .25s ease-out; }
@@ -905,6 +938,18 @@ thead th {
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+/* Scroll shadow on table-wrap */
+.table-wrap { position: relative; }
+.table-wrap::after {
+  content: "";
+  position: sticky;
+  bottom: 0; left: 0; right: 0;
+  display: block;
+  height: 0;
+  box-shadow: 0 -6px 12px -4px rgba(16, 18, 22, .08);
+  pointer-events: none;
 }
 
 /* Report cards */
@@ -1028,6 +1073,7 @@ thead th {
   box-shadow: none;
 }
 :root .sidebar .sidebar-toggle:hover { background: rgba(255, 255, 255, .1); color: #f2f3f6; }
+.sidebar-version { display: block; padding: 2px 12px; font-size: 11px; color: #5a6172; user-select: all; }
 .sidebar-toggle-icon { transition: transform .25s ease; flex-shrink: 0; }
 
 :root[data-sidebar="collapsed"] { --sidebar-w: 72px; }

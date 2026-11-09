@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Тестовый стенд FormulaD MES: API + собранный UI на базе FormulaD_TEST (Docker).
-# Требует запущенный Docker-контейнер с SQL Server и базой FormulaD_TEST (см. docker/README.md).
 #
-#   ./stand/stand.sh up       сборка UI и API, запуск, ожидание готовности, печать входа
-#   ./stand/stand.sh smoke    быстрая проверка живого стенда (health, 401 без входа, вход, данные, статика)
+#   ./stand/stand.sh up       поднять Docker SQL + собрать и запустить API + UI
+#   ./stand/stand.sh smoke    быстрая проверка живого стенда
 #   ./stand/stand.sh status   работает ли стенд и по какому адресу
-#   ./stand/stand.sh down     остановка
+#   ./stand/stand.sh down     остановка API (Docker остаётся)
+#   ./stand/stand.sh reset    docker compose down -v + up (полный сброс БД)
 #
-# Переменные: PORT (по умолчанию 5080), STAND_USER (demo-operator), STAND_PASSWORD (иначе случайный).
-# SQL: Sql__ConnectionString — обязательна (задайте через переменную среды или .env).
+# Переменные: PORT (по умолчанию 5080), STAND_USER (admin), STAND_PASSWORD (F7mes).
+# SQL: Sql__ConnectionString — подставляется автоматически из Docker (можно переопределить).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,21 +17,34 @@ PORT="${PORT:-5080}"
 URL="http://localhost:$PORT"
 # На macOS нет утилиты setsid — запасной вариант через perl (есть и на macOS, и на Linux).
 if command -v setsid >/dev/null; then NEWSESSION=(setsid); else NEWSESSION=(perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' --); fi
-USER_NAME="${STAND_USER:-demo-operator}"
+USER_NAME="${STAND_USER:-admin}"
+DOCKER_COMPOSE="$ROOT/docker/docker-compose.yml"
+DEFAULT_CONN="Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_writer;Password=MesWriter2024!;TrustServerCertificate=True"
 API_DIR="$ROOT/src/FormulaD.Mes.Api"
 
 need() { command -v "$1" >/dev/null || { echo "Не найден '$1' — установите (см. README, раздел «Требования»)" >&2; exit 1; }; }
 is_up() { curl -fsS -o /dev/null "$URL/api/v1/health/live" 2>/dev/null; }
+
+ensure_docker() {
+  need docker
+  if docker ps --format '{{.Names}}' | grep -q '^formulad-test-sql$'; then
+    echo "▸ Docker SQL: уже запущен"
+  else
+    echo "▸ Docker SQL: запуск..."
+    docker compose -f "$DOCKER_COMPOSE" up -d --wait
+    echo "▸ Docker SQL: готов"
+  fi
+}
 
 up() {
   need dotnet; need node; need npm; need curl
   mkdir -p "$RUN"
   if is_up; then echo "Стенд уже запущен: $URL"; return; fi
 
+  # Автозапуск Docker SQL, если ConnectionString не задан извне
   if [ -z "${Sql__ConnectionString:-}" ]; then
-    echo "Не задана Sql__ConnectionString. Пример:" >&2
-    echo '  Sql__ConnectionString="Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_reader;Password=...;TrustServerCertificate=True" ./stand/stand.sh up' >&2
-    exit 1
+    ensure_docker
+    export Sql__ConnectionString="$DEFAULT_CONN"
   fi
 
   echo "▸ UI: сборка"
@@ -41,7 +54,7 @@ up() {
   echo "▸ API: сборка (Release)"
   (cd "$ROOT" && dotnet build "$API_DIR" -c Release -v quiet --nologo >/dev/null)
 
-  local password="${STAND_PASSWORD:-$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)}"
+  local password="${STAND_PASSWORD:-F7mes}"
   printf '%s\n%s\n' "$USER_NAME" "$password" > "$RUN/credentials"
   chmod 600 "$RUN/credentials"
 
@@ -113,10 +126,19 @@ smoke() {
   [ "$fails" -eq 0 ] && echo "Итог: всё в порядке" || { echo "Итог: провалено проверок — $fails" >&2; return 1; }
 }
 
+reset() {
+  down 2>/dev/null || true
+  need docker
+  echo "▸ Полный сброс Docker SQL..."
+  docker compose -f "$DOCKER_COMPOSE" down -v 2>/dev/null || true
+  up
+}
+
 case "${1:-}" in
   up) up ;;
   down) down ;;
   status) status ;;
   smoke) smoke ;;
+  reset) reset ;;
   *) sed -n '2,12p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac
