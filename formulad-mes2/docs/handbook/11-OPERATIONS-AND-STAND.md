@@ -33,8 +33,7 @@
 
 ## 2. Тестовый стенд (`stand.sh`)
 
-Файл `stand/stand.sh` — запуск **демонстрационного** стенда одной командой на синтетических данных. К SQL/PROD он **не подключается**:
-источник жёстко `DataSource=Demo`, переменные `Sql__ConnectionString` и `Sql__IsTestEnvironment` сбрасываются (`env -u …`).
+Файл `stand/stand.sh` — запуск стенда одной командой на тестовых данных. Стенд подключается к `FormulaD_TEST` в Docker (строка подключения из переменной окружения или `user-secrets`).
 
 ### Команды
 
@@ -57,7 +56,7 @@
 
 ### Как устроен
 
-- Запуск: `env -u Sql__… DataSource=Demo ASPNETCORE_ENVIRONMENT=Development DevAuth__Enabled=true DevAuth__Username=… DevAuth__Password=… <новая сессия> nohup dotnet run --no-build -c Release --no-launch-profile --urls $URL > stand.log &`.
+- Запуск: `ASPNETCORE_ENVIRONMENT=Development DevAuth__Enabled=true DevAuth__Username=… DevAuth__Password=… <новая сессия> nohup dotnet run --no-build -c Release --no-launch-profile --urls $URL > stand.log &`.
 - «Новая сессия» делает процесс лидером собственной группы, чтобы `down` гасил всё дерево (`kill -- -PID`): это `setsid` на Linux, а на macOS (где его нет) —
   запасной вариант `perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' --`.
 - Если `health/live` уже отвечает, `up` ничего не делает («Стенд уже запущен») — **даже если сервер запущен не этим скриптом**
@@ -108,8 +107,7 @@ cd apps/web && npm install && npm run dev        # http://localhost:5173
 | `DevAuth:Enabled` | `false` | Включает dev-вход (**только** при `ASPNETCORE_ENVIRONMENT=Development`) | — |
 | `DevAuth:Username` | — | Логин dev-входа | — |
 | `DevAuth:Password` | — | Пароль dev-входа (без него вход невозможен) | **да** |
-| `Sql:IsTestEnvironment` | `false` | Подтверждение тестовой среды; без `true` режим `Sql` не стартует | — |
-| `Sql:ConnectionString` | — | Строка подключения к **TEST**-базе (база ≠ `FormulaD`, логин ≠ `sa`/`sa1`) | **да** |
+| `Sql:ConnectionString` | — | Строка подключения к SQL Server | **да** |
 | `Sql:CommandTimeoutSeconds` | `15` | Таймаут команд SQL | — |
 | `ASPNETCORE_ENVIRONMENT` | `Production` (если не задано) | `Development` включает DevAuth, OpenAPI и ослабляет `Secure` cookie | — |
 | `ASPNETCORE_URLS` / `--urls` | из `launchSettings`/Kestrel | Адрес прослушивания | — |
@@ -120,15 +118,12 @@ cd apps/web && npm install && npm run dev        # http://localhost:5173
 Минимальные примеры:
 
 ```bash
-# Demo (по умолчанию) — ничего, кроме DevAuth, не нужно
-DevAuth__Enabled=true DevAuth__Username=demo-operator DevAuth__Password='<пароль>' ASPNETCORE_ENVIRONMENT=Development dotnet run
-
-# Sql (только TEST). Строку подключения — через user-secrets, не в файл:
+# Строку подключения — через user-secrets, не в файл:
 dotnet user-secrets set "Sql:ConnectionString" "Server=<host>;Database=FormulaD_TEST;User ID=<test-login>;Password=<...>;Encrypt=True" --project src/FormulaD.Mes.Api
-DataSource=Sql Sql__IsTestEnvironment=true DevAuth__Enabled=true DevAuth__Username=demo-operator DevAuth__Password='<пароль>' ASPNETCORE_ENVIRONMENT=Development dotnet run
+DevAuth__Enabled=true DevAuth__Username=demo-operator DevAuth__Password='<пароль>' ASPNETCORE_ENVIRONMENT=Development dotnet run
 ```
 
-Перед режимом `Sql` прочитайте [09](09-SECURITY-AND-CONSTRAINTS.md): логин должен существовать только в `FormulaD_TEST` и иметь права записи
+Прочитайте [09](09-SECURITY-AND-CONSTRAINTS.md): логин должен иметь права записи
 на нужные таблицы (`sql/create-writer-login.sql`); приложение при первом обращении само создаёт таблицы проверок станций и входного контроля.
 
 ## 4. Развёртывание как служба Windows
@@ -191,7 +186,7 @@ git pull origin <ветка>
 | `POST /dev-auth/login` → `403` «только локально» | Запрос не с loopback или чужой `Origin` | Открывать `http://localhost:5080` с той же машины |
 | Белая страница / `404` на `/` | UI не собран: нет `wwwroot/index.html` | `vite build` в `src/FormulaD.Mes.Api/wwwroot` (`stand.sh up` делает это сам) |
 | Картинки (логотип, квадроцикл) не грузятся | Не попали из `apps/web/public/` в `wwwroot` (устаревшая сборка) | Пересобрать UI (`--emptyOutDir`) |
-| Приложение падает при старте в режиме `Sql` | Сработал fail-closed: нет `Sql:IsTestEnvironment`, нет строки, база `FormulaD`, логин `sa`/`sa1`, не указана база | Прочитать сообщение исключения — оно названо точно; исправить конфигурацию |
+| Приложение падает при старте | Нет строки подключения или не указана база | Прочитать сообщение исключения — оно названо точно; исправить конфигурацию |
 | `Address already in use` | Порт 5080 занят | Остановить прежний процесс или задать другой `PORT`/`--urls` |
 | `stand.sh up` пишет «уже запущен», пароля нет | Сервер запущен вручную, не стендом | Остановить его (по PID/порту) и запустить `up` |
 | `smoke` падает на «вход» | Устаревший `stand/.run/credentials` или стенд поднят с другим паролем | `down` → `up` |

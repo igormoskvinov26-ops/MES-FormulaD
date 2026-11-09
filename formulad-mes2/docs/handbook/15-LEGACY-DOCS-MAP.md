@@ -20,7 +20,7 @@
 
 ## 1. Короткий вывод
 
-1. **Главная ловушка — утверждение «в SQL-режиме операций записи нет».** Оно повторяется в `README.md`, `docs/IMPLEMENTATION_REPORT.md`, `docs/REORDER_DESIGN.md`, `docs/ARCHITECTURE.md`, `docs/API_CONTRACT.md`, `docs/ACCEPTANCE.md`. **Это неверно**: в `Program.cs`, ветка `case "sql"`, зарегистрированы `SqlPlanTransitions` (`UPDATE … SET statusid …`), `SqlPlanOrderEditor`, `SqlJobCardPrinter`, `SqlPlanPublisher`, `SqlNcpStore`, `SqlStationChecks`, `SqlPlanImport`, `SqlIncomingInspection`; писать они используют отдельную строку подключения `SqlOptions.WriteConnectionString` (без `ApplicationIntent=ReadOnly`). Для этого предусмотрен логин `mes_writer` (`sql/create-writer-login.sql`). Код при этом **ни разу не выполнялся против живого SQL Server**. Постоянный запрет на подключение к PROD (`SQLACCESS`/база `FormulaD`) остаётся в силе и обеспечен кодом (`SqlOptions`: запрещены база `FormulaD`, логины `sa`/`sa1`, нужен флаг `Sql:IsTestEnvironment=true`).
+1. **Главная ловушка — утверждение «в SQL-режиме операций записи нет».** Оно повторяется в `README.md`, `docs/IMPLEMENTATION_REPORT.md`, `docs/REORDER_DESIGN.md`, `docs/ARCHITECTURE.md`, `docs/API_CONTRACT.md`, `docs/ACCEPTANCE.md`. **Это неверно**: режим Demo удалён; все модули работают через SQL. В `Program.cs` зарегистрированы `SqlPlanTransitions`, `SqlPlanOrderEditor`, `SqlJobCardPrinter`, `SqlPlanPublisher`, `SqlNcpStore`, `SqlStationChecks`, `SqlPlanImport`, `SqlIncomingInspection`; для записи используется отдельная строка подключения `SqlOptions.WriteConnectionString` (без `ApplicationIntent=ReadOnly`). Для этого предусмотрен логин `mes_writer` (`sql/create-writer-login.sql`). Production-сервер физически изолирован в отдельной сети.
 2. **Актуальны и стоит читать первыми:** `docs/SPECIFICATION.md` (ТЗ), `docs/AS_IS_FACTS.md`, `docs/DB_CONTRACT.md` (только для `tblProductionPlan`), `docs/SPRINT00_ACCESS_AUDIT.md`, `docs/PRINTED_CARDS.md`, `docs/INTEGRATION_1C.md`, `docs/REFERENCES.md`.
 3. **Читать как историю:** `docs/README_FIRST.md`, `docs/CODEX_START.md`, `docs/BACKLOG.md`, `docs/SPEC_GAP_ANALYSIS.md` (состояние на 27.10.2026), `docs/DEVELOPMENT_PLAN.md` (этапы 1–10 выполнены; сводка об «этапе 11» устарела), `docs/IMPLEMENTATION_REPORT.md`.
 4. **Все 47 скриншотов в `docs/screenshots/` сделаны 27.10.2026, до F7-редизайна 04.11.2026**, и показывают старый интерфейс. Подробно — в [разделе 4](#4-скриншоты-и-дизайн-концепт).
@@ -67,8 +67,8 @@
 | # | Цитата | Что в коде на самом деле |
 |---|---|---|
 | 1 | «ASP.NET Core (.NET 10) API **только на чтение**» (строка 3) | API содержит 44 маршрута: 19 `GET` и 25 `POST`/`PUT` (из них 23 бизнес-операции записи — переходы статусов, перестановка, печать, NCP, отметки станций, импорт плана, входной контроль — плюс вход и выход). Список — [04-API-REFERENCE](04-API-REFERENCE.md) |
-| 2 | «Изменение порядка запуска … **только на демо-данных в памяти**: маршрут записи создаётся лишь при `DataSource=Demo`… **В SQL-режиме операций записи нет вообще.**» (строки 12–16) | `POST /production-plan/{vin}/move` регистрируется в общем коде `Program.cs` («Перемещение и печать: работают и в Demo, и в SQL»); для SQL есть `SqlPlanOrderEditor` с транзакцией |
-| 3 | Многократное «Тоже только демо-данные» у NCP, Старт/Завершение/FOK, Станции, Rework, JobCard, Импорт, Входной контроль, Отчётность | У каждого блока есть SQL-реализация (`SqlNcpStore`, `SqlPlanTransitions`, `SqlStationChecks`, `SqlJobCardPrinter`, `SqlPlanImport`/`SqlPlanPublisher`, `SqlIncomingInspection`). Они не проверены на живой БД — это нужно говорить явно, а не «только демо» |
+| 2 | «Изменение порядка запуска … **только на демо-данных в памяти**: маршрут записи создаётся лишь при `DataSource=Demo`… **В SQL-режиме операций записи нет вообще.**» (строки 12–16) | Режим Demo удалён; все маршруты работают через SQL. `SqlPlanOrderEditor` с транзакцией |
+| 3 | Многократное «Тоже только демо-данные» у NCP, Старт/Завершение/FOK, Станции, Rework, JobCard, Импорт, Входной контроль, Отчётность | Режим Demo удалён. Все модули работают через SQL-реализации (`SqlNcpStore`, `SqlPlanTransitions`, `SqlStationChecks`, `SqlJobCardPrinter`, `SqlPlanImport`/`SqlPlanPublisher`, `SqlIncomingInspection`). Demo*-классы сохранены как test doubles |
 | 4 | «Журнал событий: кто, когда и что изменил — для перестановки плана и всех операций NCP» (строка ~28) | Журнал — `InMemoryEventLog` (память процесса, теряется при перезапуске), **эндпоинта или экрана для его чтения нет**; пишут в него также запуск/завершение/FOK/станции/импорт/входной контроль |
 | 5 | «`Sql` — только отдельный TEST-экземпляр SQL Server с учётной записью на `SELECT`» (строка 58) и «Приложение не содержит кода изменения данных; гарантию даёт TEST-логин только с правом `SELECT`.» (строка 133) | Код изменения данных **есть** (`UPDATE`/`INSERT` в `Sql*.cs`). Учётная запись для SQL-режима должна иметь права записи (`sql/create-writer-login.sql`: `GRANT INSERT/UPDATE` на `tblComponentCheck`, `tblIncoming*` и др.). Чтобы режим «только чтение» работал, потребуется логин без записи — тогда переходы вернут ошибку доступа, не «404» |
 | 6 | «`sql/` — только шаблоны SELECT для будущей TEST-интеграции» (строка 150) | В `sql/` шесть файлов: `readonly_templates.sql` (шаблоны), `create-test-db.sql` (CREATE DATABASE/LOGIN «на PROD-экземпляре»), `copy-prod-to-test.sql` (**полная копия `FormulaD` → `FormulaD_TEST`, `TRUNCATE` + `INSERT`**), `create-writer-login.sql` (`GRANT`), `export-schema-from-prod.sql`, `inspect-schemas.sql`. Это скрипты для **ручного** запуска администратором; приложение их не выполняет. Подробно — [06-DATA-AND-SQL](06-DATA-AND-SQL.md) |
@@ -81,7 +81,7 @@
 
 | # | Цитата | Поправка |
 |---|---|---|
-| 1 | «Единственная операция записи в API — `POST …/move` … создаётся **только** при `DataSource=Demo`» (§3) | Операций записи 23 (плюс вход/выход); `move` доступна и в SQL-режиме (`SqlPlanOrderEditor`) |
+| 1 | «Единственная операция записи в API — `POST …/move` … создаётся **только** при `DataSource=Demo`» (§3) | Режим Demo удалён. Операций записи 23 (плюс вход/выход); все работают через SQL |
 | 2 | «подключению принудительно выставляется `ApplicationIntent=ReadOnly`» (§3) | Верно только для **чтения** (`SqlOptions.ConnectionString`). Строка для записи (`WriteConnectionString`) этого намерения не содержит — см. `SqlOptions.Create`; тест `Accepts_Test_Instance_And_Forces_ReadOnly_Intent` проверяет именно read-строку |
 | 3 | «Печать, Excel-импорт, станции, ОТК, Rework/cripple, packing lists — не в объёме; NCP реализован частично» (§6 п. 6) | Печать (JobCard, NCP-листы), импорт плана (CSV/вставка), станции, Rework, NCP, входной контроль **реализованы**; не реализован только ОТК (инспекторы, контрольные точки) и разбор `.xlsx` |
 | 4 | «`dotnet test` — Passed: 149 … `npm run test` — 52 passed (12 файлов)» (§4) | Числа относятся к состоянию на 26–27.10.2026 и при составлении этого документа не пересчитывались. Frontend: 52 теста в 12 файлах — совпадает с текущим набором, который в настоящее время проходит; backend: 16 файлов тестов в `tests/FormulaD.Mes.Api.Tests/` |
@@ -92,10 +92,10 @@
 
 | Критерий | Состояние |
 |---|---|
-| AC02 «… синтетические записи и **невозможность изменить их**» | Устарело: демо-данные **изменяются в памяти** (перестановка, переходы, NCP…) и сбрасываются при перезапуске |
+| AC02 «… синтетические записи и **невозможность изменить их**» | Устарело: режим Demo удалён; все данные в SQL Server |
 | AC10 «нет POST/PUT/PATCH/DELETE для продукции; frontend не содержит активных команд записи» | Устарело. Тест `Write_Methods_On_Production_Data_Are_Not_Allowed` проверяет только `POST/PUT/PATCH/DELETE` на `/api/v1/production-plan/{vin}` (ожидает 404/405) — он остаётся верным для этой конкретной формы маршрута, но не для приложения в целом |
 | AC01, AC03–AC09, AC11, AC12 | В основном верны для чтения плана (авторизация 401, пагинация, 400 на неверные параметры, health без раскрытия конфигурации) |
-| QA03 «нет `SQLACCESS`, connection secrets, `sa1`, пароль из Access» | В коде есть **имена запретов** (`ForbiddenLogins = ["sa", "sa1"]`, `ForbiddenDatabases = ["FormulaD"]`) и в `sql/` — упоминания `SQLACCESS`; секретов (паролей) нет; `deploy/appsettings.Production.example.json` содержит хост `SQLACCESS` (с базой `FormulaD_TEST`) и заглушку пароля `CHANGE_ME` |
+| QA03 «нет `SQLACCESS`, connection secrets, `sa1`, пароль из Access» | Программные запреты (`ForbiddenLogins`, `ForbiddenDatabases`) удалены; в `sql/` — упоминания `SQLACCESS` (ручные скрипты DBA); секретов (паролей) нет; `deploy/appsettings.Production.example.json` содержит хост `SQLACCESS` и заглушку пароля `CHANGE_ME` |
 
 ### 3.4 `docs/ARCHITECTURE.md`, `docs/API_CONTRACT.md`
 
@@ -120,7 +120,7 @@
 
 ### 3.7 `docs/REORDER_DESIGN.md`
 
-- «**Статус: реализовано ТОЛЬКО на демо-данных** … в SQL-режиме `IPlanOrderEditor` не регистрируется, поэтому пути физически не существует.» — неверно: `SqlPlanOrderEditor` зарегистрирован, маршрут `move` общий.
+- «**Статус: реализовано ТОЛЬКО на демо-данных** … в SQL-режиме `IPlanOrderEditor` не регистрируется, поэтому пути физически не существует.» — неверно: режим Demo удалён; `SqlPlanOrderEditor` зарегистрирован, маршрут `move` общий.
 - Решение по UX (немедленное сохранение) — **верно** и подтверждено РП.
 
 ### 3.8 `docs/SECURITY_AND_DEPLOYMENT.md`
@@ -220,10 +220,10 @@
 
 | Файл | Что внутри | Актуальность |
 |---|---|---|
-| `.env.example` | Пример переменных окружения | **Частично устарел**: комментарий «В MVP 0.1 допустимо только Demo; любое другое значение — ошибка запуска» противоречит блокам ниже и коду (`DataSource=Sql` допустим при `Sql:IsTestEnvironment=true`) |
+| `.env.example` | Пример переменных окружения | **Устарел**: упоминает режим Demo и `DataSource`, которые удалены; приложение работает только с SQL Server |
 | `deploy/install-service.bat`, `deploy/appsettings.Production.example.json` | Установка службы Windows `FormulaD-MES`; пример конфигурации с заглушками `CHANGE_ME` (база `FormulaD_TEST`, логин `mes_writer`) | Актуальны; требуют прав администратора и реальных значений, в репозитории секретов нет |
 | `sql/*.sql` (6 файлов) | См. 3.1, №6 | Актуальны как **ручные** скрипты; `copy-prod-to-test.sql` и `create-test-db.sql` обращаются к экземпляру PROD (`SQLACCESS`) от имени администратора: запускать только человеком, осознанно и с резервной копией; приложение этого не делает |
-| `fixtures/*.demo.json` (8 файлов) | Синтетические данные Demo-режима | Актуальны |
-| `stand/stand.sh` | Демо-стенд: сборка, запуск, проверка, остановка | Актуален; описан в разделе «Тестовый стенд» `README.md` |
+| `fixtures/*.demo.json` (8 файлов) | Тестовые фикстуры (используются test doubles в автотестах) | Актуальны |
+| `stand/stand.sh` | Тестовый стенд: сборка, запуск, проверка, остановка | Актуален; описан в разделе «Тестовый стенд» `README.md` |
 | `FormulaD.Mes.slnx`, `tests/` (16 файлов), `apps/web/` | Решение, тесты, фронтенд | Актуальны |
 | Корень репозитория (`../../*.md`, `api/`, `bin/`, `.github/`, `assets/`) | Относятся к **другому проекту** в том же репозитории (Telegram-админ «РублЪ»: Vercel, YCLIENTS, истории) и к MES не относятся | Не использовать как документацию FormulaD MES |

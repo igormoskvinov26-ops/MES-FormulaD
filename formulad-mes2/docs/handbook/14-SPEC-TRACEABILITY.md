@@ -34,7 +34,7 @@
 
 Пометки ТЗ: **[С]** согласовано, **[П]** проектная рекомендация, **[В-xx]** открытый вопрос, **[Б]** будущий этап.
 
-**Два режима данных.** Приложение работает в `DataSource=Demo` (данные в памяти, из `fixtures/*.json`) или `DataSource=Sql` (только отдельная TEST-база, см. [06-DATA-AND-SQL](06-DATA-AND-SQL.md)). Если не сказано иное, «реализовано» значит «в Demo». Для SQL-режима в столбце «Код» указан `Sql*.cs`, но он **ни разу не выполнялся против живого SQL Server** (подтверждено в `docs/IMPLEMENTATION_REPORT.md`, п. 6.1; в среде составления документа SQL Server нет).
+**Источник данных — SQL Server.** Приложение подключается к SQL Server напрямую (Development — `FormulaD_TEST` в Docker, Production — `FormulaD` на изолированном сервере). В автотестах вместо SQL используются in-memory test doubles (`Demo*`-классы), подключаемые через `ConfigureTestServices`. Подробности — [06-DATA-AND-SQL](06-DATA-AND-SQL.md).
 
 **Сокращения путей.** Бэкенд — `src/FormulaD.Mes.Api/` (далее `Api/`), фронтенд — `apps/web/src/` (далее `web/`), тесты бэкенда — `tests/FormulaD.Mes.Api.Tests/` (далее `T/`). Тесты фронтенда лежат рядом с экранами (`web/*.test.tsx`).
 
@@ -396,7 +396,7 @@
 | Плитки сводки по статусам и фильтр по ним | `web/PlanScreen.tsx` | Вариант «список производства по статусам» |
 | Поиск VIN по началу/по последним цифрам | `Api/VinSearch.cs` | Решение РП (`docs/IMPLEMENTATION_REPORT.md`, п. 6.4) |
 | Dev-аутентификация (cookie, loopback, Origin-check) | `Api/Program.cs` | ТЗ [В-04] авторизацию не определяет |
-| Fail-closed защита SQL-режима (запрет базы `FormulaD`, логинов `sa`/`sa1`, флаг `Sql:IsTestEnvironment`) | `Api/SqlOptions.cs` | Постоянное ограничение проекта, не требование ТЗ |
+| Валидация строки подключения (обязательна `ConnectionString` и `Initial Catalog`) | `Api/SqlOptions.cs` | Эксплуатационная часть, не требование ТЗ |
 | Диалог подтверждения FOK и кнопка «Отправить в Rework» прямо на FOK | `web/FokScreen.tsx` | Реализация [В-19]; диалог добавлен позже |
 | Служба Windows (`UseWindowsService`) и `deploy/install-service.bat` | `Api/Program.cs`, `deploy/` | Эксплуатационная часть, ТЗ не упоминает |
 | Скрипты стенда `stand/stand.sh` | `stand/` | Эксплуатационная часть |

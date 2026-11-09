@@ -177,7 +177,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 | Станции | `stationChecks`, `setStationCheck` |
 | Входной контроль | `suppliers`, `incomingComponents`, `addComponent`, `deliveries`, `delivery`, `createDelivery`, `packageByHu`, `stagePackingList`, `replacePackingListRow`, `confirmPackingList`, `recordRowResult`, `increaseQuota`, `closePackage`, `reopenPackage` |
 
-Комментарии «существует только в демо-режиме сервера» в `api.ts` означают: при `DataSource=Sql` соответствующих эндпоинтов нет и вызов вернёт 404. Это ограничение сервера (см. [`SECURITY_AND_DEPLOYMENT.md`](../SECURITY_AND_DEPLOYMENT.md)), клиент его не скрывает.
+Все эндпоинты доступны при любом подключении к SQL Server — разделения на «режимы» нет. Устаревшие комментарии «существует только в демо-режиме» в `api.ts` можно удалять при случае.
 
 **Хуки данных** лежат не в `api.ts`, а в [`App.tsx`](../../apps/web/src/App.tsx) (исторически, чтобы `PlanScreen` оставался «про разметку»):
 

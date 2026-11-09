@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Назначение** | Как система устроена: компоненты, потоки данных, режимы Demo/Sql, сквозные аспекты и принятые архитектурные решения |
+| **Назначение** | Как система устроена: компоненты, потоки данных, SQL-архитектура, сквозные аспекты и принятые архитектурные решения |
 | **Для кого** | Разработчик перед первым изменением кода; ревьюер |
 | **Проверено по коммиту** | `fc6f055` |
 
@@ -16,7 +16,7 @@
 3. [Контейнерная диаграмма](#3-контейнерная-диаграмма)
 4. [Компоненты backend](#4-компоненты-backend)
 5. [Компоненты frontend](#5-компоненты-frontend)
-6. [Режимы Demo и Sql](#6-режимы-demo-и-sql)
+6. [Источник данных](#6-источник-данных)
 7. [Потоки данных](#7-потоки-данных)
 8. [Сквозные аспекты](#8-сквозные-аспекты)
 9. [Архитектурные решения (ADR)](#9-архитектурные-решения-adr)
@@ -111,12 +111,12 @@ flowchart TB
 | `PlanTransitions.cs` | Порт переходов `0→1→2→3`, `2→4`, `4→2` · `SqlPlanTransitions.cs` |
 | `IPlanOrderEditor.cs` | Порт перестановки · `SqlPlanOrderEditor.cs` |
 | `JobCardPrinter.cs` | Порт отметки печати · `SqlJobCardPrinter.cs` |
-| `PlanImport.cs` | Порты `IPlanPublisher`, `IPlanImport` + демо-реализация (staging, валидация, публикация) · `SqlPlanPublisher.cs`, `SqlPlanImport.cs` |
+| `PlanImport.cs` | Порты `IPlanPublisher`, `IPlanImport` + in-memory test double (staging, валидация, публикация) · `SqlPlanPublisher.cs`, `SqlPlanImport.cs` |
 | `Ncp.cs` | Порты `INcpReader`/`INcpWriter` + `DemoNcpStore` · `SqlNcpStore.cs` |
 | `StationChecks.cs` | Порт `IStationChecks` + `DemoStationChecks` · `SqlStationChecks.cs` |
 | `IncomingInspection.cs` | Порты `IIncomingInspectionReader/Writer` + `DemoIncomingInspectionStore` (≈670 строк) · `SqlIncomingInspection.cs` (≈810) |
-| `VinSearch.cs` | Единое правило поиска VIN для Demo и Sql (по началу / по концу) |
-| `SqlOptions.cs` | **Fail-closed валидация** SQL-конфигурации; две строки подключения: чтение (`ApplicationIntent=ReadOnly`) и запись |
+| `VinSearch.cs` | Единое правило поиска VIN (по началу / по концу) |
+| `SqlOptions.cs` | Валидация SQL-конфигурации; две строки подключения: чтение (`ApplicationIntent=ReadOnly`) и запись |
 | `EventLog.cs` | `IEventLog` / `InMemoryEventLog` |
 
 Соглашения: переходы статусов атомарны (`UPDATE … WHERE VIN=@vin AND statusid=@from`); результат — `TransitionOutcome`
@@ -150,26 +150,19 @@ flowchart TB
   экран FOK, общие классы `f7plan*`, анимация кнопок). Состояние темы и меню — атрибуты `data-theme`, `data-sidebar` на `<html>`
   (читаются из `localStorage` до первой отрисовки в `main.tsx`). Подробнее — `08-UI-DESIGN-SYSTEM`.
 
-## 6. Режимы Demo и Sql
+## 6. Источник данных
 
-Выбор — при старте по `DataSource` (`Demo` по умолчанию, `Sql`; любое другое значение — исключение).
+Единственный источник данных — **SQL Server**. При старте `SqlOptions.Create` проверяет наличие строки подключения (`Sql:ConnectionString`) и формирует две строки: чтение (`ApplicationIntent=ReadOnly`) и запись.
 
-| | **Demo** | **Sql** |
-|---|---|---|
-| Данные | `fixtures/*.demo.json` → списки в памяти процесса | таблицы `FormulaD_TEST` (`tblProductionPlan`, `tblNCP`, `tblComponent`, …) |
-| Запись | в память; **теряется при перезапуске** | реальные `UPDATE/INSERT` в TEST |
-| Включается | по умолчанию | `DataSource=Sql` + `Sql:IsTestEnvironment=true` + `Sql:ConnectionString` |
-| Проверки старта | — | `SqlOptions.Create`: флаг TEST, база ≠ `FormulaD`, логин ∉ {`sa`,`sa1`}, база указана |
-| Подключения | нет | чтение: `ApplicationIntent=ReadOnly`; запись: отдельная строка (та же, без ReadOnly) |
-| Журнал событий | `InMemoryEventLog` | **тоже `InMemoryEventLog`** (в БД не пишется) |
-| Тесты | основная масса (`ApiFactory`) | только конфигурационные проверки и тексты запросов — **без живого SQL** |
+| Аспект | Описание |
+|---|---|
+| Данные | таблицы SQL Server (`tblProductionPlan`, `tblNCP`, `tblComponent`, …) |
+| Запись | реальные `UPDATE/INSERT/MERGE` в базу |
+| Подключения | чтение: `ApplicationIntent=ReadOnly`; запись: отдельная строка (без ReadOnly) |
+| Журнал событий | `InMemoryEventLog` (в БД не пишется) |
+| Тесты | `ApiFactory` подключает in-memory test doubles через `ConfigureTestServices` — **без живого SQL** |
 
-Демо-фикстуры загружаются из папки приложения (`fixtures/` рядом с dll; csproj копирует их из `../../fixtures`). Пути
-переопределяются ключами `Demo:*FixturePath`.
-
-> Расхождение с документами: `README.md` и `IMPLEMENTATION_REPORT.md` утверждают, что «в SQL-режиме операций записи нет
-> вообще». **Это устарело**: в коде SQL-режима зарегистрированы все пишущие адаптеры (переходы, перестановка, публикация
-> плана, NCP, проверки станций, входной контроль). Подробнее — [13](13-ROADMAP-AND-KNOWN-ISSUES.md#3-расхождения-документов-и-кода).
+In-memory реализации (`DemoProductionPlanReader`, `DemoNcpStore` и др.) сохранены и используются только в тестах. Фикстуры `fixtures/*.demo.json` — тестовые данные.
 
 ## 7. Потоки данных
 

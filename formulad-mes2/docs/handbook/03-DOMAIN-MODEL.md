@@ -14,7 +14,7 @@
 3. [Статусы изделия и переходы](#3-статусы-изделия-и-переходы)
 4. [Бизнес-правила](#4-бизнес-правила)
 5. [Журнал событий](#5-журнал-событий)
-6. [Сводка расхождений Demo и SQL](#6-сводка-расхождений-demo-и-sql)
+6. [Расхождения SQL и test doubles](#6-расхождения-sql-и-test-doubles)
 7. [Что не подтверждено кодом](#7-что-не-подтверждено-кодом)
 
 ---
@@ -272,7 +272,7 @@ stateDiagram-v2
 2. `PUT /plan-import/sessions/{id}/rows/{n}` — замена одной сырой строки и **повторная проверка всей сессии** (так ловятся дубли между строками).
 3. `POST /plan-import/sessions/{id}/publish` — только при `ErrorCount == 0`; иначе 400 «Нельзя опубликовать».
 
-Правила проверки строки (`ValidateRowAsync`, одинаковы в Demo и SQL):
+Правила проверки строки (`ValidateRowAsync`, одинаковы в SQL и test doubles):
 
 | Поле | Ошибка |
 |---|---|
@@ -354,15 +354,15 @@ stateDiagram-v2
 | `Delivery` | id поставки | `Create` |
 | `Component` | код | `Add` |
 
-Значения `OldValue`/`NewValue`: для переходов Demo — числа `statusId`, SQL — строки вида `statusid=2`. Для перестановки — номера позиций.
+Значения `OldValue`/`NewValue`: для переходов — строки вида `statusid=2`. Для перестановки — номера позиций.
 
-## 6. Сводка расхождений Demo и SQL
+## 6. Расхождения SQL и test doubles
 
-Одинаковые интерфейсы, но реализации ведут себя по-разному. Это самое важное, что надо знать перед работой с `DataSource=Sql`.
+Одинаковые интерфейсы, но SQL-реализации и in-memory test doubles ведут себя по-разному. Это важно при написании тестов.
 
 ### 6.1. NCP: признак установки детали
 
-| | Demo | SQL |
+| | Test double | SQL |
 |---|---|---|
 | `PartInstalled` | отдельное поле | вычисляется как `Status == 2` |
 | `SetPartInstalled` | меняет поле | **ничего не меняет**: только пишет событие в журнал и возвращает текущую заявку |
@@ -372,25 +372,21 @@ stateDiagram-v2
 | `Number` | `NC-2026-0001` | `NC-{id}` |
 | Длина комментария | без ограничения | колонка `Comment` — `nvarchar(50)` (по комментарию в коде); длинный комментарий может не поместиться |
 
-Следствие: раздельные состояния «деталь установлена» и «заявка закрыта» (раздел 16 спецификации) в SQL-режиме **не реализованы**. Чтобы реализовать, нужна новая колонка в `tblNCP` (комментарий `ponytail:` в `SqlNcpStore.cs`).
+Следствие: раздельные состояния «деталь установлена» и «заявка закрыта» (раздел 16 спецификации) в SQL **не реализованы**. Чтобы реализовать, нужна новая колонка в `tblNCP` (комментарий `ponytail:` в `SqlNcpStore.cs`).
 
-### 6.2. Запись в SQL существует
+### 6.2. Хранение данных
 
-> **Расхождение с README и `docs/*`.** README (раздел про режим SQL) утверждает: «Приложение не содержит кода изменения данных», а комментарии в `PlanTransitions.cs`, `IPlanOrderEditor.cs`, `Ncp.cs`, `IncomingInspection.cs` — «реализовано ТОЛЬКО для демо-источника». В коде это неверно: `SqlPlanTransitions`, `SqlPlanOrderEditor`, `SqlJobCardPrinter`, `SqlPlanPublisher`, `SqlNcpStore` (запись), `SqlStationChecks`, `SqlIncomingInspection` выполняют `UPDATE`/`INSERT`/`MERGE` и даже `CREATE TABLE` через `SqlOptions.WriteConnectionString`. Подробно — [06-DATA-AND-SQL.md](06-DATA-AND-SQL.md).
+| Данные | SQL |
+|---|---|
+| План, NCP | таблицы `tblProductionPlan`, `tblNCP` |
+| Отметки станций | `tblComponentCheck` (создаётся приложением) |
+| Входной контроль | `tblIncoming*`, `tblInspectionQuota` (создаются приложением) |
+| Сессии импорта и Packing List | **память** (теряются при перезапуске) |
+| Журнал событий | **память** (теряется при перезапуске) |
 
-### 6.3. Что хранится где
+### 6.3. Дата «план завершения»
 
-| Данные | Demo | SQL |
-|---|---|---|
-| План, NCP | память процесса (стартуют из фикстур) | таблицы `tblProductionPlan`, `tblNCP` |
-| Отметки станций | память | `tblComponentCheck` (создаётся приложением) |
-| Входной контроль | память | `tblIncoming*`, `tblInspectionQuota` (создаются приложением) |
-| Сессии импорта и Packing List | память | **память** (в обоих режимах) |
-| Журнал событий | память | **память** (в обоих режимах) |
-
-### 6.4. Дата «план завершения»
-
-В SQL-чтении `PlannedCompleteDate` заполняется значением колонки `PlannedShipmentDate` (комментарий `ponytail:` в `SqlProductionPlanReader.Map`: допущение, что «Дата завершения План» на экране Access — это `PlannedShipmentDate`; сверить на TEST, см. [`../OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md)). Поэтому в SQL-режиме `plannedCompleteDate` и `plannedShipmentDate` в ответе всегда равны. В Demo это независимые поля.
+`PlannedCompleteDate` заполняется значением колонки `PlannedShipmentDate` (комментарий `ponytail:` в `SqlProductionPlanReader.Map`: допущение, что «Дата завершения План» на экране Access — это `PlannedShipmentDate`; сверить на TEST). Поэтому `plannedCompleteDate` и `plannedShipmentDate` в ответе всегда равны.
 
 ## 7. Что не подтверждено кодом
 

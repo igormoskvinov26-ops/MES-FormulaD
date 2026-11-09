@@ -66,7 +66,7 @@ curl -s -b jar.txt 'http://localhost:5080/api/v1/production-plan?page=1&pageSize
 
 - **#1** не раскрывает ни конфигурации, ни БД, ни хоста.
 - **#2 физически отсутствует** (маршрут не регистрируется), если не выполнено **всё сразу**: `DevAuth:Enabled=true`, окружение `Development` и заданы `DevAuth:Username` и `DevAuth:Password`. Пароля по умолчанию нет. Сравнение логина — `Ordinal`, пароля — `FixedTimeEquals`. Проверка loopback: адрес клиента `null` или loopback. Проверка `Origin`: пустой допускается (curl, тесты), иначе хост должен быть loopback или `localhost`.
-- **#3** `mode` равен `"dev"`, если вход возможен, иначе `"closed"`. Поле `demo` в коде **всегда `true`**, даже при `DataSource=Sql`.
+- **#3** `mode` равен `"dev"`, если вход возможен, иначе `"closed"`. Поле `demo` в ответе всегда `true` (историческое; смысловой нагрузки не несёт).
 - Логин кладёт в cookie claims `Name` и `auth_mode=dev`.
 
 ## 3. Производственный план
