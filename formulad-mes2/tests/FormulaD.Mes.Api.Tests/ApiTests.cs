@@ -18,6 +18,17 @@ public sealed class ApiTests
         Assert.Equal("{\"status\":\"ok\"}", body);
     }
 
+    [Fact]
+    public async Task Responses_Include_Security_Headers()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: false);
+        var response = await factory.CreateClient().GetAsync("/api/v1/health/live");
+
+        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Equal("strict-origin-when-cross-origin", response.Headers.GetValues("Referrer-Policy").Single());
+    }
+
     [Theory]
     [InlineData("/api/v1/production-plan")]
     [InlineData("/api/v1/production-plan/DEMO-VIN-00001")]
