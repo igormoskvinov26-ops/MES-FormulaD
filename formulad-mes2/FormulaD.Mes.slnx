@@ -4,5 +4,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FormulaD.Mes.Api.Tests/FormulaD.Mes.Api.Tests.csproj" />
+    <Project Path="tests/FormulaD.Mes.Api.IntegrationTests/FormulaD.Mes.Api.IntegrationTests.csproj" />
   </Folder>
 </Solution>

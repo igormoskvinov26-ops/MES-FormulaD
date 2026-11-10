@@ -4,9 +4,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>formulad-mes2-api</UserSecretsId>
+    <Version>2.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="FormulaD.Mes.Api.Tests" />
+    <InternalsVisibleTo Include="FormulaD.Mes.Api.IntegrationTests" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="../../fixtures/production-plan.demo.json" CopyToOutputDirectory="PreserveNewest" Link="fixtures/production-plan.demo.json" />

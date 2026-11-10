@@ -52,7 +52,7 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
         await conn.OpenAsync(ct);
 
         await using var cmd = new SqlCommand("""
-            SELECT [ComponentCode], [ComponentName], [Station]
+            SELECT [ComponentCode], [ComponentName], [StationID]
             FROM [dbo].[tblComponent]
             ORDER BY [ComponentCode]
             """, conn) { CommandTimeout = _options.CommandTimeoutSeconds };
@@ -60,7 +60,7 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
         var list = new List<ComponentItem>();
         await using var r = await cmd.ExecuteReaderAsync(ct);
         while (await r.ReadAsync(ct))
-            list.Add(new ComponentItem(r.GetString(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2)));
+            list.Add(new ComponentItem(r.GetString(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetInt32(2).ToString()));
         return list;
     }
 
@@ -621,13 +621,13 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     private async Task<List<ComponentItem>> GetComponentsInternalAsync(SqlConnection conn, SqlTransaction tx, CancellationToken ct)
     {
         await using var cmd = new SqlCommand(
-            "SELECT [ComponentCode], [ComponentName], [Station] FROM [dbo].[tblComponent]", conn, tx)
+            "SELECT [ComponentCode], [ComponentName], [StationID] FROM [dbo].[tblComponent]", conn, tx)
         { CommandTimeout = _options.CommandTimeoutSeconds };
 
         var list = new List<ComponentItem>();
         await using var r = await cmd.ExecuteReaderAsync(ct);
         while (await r.ReadAsync(ct))
-            list.Add(new ComponentItem(r.GetString(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2)));
+            list.Add(new ComponentItem(r.GetString(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetInt32(2).ToString()));
         return list;
     }
 

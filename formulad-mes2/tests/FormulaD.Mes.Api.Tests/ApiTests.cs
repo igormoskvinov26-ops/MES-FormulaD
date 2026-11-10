@@ -19,6 +19,28 @@ public sealed class ApiTests
     }
 
     [Fact]
+    public async Task Health_Ready_Is_Anonymous_And_Returns_Degraded_Without_Sql()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: false);
+        var response = await factory.CreateClient().GetAsync("/api/v1/health/ready");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("degraded", body);
+    }
+
+    [Fact]
+    public async Task Version_Is_Anonymous_And_Returns_Version_String()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: false);
+        var response = await factory.CreateClient().GetAsync("/api/v1/version");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("version", body);
+    }
+
+    [Fact]
     public async Task Responses_Include_Security_Headers()
     {
         using var factory = new ApiFactory(devAuthEnabled: false);

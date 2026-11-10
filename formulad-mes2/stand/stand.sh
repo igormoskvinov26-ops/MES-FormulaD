@@ -107,6 +107,7 @@ smoke() {
 
   echo "Проверка стенда $URL"
   check "health/live"                         200 "$(code "$URL/api/v1/health/live")"
+  check "health/ready"                        200 "$(code "$URL/api/v1/health/ready")"
   check "план без входа закрыт (401)"         401 "$(code "$URL/api/v1/production-plan")"
   check "вход"                                200 "$(code -c "$jar" -H 'Content-Type: application/json' \
         -d "{\"username\":\"$user\",\"password\":\"$password\"}" "$URL/api/v1/dev-auth/login")"

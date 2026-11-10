@@ -1,6 +1,8 @@
+using System.Reflection;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using FormulaD.Mes.Api;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -128,6 +130,31 @@ var api = app.MapGroup("/api/v1");
 
 // Liveness: без аутентификации и без любых сведений о конфигурации/БД/хосте.
 api.MapGet("/health/live", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+
+// ponytail: версия из AssemblyInformationalVersion (SourceRevisionId подставляет git hash при сборке)
+api.MapGet("/version", () =>
+{
+    var asm = Assembly.GetExecutingAssembly();
+    var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
+    return Results.Ok(new { version = info });
+}).AllowAnonymous();
+
+// Readiness: проверяет доступность БД. Не раскрывает деталей подключения.
+api.MapGet("/health/ready", async (SqlOptions sqlOptions) =>
+{
+    try
+    {
+        await using var conn = new SqlConnection(sqlOptions.ConnectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand("SELECT 1", conn);
+        await cmd.ExecuteScalarAsync();
+        return Results.Ok(new { status = "ok" });
+    }
+    catch
+    {
+        return Results.Json(new { status = "degraded" }, statusCode: 503);
+    }
+}).AllowAnonymous();
 
 var plan = api.MapGroup("/production-plan").RequireAuthorization();
 
