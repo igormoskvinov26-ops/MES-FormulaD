@@ -224,7 +224,7 @@ dotnet user-secrets set "DevAuth:Password" "<локальный пароль>" -
 
 ## 11. Тесты
 
-Команда: `dotnet test` из `formulad-mes2` (в проекте тестов 127 тестов).
+Команда: `dotnet test` из `formulad-mes2` (в проекте тестов 143 теста).
 
 **Базовая фабрика — [`ApiFactory`](../../tests/FormulaD.Mes.Api.Tests/ApiFactory.cs).** Поднимает приложение в памяти (`WebApplicationFactory<Program>`) с in-memory test doubles через `ConfigureTestServices`, окружение `Development`, `DevAuth:Enabled` по параметру, логин `demo-operator` и пароль `test-only-secret` (константы только для тестов). Фабрика задаёт фиктивную строку подключения SQL и подменяет все сервисы данных на `DemoProductionPlanReader`, `DemoNcpStore` и т.д. `CreateAuthenticatedClientAsync()` возвращает клиент с cookie-сессией после реального `POST /dev-auth/login`. Каждый тест создаёт **свою фабрику** (изолированное состояние), `reloadConfigOnChange=false` защищает от лимита inotify в песочнице.
 

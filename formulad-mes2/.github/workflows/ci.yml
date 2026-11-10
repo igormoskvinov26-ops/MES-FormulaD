@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - 'formulad-mes2/**'
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'formulad-mes2/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: formulad-mes2
+
+jobs:
+  backend:
+    name: Backend (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build -c Release --nologo -v quiet
+      - run: dotnet test -c Release --nologo --no-build --logger "trx;LogFileName=results.trx" --collect:"XPlat Code Coverage"
+      - name: Check backend coverage threshold
+        if: always()
+        run: |
+          COV=$(find . -name 'coverage.cobertura.xml' -print -quit)
+          if [ -n "$COV" ]; then
+            LINE=$(grep -oP 'line-rate="\K[^"]+' "$COV" | head -1)
+            PCT=$(awk "BEGIN { printf \"%.0f\", $LINE * 100 }")
+            echo "Backend line coverage: ${PCT}%"
+            if [ "$PCT" -lt 50 ]; then
+              echo "::error::Backend coverage ${PCT}% is below 50% threshold"
+              exit 1
+            fi
+          else
+            echo "::warning::No coverage report found"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-results
+          path: |
+            formulad-mes2/**/results.trx
+            formulad-mes2/**/coverage.cobertura.xml
+
+  frontend:
+    name: Frontend (typecheck + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: formulad-mes2/apps/web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: formulad-mes2/apps/web
+      - run: npx tsc --noEmit
+        working-directory: formulad-mes2/apps/web
+      - run: npx vitest run --coverage.enabled --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json-summary
+        working-directory: formulad-mes2/apps/web
+      - name: Check frontend coverage threshold
+        if: always()
+        working-directory: formulad-mes2/apps/web
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            PCT=$(node -e "const s=require('./coverage/coverage-summary.json');console.log(Math.round(s.total.lines.pct))")
+            echo "Frontend line coverage: ${PCT}%"
+            if [ "$PCT" -lt 80 ]; then
+              echo "::error::Frontend coverage ${PCT}% is below 80% threshold"
+              exit 1
+            fi
+          else
+            echo "::warning::No coverage report found"
+          fi
+
+  secrets-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan for secrets
+        run: bash scripts/check-secrets.sh
+
+  prod-guard:
+    name: PROD guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for PROD connection strings
+        run: bash scripts/check-prod-guard.sh
+
+  build-ui:
+    name: UI build (vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: formulad-mes2/apps/web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: formulad-mes2/apps/web
+      - run: npx vite build
+        working-directory: formulad-mes2/apps/web

@@ -300,5 +300,18 @@ VALUES
     ('DEMO-VIN-00003', 7, 10, 1, 1, N'Царапина на левом крыле', 2, 'test-user', '2026-10-22T14:00:00');
 GO
 
+-- Schema version tracking (T-029)
+IF OBJECT_ID(N'dbo.__SchemaVersion', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.__SchemaVersion (
+        Version     INT           NOT NULL PRIMARY KEY,
+        Name        NVARCHAR(200) NOT NULL,
+        AppliedAt   DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+        AppliedBy   NVARCHAR(128) NOT NULL DEFAULT SUSER_SNAME()
+    );
+    INSERT INTO dbo.__SchemaVersion (Version, Name) VALUES (0, N'create_version_table');
+END
+GO
+
 PRINT 'FormulaD_TEST: база, таблицы, логины и тестовые данные готовы.';
 GO

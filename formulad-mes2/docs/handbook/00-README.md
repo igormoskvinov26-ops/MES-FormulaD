@@ -124,8 +124,8 @@ npm run dev
 ```bash
 curl -s http://localhost:5080/api/v1/health/live        # {"status":"ok"}
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:5080/api/v1/production-plan   # 401 без входа
-cd formulad-mes2/apps/web && npx vitest run              # 77 тестов
-cd formulad-mes2 && dotnet test tests/FormulaD.Mes.Api.Tests   # 158 тестов
+cd formulad-mes2/apps/web && npx vitest run              # 79 тестов
+cd formulad-mes2 && dotnet test tests/FormulaD.Mes.Api.Tests   # 143 теста
 ```
 
 ---
