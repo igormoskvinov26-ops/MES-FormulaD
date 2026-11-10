@@ -11,6 +11,16 @@ using Microsoft.AspNetCore.Mvc;
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService();
 
+// T-102: JSON-логи в production, console в Development; секреты не логируем (Sql:* маскируется)
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Logging.AddJsonConsole(o =>
+    {
+        o.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+        o.UseUtcTimestamp = true;
+    });
+}
+
 // --- Журнал событий ---------------------------------------------------------
 // Общий для всех операций записи, заводится один раз до них (docs/DEVELOPMENT_PLAN.md,
 // Этап 1), а не пристраивается к каждой новой пишущей функции отдельно.

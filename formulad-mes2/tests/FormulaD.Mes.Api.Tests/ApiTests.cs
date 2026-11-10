@@ -27,6 +27,9 @@ public sealed class ApiTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("degraded", body);
+        // T-102: no connection details leak
+        Assert.DoesNotContain("Server=", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Password=", body, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -292,5 +295,35 @@ public sealed class MoveTests
         var response = await client.PostAsJsonAsync($"/api/v1/production-plan/{vin}/move", new { toPosition });
 
         Assert.Equal(expected, response.StatusCode);
+    }
+
+    // T-096: contract tests — OpenAPI schema contains expected endpoints
+    [Fact]
+    public async Task OpenApi_Schema_Contains_Expected_Endpoints()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: true);
+        var client = await factory.CreateAuthenticatedClientAsync();
+
+        var response = await client.GetAsync("/openapi/v1.json");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var doc = JsonDocument.Parse(body);
+        var paths = doc.RootElement.GetProperty("paths");
+
+        string[] expected =
+        [
+            "/api/v1/health/live",
+            "/api/v1/health/ready",
+            "/api/v1/version",
+            "/api/v1/production-plan/statuses",
+            "/api/v1/production-plan",
+            "/api/v1/ncp",
+            "/api/v1/ncp/types",
+            "/api/v1/stations/{vin}/checks",
+        ];
+
+        foreach (var path in expected)
+            Assert.True(paths.TryGetProperty(path, out _), $"Missing endpoint: {path}");
     }
 }
