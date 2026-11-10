@@ -9,18 +9,14 @@ namespace FormulaD.Mes.Api;
 /// Checked bit, CheckedBy nvarchar(50), CheckedAt datetime.
 /// UNIQUE(VIN, ComponentCode) — одна отметка на пару.
 ///
-/// ponytail: таблица не существует в исходной схеме FormulaD — создаётся автоматически
-/// при первом обращении (EnsureTable). Когда прод подхватит, ALTER TABLE не нужен.
+/// ponytail: таблица создаётся миграцией (sql/migrations/) или Docker seed, не приложением.
 /// </summary>
 public sealed class SqlStationChecks(SqlOptions options, IEventLog eventLog) : IStationChecks
 {
-    private volatile bool _tableEnsured;
-
     public async Task<IReadOnlyDictionary<string, ComponentCheck>> GetForVinAsync(string vin, CancellationToken ct)
     {
         await using var conn = new SqlConnection(options.ConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTableAsync(conn, ct);
 
         await using var cmd = new SqlCommand("""
             SELECT [ComponentCode], [Checked], [CheckedBy], [CheckedAt]
@@ -49,7 +45,6 @@ public sealed class SqlStationChecks(SqlOptions options, IEventLog eventLog) : I
     {
         await using var conn = new SqlConnection(options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTableAsync(conn, ct);
 
         // Validate VIN
         await using (var check = new SqlCommand(
@@ -102,27 +97,4 @@ public sealed class SqlStationChecks(SqlOptions options, IEventLog eventLog) : I
         return (SetCheckOutcome.Ok, updated);
     }
 
-    // ponytail: auto-create table if missing. Idempotent, cheap after first call.
-    private async Task EnsureTableAsync(SqlConnection conn, CancellationToken ct)
-    {
-        if (_tableEnsured) return;
-
-        await using var cmd = new SqlCommand("""
-            IF OBJECT_ID(N'[dbo].[tblComponentCheck]', N'U') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[tblComponentCheck] (
-                    [id] int IDENTITY(1,1) NOT NULL,
-                    [VIN] nvarchar(50) NOT NULL,
-                    [ComponentCode] nvarchar(50) NOT NULL,
-                    [Checked] bit NOT NULL DEFAULT 0,
-                    [CheckedBy] nvarchar(50) NULL,
-                    [CheckedAt] datetime NULL,
-                    CONSTRAINT [PK_tblComponentCheck] PRIMARY KEY ([id]),
-                    CONSTRAINT [UQ_tblComponentCheck_VIN_Code] UNIQUE ([VIN], [ComponentCode])
-                );
-            END
-            """, conn) { CommandTimeout = options.CommandTimeoutSeconds };
-        await cmd.ExecuteNonQueryAsync(ct);
-        _tableEnsured = true;
-    }
 }

@@ -5,11 +5,10 @@ using Microsoft.Data.SqlClient;
 namespace FormulaD.Mes.Api;
 
 /// <summary>
-/// SQL-реализация входного контроля (разделы 19-24). Новые таблицы создаются автоматически
-/// (EnsureTable) — в исходной схеме FormulaD их нет.
+/// SQL-реализация входного контроля (разделы 19-24). Таблицы создаются миграцией
+/// (sql/migrations/) или Docker seed, не приложением.
 ///
-/// ponytail: таблицы поставщиков и нормативов тоже авто-создаются; наполнять через INSERT
-/// или будущий UI справочников. Сессии Packing List — в памяти (эфемерные, как SqlPlanImport).
+/// ponytail: сессии Packing List — в памяти (эфемерные, как SqlPlanImport).
 /// </summary>
 public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncomingInspectionWriter
 {
@@ -18,8 +17,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
 
     private readonly SqlOptions _options;
     private readonly IEventLog _eventLog;
-    private volatile bool _tableEnsured;
-
     private readonly Lock _gate = new();
     private readonly Dictionary<string, PackingListSession> _sessions = new();
 
@@ -35,7 +32,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.ConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         await using var cmd = new SqlCommand("""
             SELECT [Code], [Name], [IsParentPlant]
@@ -54,7 +50,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.ConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         await using var cmd = new SqlCommand("""
             SELECT [ComponentCode], [ComponentName], [Station]
@@ -73,7 +68,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.ConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         // Count
         int total;
@@ -118,7 +112,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.ConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         await using var cmd = new SqlCommand("""
             SELECT [SupplierCode], [SupplierName], [InvoiceNumber], [InvoiceDate],
@@ -140,7 +133,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.ConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         await using var cmd = new SqlCommand("""
             SELECT [Id], [HuNumber], [Status], [ClosedAt], [ClosedBy]
@@ -166,7 +158,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         // Validate supplier
         SupplierRef? supplier = null;
@@ -220,7 +211,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
 
         await using var conn = new SqlConnection(_options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         // Check if exists
         await using (var check = new SqlCommand(
@@ -305,7 +295,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
 
         await using var conn = new SqlConnection(_options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         // Verify delivery still exists
         var deliveryId = session.DeliveryId;
@@ -405,7 +394,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
 
         await using var conn = new SqlConnection(_options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         var (pkg, row) = await LoadPackageAndRowAsync(conn, packageId, rowId, ct);
         if (pkg is null || row is null)
@@ -446,7 +434,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         var (pkg, row) = await LoadPackageAndRowAsync(conn, packageId, rowId, ct);
         if (pkg is null || row is null)
@@ -474,7 +461,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         var pkg = await LoadFullPackageAsync(conn, packageId, ct);
         if (pkg is null)
@@ -505,7 +491,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.WriteConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
 
         var pkg = await LoadFullPackageAsync(conn, packageId, ct);
         if (pkg is null)
@@ -617,7 +602,6 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
     {
         await using var conn = new SqlConnection(_options.ConnectionString);
         await conn.OpenAsync(ct);
-        await EnsureTablesAsync(conn, ct);
         return await GetQuotasInternalAsync(conn, null, ct);
     }
 
@@ -721,89 +705,4 @@ public sealed class SqlIncomingInspection : IIncomingInspectionReader, IIncoming
         => DateTime.TryParseExact(value?.Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
 
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    // ── EnsureTable ─────────────────────────────────────────────────────────
-
-    // ponytail: auto-create all incoming inspection tables. Idempotent, cheap after first call.
-    private async Task EnsureTablesAsync(SqlConnection conn, CancellationToken ct)
-    {
-        if (_tableEnsured) return;
-
-        await using var cmd = new SqlCommand("""
-            IF OBJECT_ID(N'[dbo].[tblIncomingSupplier]', N'U') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[tblIncomingSupplier] (
-                    [Code] nvarchar(50) NOT NULL,
-                    [Name] nvarchar(200) NOT NULL,
-                    [IsParentPlant] bit NOT NULL DEFAULT 0,
-                    CONSTRAINT [PK_tblIncomingSupplier] PRIMARY KEY ([Code])
-                );
-            END
-
-            IF OBJECT_ID(N'[dbo].[tblInspectionQuota]', N'U') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[tblInspectionQuota] (
-                    [ComponentCode] nvarchar(50) NOT NULL,
-                    [Percent] int NULL,
-                    [FixedCount] int NULL,
-                    CONSTRAINT [PK_tblInspectionQuota] PRIMARY KEY ([ComponentCode])
-                );
-            END
-
-            IF OBJECT_ID(N'[dbo].[tblIncomingDelivery]', N'U') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[tblIncomingDelivery] (
-                    [Id] nvarchar(32) NOT NULL,
-                    [SupplierCode] nvarchar(50) NOT NULL,
-                    [SupplierName] nvarchar(200) NOT NULL,
-                    [InvoiceNumber] nvarchar(100) NOT NULL,
-                    [InvoiceDate] datetime NOT NULL,
-                    [AccompanyingDocument] nvarchar(200) NULL,
-                    [CreatedAt] datetime NOT NULL,
-                    [CreatedBy] nvarchar(50) NOT NULL,
-                    CONSTRAINT [PK_tblIncomingDelivery] PRIMARY KEY ([Id])
-                );
-            END
-
-            IF OBJECT_ID(N'[dbo].[tblIncomingPackage]', N'U') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[tblIncomingPackage] (
-                    [Id] int IDENTITY(1,1) NOT NULL,
-                    [DeliveryId] nvarchar(32) NOT NULL,
-                    [HuNumber] nvarchar(100) NOT NULL,
-                    [Status] nvarchar(20) NOT NULL DEFAULT 'Open',
-                    [ClosedAt] datetime NULL,
-                    [ClosedBy] nvarchar(50) NULL,
-                    CONSTRAINT [PK_tblIncomingPackage] PRIMARY KEY ([Id]),
-                    CONSTRAINT [FK_tblIncomingPackage_Delivery] FOREIGN KEY ([DeliveryId])
-                        REFERENCES [dbo].[tblIncomingDelivery]([Id])
-                );
-            END
-
-            IF OBJECT_ID(N'[dbo].[tblIncomingPackingRow]', N'U') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[tblIncomingPackingRow] (
-                    [Id] int IDENTITY(1,1) NOT NULL,
-                    [PackageId] int NOT NULL,
-                    [ComponentCode] nvarchar(50) NOT NULL,
-                    [ComponentName] nvarchar(200) NOT NULL,
-                    [PlannedQuantity] int NOT NULL,
-                    [NetWeight] decimal(18,4) NULL,
-                    [GrossWeight] decimal(18,4) NULL,
-                    [Batch] nvarchar(100) NULL,
-                    [RequiredQuantity] int NOT NULL,
-                    [OkQuantity] int NOT NULL DEFAULT 0,
-                    [DefectQuantity] int NOT NULL DEFAULT 0,
-                    [MismatchQuantity] int NOT NULL DEFAULT 0,
-                    [ShortageQuantity] int NOT NULL DEFAULT 0,
-                    [DiscrepancyReason] nvarchar(500) NULL,
-                    CONSTRAINT [PK_tblIncomingPackingRow] PRIMARY KEY ([Id]),
-                    CONSTRAINT [FK_tblIncomingPackingRow_Package] FOREIGN KEY ([PackageId])
-                        REFERENCES [dbo].[tblIncomingPackage]([Id])
-                );
-            END
-            """, conn) { CommandTimeout = _options.CommandTimeoutSeconds };
-        await cmd.ExecuteNonQueryAsync(ct);
-        _tableEnsured = true;
-    }
 }

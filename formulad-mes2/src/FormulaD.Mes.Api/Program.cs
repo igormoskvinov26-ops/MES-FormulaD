@@ -73,6 +73,9 @@ var app = builder.Build();
 
 app.Logger.LogInformation("Источник данных: SQL Server");
 
+// T-029: Проверка версии схемы и наличия таблиц при старте (T-004: fail-fast вместо runtime DDL).
+await SqlStartupCheck.RunAsync(sqlOptions, app.Logger, app.Lifetime.ApplicationStopping);
+
 if (!devAuth.CanLogIn)
 {
     app.Logger.LogWarning(
