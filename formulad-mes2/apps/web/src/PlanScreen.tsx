@@ -13,6 +13,7 @@ import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } fr
 import { JobCardDialog } from './JobCardDialog';
 import { NcpPrintDialog } from './NcpPrintDialog';
 import { DensityToggle } from './DensityToggle';
+import { FilterPresets, type FilterState } from './FilterPresets';
 import { EmptyState } from './EmptyState';
 import { TableSkeleton } from './Skeleton';
 import './f7-components.css';
@@ -268,6 +269,10 @@ export function PlanScreen({
           </select>
           <ColumnPicker visible={visible} onToggle={toggle} onReset={reset} />
           <DensityToggle />
+          <FilterPresets
+            current={{ vin, statusChoice, filterStatusId }}
+            onApply={(s: FilterState) => { setVin(s.vin); setStatusChoice(s.statusChoice); setFilterStatusId(s.filterStatusId); setPage(1); }}
+          />
           <button
             type="button"
             className={editOrder ? 'primary' : undefined}
@@ -333,7 +338,7 @@ export function PlanScreen({
                     <span className="sr-only">Выбор для печати</span>
                   </th>
                   {editOrder && <th scope="col">Перемещение</th>}
-                  {vinColumn && <th scope="col">{vinColumn.label}</th>}
+                  {vinColumn && <th scope="col" className="vin">{vinColumn.label}</th>}
                   <th scope="col">Состояние</th>
                   {otherColumns.map((column) => (
                     <th key={column.key} scope="col">

@@ -18,5 +18,9 @@ docs/design/*.webp
 wwwroot/
 *.tsbuildinfo
 
+# Playwright
+test-results/
+playwright-report/
+
 # Стенд: пароль и лог текущего запуска
 stand/.run/

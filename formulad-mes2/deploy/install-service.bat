@@ -37,7 +37,7 @@ sc create "%SVC_NAME%" ^
     DisplayName="%SVC_DISPLAY%" ^
     start=auto
 
-sc description "%SVC_NAME%" "FormulaD MES 2.0 — производственный план (read-only)"
+sc description "%SVC_NAME%" "FormulaD MES 2.0 — система управления производством ATV"
 sc start "%SVC_NAME%"
 
 echo.

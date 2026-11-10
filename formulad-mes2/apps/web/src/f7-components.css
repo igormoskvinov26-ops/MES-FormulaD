@@ -402,7 +402,15 @@
 :root .f7plan .controls button.primary { background: var(--f7-red, #e31e24); color: #fff; border-color: transparent; }
 
 /* table */
-.f7plan .table-wrap { max-height: calc(100vh - 300px); overflow: auto; }
+/* T-084: horizontal scroll shadow */
+.f7plan .table-wrap {
+  max-height: calc(100vh - 300px); overflow: auto;
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) left center / 40px 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 30%, transparent) right center / 40px 100% no-repeat local,
+    linear-gradient(to right, rgba(16,18,22,.12), transparent) left center / 14px 100% no-repeat scroll,
+    linear-gradient(to left, rgba(16,18,22,.12), transparent) right center / 14px 100% no-repeat scroll;
+}
 .f7plan table { border-collapse: separate; border-spacing: 0 4px; }
 .f7plan thead th {
   position: sticky; top: 0; z-index: 2;
@@ -410,6 +418,9 @@
   background: color-mix(in srgb, var(--muted) 14%, var(--surface)); color: var(--text);
   box-shadow: 0 2px 4px rgba(16, 18, 22, .08);
 }
+/* T-084: sticky VIN column */
+.f7plan .vin { position: sticky; left: 0; z-index: 1; background: inherit; }
+.f7plan thead .vin { z-index: 3; }
 .f7plan tbody tr { background: var(--surface); }
 .f7plan tbody tr:nth-child(even) { background: var(--surface); }
 .f7plan tbody tr td:first-child { box-shadow: inset 3px 0 0 transparent; }
@@ -780,14 +791,16 @@
   box-shadow: 0 -10px 12px -10px rgba(16, 18, 22, .2);
 }
 
-/* сенсорный терминал: цели касания ≥ 48 px, главные действия 56 px */
+/* ponytail: сенсорный терминал — цели касания ≥ 52 px, главные действия 56 px (T-077) */
 @media (pointer: coarse) {
   :root .f7mes button, :root .f7plan button,
-  :root .f7plan input:not([type="checkbox"]), :root .f7plan select { min-height: 48px; }
+  :root .f7plan input:not([type="checkbox"]), :root .f7plan select { min-height: 52px; }
   :root .f7mes button.f7mes__btn { min-height: 56px; }
   :root .f7plan input[type="checkbox"] { width: 26px; height: 26px; }
   .f7plan tbody td { padding-top: 14px; padding-bottom: 14px; }
-  .sidebar-link { min-height: 48px; }
+  .sidebar-link { min-height: 52px; }
+  /* pin main scan action to bottom on touch screens */
+  .scan-found__actions { position: sticky; bottom: 0; z-index: 3; background: var(--surface); padding: 12px 0; border-top: 1px solid var(--border); }
 }
 
 /* ── Вспышка результата скана ───────────────────────────── */

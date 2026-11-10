@@ -646,14 +646,15 @@ tbody tr.moved { animation: moved-flash 2.5s ease-out; }
 
 .ncp-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 
-/* --- Touch targets: WCAG 2.5.8 — min 44px on touch, relaxed on mouse --- */
+/* --- Touch targets: WCAG 2.5.8 — min 52px on coarse pointer (T-077) --- */
 @media (pointer: coarse) {
-  button { min-height: 48px; }
-  .select-cell input { width: 24px; height: 24px; }
-  .station-component input { width: 24px; height: 24px; }
-  .sidebar-link { min-height: 48px; }
-  .order-cell button { min-height: 44px; min-width: 44px; }
-  .pager button { min-height: 44px; min-width: 44px; }
+  button { min-height: 52px; }
+  .select-cell input { width: 26px; height: 26px; }
+  .station-component input { width: 26px; height: 26px; }
+  .sidebar-link { min-height: 52px; }
+  .order-cell button { min-height: 48px; min-width: 48px; }
+  .pager button { min-height: 48px; min-width: 48px; }
+  a, .clickable { min-height: 48px; display: inline-flex; align-items: center; }
 }
 
 /* --- Экран сканирования (Старт/Завершение/FOK — общая механика) --- */
