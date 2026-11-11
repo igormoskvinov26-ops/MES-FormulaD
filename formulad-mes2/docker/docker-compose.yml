@@ -53,7 +53,7 @@ services:
     ports:
       - "5080:5080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       Sql__ConnectionString: "Server=sqlserver;Database=FormulaD_TEST;User ID=mes_reader;Password=MesReader2024!;TrustServerCertificate=True"
       Sql__WriteConnectionString: "Server=sqlserver;Database=FormulaD_TEST;User ID=mes_writer;Password=MesWriter2024!;TrustServerCertificate=True"
       DevAuth__Enabled: "true"
