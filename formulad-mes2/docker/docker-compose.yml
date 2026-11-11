@@ -34,7 +34,7 @@ services:
         condition: service_healthy
     volumes:
       - ./init:/docker-entrypoint-initdb.d
-      - ../sql/migrations:/migrations:ro
+      - ../sql:/sql:ro
       - ./backup:/backup
     entrypoint: /bin/bash
     command: /docker-entrypoint-initdb.d/setup.sh

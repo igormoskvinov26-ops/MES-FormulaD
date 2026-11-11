@@ -7,6 +7,7 @@ SA_PASSWORD="${MSSQL_SA_PASSWORD:-FormulaD_Test2024!}"
 HOST="${MSSQL_HOST:-localhost}"
 MAX_WAIT=60
 BACKUP_FILE="/backup/FormulaD.bak"
+DUMP_FILE="/sql/seed/prod_dump.sql"
 
 sql() { $SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C "$@"; }
 
@@ -55,10 +56,35 @@ else
     echo "Бэкап не найден в $BACKUP_FILE"
 fi
 
-if [ "$RESTORED" -eq 0 ]; then
-    echo "=== Fallback: создаём БД из seed-скрипта ==="
-    sql -i /docker-entrypoint-initdb.d/01-seed.sql
+# Выгрузка схемы и данных прода (SSMS → Generate Scripts → Schema and data, UTF-16).
+# Даёт настоящие данные там, где они на проде есть; таблицы MES 2.0 прод ещё не знает,
+# их ниже доберёт seed. Пропускается, если база уже поднята из .bak.
+if [ "$RESTORED" -eq 0 ] && [ -f "$DUMP_FILE" ]; then
+    echo "=== Загружаем выгрузку прода: $DUMP_FILE ==="
+    # Дамп начинается с CREATE USER ... FOR LOGIN для учёток прода. Заводим их со
+    # случайным паролем: он никому не известен и в репозиторий не попадает, нужны
+    # только чтобы эти строки дампа отработали и ошибки ниже остались настоящими.
+    sql -b -Q "
+        IF DB_ID(N'FormulaD_TEST') IS NULL CREATE DATABASE [FormulaD_TEST];
+        DECLARE @pwd NVARCHAR(100) = CONVERT(NVARCHAR(100), NEWID()) + N'aA1!';
+        IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'CommonUser')
+            EXEC(N'CREATE LOGIN [CommonUser] WITH PASSWORD = N''' + @pwd + N'''');
+        IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'sa1')
+            EXEC(N'CREATE LOGIN [sa1] WITH PASSWORD = N''' + @pwd + N'''');
+    "
+    if sql -b -d FormulaD_TEST -i "$DUMP_FILE"; then
+        RESTORED=1
+        echo "Загружено. Строк в плане: $(sql -h -1 -W -d FormulaD_TEST \
+            -Q 'SET NOCOUNT ON; SELECT COUNT(*) FROM dbo.tblProductionPlan' | tr -d '[:space:]')"
+    else
+        echo "!!! Выгрузка прода не загрузилась — см. ошибку выше" >&2
+    fi
 fi
+
+# Seed создаёт недостающие таблицы и наполняет только пустые,
+# поэтому безопасен и поверх прод-данных, и как единственный источник.
+echo "=== Seed: добираем недостающие таблицы и демо-данные ==="
+sql -i /docker-entrypoint-initdb.d/01-seed.sql
 
 # Логины и служебные таблицы — всегда
 echo "Создаём логины и служебные таблицы..."
@@ -109,6 +135,6 @@ sql -b -Q "
 "
 
 # tblUser: при RESTORE из прода уже есть — тогда guard'ы ничего не делают.
-sql -b -d FormulaD_TEST -i /migrations/003_create_user.sql
+sql -b -d FormulaD_TEST -i /sql/migrations/003_create_user.sql
 
 echo "Инициализация завершена."

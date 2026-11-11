@@ -215,7 +215,11 @@ GO
 
 -- 4. Тестовые данные
 
--- Компоненты
+-- Компоненты.
+-- Везде ниже вставка только в пустую таблицу: при загрузке дампа прода эти блоки
+-- пропускаются, а демо-данные остаются лишь там, где на проде таблицы нет.
+IF NOT EXISTS (SELECT 1 FROM [dbo].[tblComponent])
+BEGIN
 SET IDENTITY_INSERT [dbo].[tblComponent] ON;
 INSERT INTO [dbo].[tblComponent] ([id], [ComponentCode], [ComponentName], [StationID]) VALUES
     (1, 'FRM-001', N'Рама основная',                1),
@@ -234,9 +238,12 @@ INSERT INTO [dbo].[tblComponent] ([id], [ComponentCode], [ComponentName], [Stati
     (14, 'EXH-001', N'Выхлопная система',           11),
     (15, 'LGT-001', N'Светотехника комплект',       7);
 SET IDENTITY_INSERT [dbo].[tblComponent] OFF;
+END
 GO
 
 -- Типы несоответствий
+IF NOT EXISTS (SELECT 1 FROM [dbo].[tblDiscrepancyList])
+BEGIN
 SET IDENTITY_INSERT [dbo].[tblDiscrepancyList] ON;
 INSERT INTO [dbo].[tblDiscrepancyList] ([id], [discrepancy]) VALUES
     (1, N'Царапина'),
@@ -248,9 +255,11 @@ INSERT INTO [dbo].[tblDiscrepancyList] ([id], [discrepancy]) VALUES
     (7, N'Электрический дефект'),
     (8, N'Крепёж не затянут');
 SET IDENTITY_INSERT [dbo].[tblDiscrepancyList] OFF;
+END
 GO
 
 -- Поставщики
+IF NOT EXISTS (SELECT 1 FROM [dbo].[tblIncomingSupplier])
 INSERT INTO [dbo].[tblIncomingSupplier] ([Code], [Name], [IsParentPlant]) VALUES
     ('SUP-001', N'ООО «МоторТех»',        0),
     ('SUP-002', N'ЗАО «РамаПром»',        0),
@@ -259,6 +268,8 @@ INSERT INTO [dbo].[tblIncomingSupplier] ([Code], [Name], [IsParentPlant]) VALUES
 GO
 
 -- Производственный план (6 изделий — совпадает с тестовыми фикстурами)
+IF NOT EXISTS (SELECT 1 FROM [dbo].[tblProductionPlan])
+BEGIN
 SET IDENTITY_INSERT [dbo].[tblProductionPlan] ON;
 
 INSERT INTO [dbo].[tblProductionPlan]
@@ -291,9 +302,11 @@ VALUES
      '2026-10-23', NULL, NULL, NULL, NULL, NULL);
 
 SET IDENTITY_INSERT [dbo].[tblProductionPlan] OFF;
+END
 GO
 
 -- NCP: пара тестовых несоответствий
+IF NOT EXISTS (SELECT 1 FROM [dbo].[tblNCP])
 INSERT INTO [dbo].[tblNCP] ([VIN], [StationID], [ComponentID], [Quantity], [DiscrepancyTypeID], [Comment], [Status], [CreatedBy], [CreatedAt])
 VALUES
     ('DEMO-VIN-00001', 3, 4, 1, 3, N'Не хватает болтов крепления', 1, 'test-user', '2026-10-21T10:00:00'),
