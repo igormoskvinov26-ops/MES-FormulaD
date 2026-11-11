@@ -300,6 +300,25 @@ VALUES
     ('DEMO-VIN-00003', 7, 10, 1, 1, N'Царапина на левом крыле', 2, 'test-user', '2026-10-22T14:00:00');
 GO
 
+-- Event log (T-005): append-only audit trail
+IF OBJECT_ID(N'dbo.tblEventLog', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.tblEventLog (
+        Id              BIGINT        IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        OccurredAt      DATETIME      NOT NULL DEFAULT GETDATE(),
+        UserName        NVARCHAR(100) NOT NULL,
+        EntityType      NVARCHAR(100) NOT NULL,
+        EntityKey       NVARCHAR(100) NOT NULL,
+        Action          NVARCHAR(100) NOT NULL,
+        OldValue        NVARCHAR(MAX) NULL,
+        NewValue        NVARCHAR(MAX) NULL,
+    );
+    CREATE NONCLUSTERED INDEX IX_tblEventLog_EntityType_EntityKey
+        ON dbo.tblEventLog (EntityType, EntityKey)
+        INCLUDE (OccurredAt);
+END
+GO
+
 -- Schema version tracking (T-029)
 IF OBJECT_ID(N'dbo.__SchemaVersion', N'U') IS NULL
 BEGIN
@@ -310,6 +329,7 @@ BEGIN
         AppliedBy   NVARCHAR(128) NOT NULL DEFAULT SUSER_SNAME()
     );
     INSERT INTO dbo.__SchemaVersion (Version, Name) VALUES (0, N'create_version_table');
+    INSERT INTO dbo.__SchemaVersion (Version, Name) VALUES (2, N'create_event_log');
 END
 GO
 

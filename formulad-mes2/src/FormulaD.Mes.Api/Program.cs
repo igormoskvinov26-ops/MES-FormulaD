@@ -21,15 +21,14 @@ if (!builder.Environment.IsDevelopment())
     });
 }
 
-// --- Журнал событий ---------------------------------------------------------
-// Общий для всех операций записи, заводится один раз до них (docs/DEVELOPMENT_PLAN.md,
-// Этап 1), а не пристраивается к каждой новой пишущей функции отдельно.
-var eventLog = new InMemoryEventLog();
-builder.Services.AddSingleton<IEventLog>(eventLog);
-
 // --- Источник данных: SQL Server -------------------------------------------
 var sqlOptions = SqlOptions.Create(builder.Configuration);
 builder.Services.AddSingleton(sqlOptions);
+
+// --- Журнал событий ---------------------------------------------------------
+// ponytail: SqlEventLog persists to SQL; tests override via ConfigureTestServices
+var eventLog = (IEventLog)new SqlEventLog(sqlOptions);
+builder.Services.AddSingleton(eventLog);
 builder.Services.AddSingleton<IProductionPlanReader>(sp => new SqlProductionPlanReader(sp.GetRequiredService<SqlOptions>()));
 builder.Services.AddSingleton<IPlanTransitions>(sp => new SqlPlanTransitions(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
 builder.Services.AddSingleton<IPlanOrderEditor>(sp => new SqlPlanOrderEditor(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));

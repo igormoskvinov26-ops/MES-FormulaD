@@ -3,8 +3,9 @@ using Microsoft.Data.SqlClient;
 namespace FormulaD.Mes.Api;
 
 /// <summary>
-/// Настройки подключения к SQL Server. Fail-closed: отсутствие строки подключения
-/// или базы данных приводит к ошибке запуска.
+/// Настройки подключения к SQL Server.
+/// ConnectionString — чтение (ApplicationIntent=ReadOnly).
+/// WriteConnectionString — запись; если Sql:WriteConnectionString не задан, используется основная строка.
 /// </summary>
 public sealed record SqlOptions(string ConnectionString, string WriteConnectionString, int CommandTimeoutSeconds)
 {
@@ -23,8 +24,23 @@ public sealed record SqlOptions(string ConnectionString, string WriteConnectionS
 
         builder.ApplicationName = "FormulaD.Mes.Api";
         builder.ConnectTimeout = Math.Min(builder.ConnectTimeout is 0 ? 5 : builder.ConnectTimeout, 15);
+        var baseCs = builder.ConnectionString;
 
-        var writeCs = builder.ConnectionString;
+        // ponytail: отдельная write-строка — если задана, используем; иначе fallback на основную
+        var explicitWrite = configuration["Sql:WriteConnectionString"];
+        string writeCs;
+        if (!string.IsNullOrWhiteSpace(explicitWrite))
+        {
+            var wb = new SqlConnectionStringBuilder(explicitWrite);
+            Validate(wb);
+            wb.ApplicationName = "FormulaD.Mes.Api (writer)";
+            wb.ConnectTimeout = Math.Min(wb.ConnectTimeout is 0 ? 5 : wb.ConnectTimeout, 15);
+            writeCs = wb.ConnectionString;
+        }
+        else
+        {
+            writeCs = baseCs;
+        }
 
         builder.ApplicationIntent = ApplicationIntent.ReadOnly;
         builder.ApplicationName = "FormulaD.Mes.Api (read-only)";

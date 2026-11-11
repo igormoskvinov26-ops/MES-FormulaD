@@ -39,5 +39,25 @@ services:
       MSSQL_SA_PASSWORD: "FormulaD_Test2024!"
       MSSQL_HOST: sqlserver
 
+  mes-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: formulad-mes-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+    ports:
+      - "5080:5080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Sql__ConnectionString: "Server=sqlserver;Database=FormulaD_TEST;User ID=mes_reader;Password=MesReader2024!;TrustServerCertificate=True"
+      Sql__WriteConnectionString: "Server=sqlserver;Database=FormulaD_TEST;User ID=mes_writer;Password=MesWriter2024!;TrustServerCertificate=True"
+      DevAuth__Enabled: "true"
+      DevAuth__Username: "admin"
+      DevAuth__Password: "F7mes"
+
 volumes:
   sqldata:

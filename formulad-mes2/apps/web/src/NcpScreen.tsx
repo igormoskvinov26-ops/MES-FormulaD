@@ -179,7 +179,7 @@ export function NcpScreen({
               <thead>
                 <tr>
                   <th scope="col">№</th>
-                  <th scope="col">VIN</th>
+                  <th scope="col" className="vin">VIN</th>
                   <th scope="col">Станция</th>
                   <th scope="col">Компонент</th>
                   <th scope="col">Кол-во</th>
