@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Инициализация тестовой БД: RESTORE из .bak если есть, иначе seed-скрипт.
-set -e
+set -euo pipefail
 
 SQLCMD=/opt/mssql-tools18/bin/sqlcmd
 SA_PASSWORD="${MSSQL_SA_PASSWORD:-FormulaD_Test2024!}"
@@ -8,61 +8,56 @@ HOST="${MSSQL_HOST:-localhost}"
 MAX_WAIT=60
 BACKUP_FILE="/backup/FormulaD.bak"
 
+sql() { $SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C "$@"; }
+
 echo "Ожидание SQL Server ($HOST)..."
 for i in $(seq 1 $MAX_WAIT); do
-    $SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" -b >/dev/null 2>&1 && break
+    sql -Q "SELECT 1" -b >/dev/null 2>&1 && break
     sleep 1
 done
-
-$SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" -b >/dev/null 2>&1 || {
-    echo "SQL Server не запустился за ${MAX_WAIT}с" >&2
-    exit 1
-}
-
+sql -Q "SELECT 1" -b >/dev/null 2>&1 || { echo "SQL Server не запустился за ${MAX_WAIT}с" >&2; exit 1; }
 echo "SQL Server готов."
 
 RESTORED=0
 
 if [ -f "$BACKUP_FILE" ]; then
-    echo "Найден бэкап: $BACKUP_FILE — восстанавливаем..."
+    echo "Найден бэкап: $BACKUP_FILE — пробуем восстановить..."
+    # RESTORE выполняется на sqlserver — файл должен быть смонтирован туда же
+    if sql -Q "RESTORE VERIFYONLY FROM DISK = N'$BACKUP_FILE'" -b >/dev/null 2>&1; then
+        echo "Бэкап валиден. Восстанавливаем..."
+        # Получаем логические имена
+        DATA_NAME=$(sql -h -1 -W -Q "RESTORE FILELISTONLY FROM DISK = N'$BACKUP_FILE'" | head -1 | awk '{print $1}')
+        LOG_NAME=$(sql -h -1 -W -Q "RESTORE FILELISTONLY FROM DISK = N'$BACKUP_FILE'" | sed -n '2p' | awk '{print $1}')
+        echo "  DATA=$DATA_NAME, LOG=$LOG_NAME"
 
-    # Получаем логические имена из бэкапа
-    LOGICAL=$($SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C -h -1 -W -Q "
-        RESTORE FILELISTONLY FROM DISK = N'$BACKUP_FILE'
-    " 2>&1) || true
-
-    DATA_NAME=$(echo "$LOGICAL" | head -1 | awk '{print $1}')
-    LOG_NAME=$(echo "$LOGICAL" | sed -n '2p' | awk '{print $1}')
-
-    if [ -n "$DATA_NAME" ] && [ -n "$LOG_NAME" ]; then
-        $SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C -Q "
+        sql -Q "
             IF DB_ID(N'FormulaD_TEST') IS NOT NULL
             BEGIN
                 ALTER DATABASE [FormulaD_TEST] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
                 DROP DATABASE [FormulaD_TEST];
             END
-        " && \
-        $SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C -Q "
+        " -b
+        sql -Q "
             RESTORE DATABASE [FormulaD_TEST] FROM DISK = N'$BACKUP_FILE'
             WITH MOVE N'$DATA_NAME' TO N'/var/opt/mssql/data/FormulaD_TEST.mdf',
                  MOVE N'$LOG_NAME' TO N'/var/opt/mssql/data/FormulaD_TEST_log.ldf',
                  REPLACE;
-        " && RESTORED=1 || echo "RESTORE не удался — fallback на seed"
+        " -b && RESTORED=1 || echo "RESTORE не удался"
     else
-        echo "Не удалось прочитать .bak — fallback на seed"
+        echo "Бэкап невалиден или недоступен для SQL Server"
     fi
 else
-    echo "Бэкап не найден — используем seed-скрипт"
+    echo "Бэкап не найден в $BACKUP_FILE"
 fi
 
 if [ "$RESTORED" -eq 0 ]; then
-    echo "Создаём БД из seed-скрипта..."
-    $SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C -i /docker-entrypoint-initdb.d/01-seed.sql
+    echo "=== Fallback: создаём БД из seed-скрипта ==="
+    sql -i /docker-entrypoint-initdb.d/01-seed.sql
 fi
 
 # Логины и служебные таблицы — всегда
 echo "Создаём логины и служебные таблицы..."
-$SQLCMD -S "$HOST" -U sa -P "$SA_PASSWORD" -C -Q "
+sql -b -Q "
     USE [master];
     IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'mes_reader')
         CREATE LOGIN [mes_reader] WITH PASSWORD = N'MesReader2024!', DEFAULT_DATABASE = [FormulaD_TEST];
