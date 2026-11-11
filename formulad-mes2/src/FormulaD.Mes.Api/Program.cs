@@ -722,7 +722,7 @@ if (devAuth.CanLogIn)
 {
     api.MapPost("/dev-auth/login", async (DevAuthLoginRequest request, HttpContext ctx, DevAuthOptions opts) =>
     {
-        if (!IsLoopback(ctx) || !IsSameOrigin(ctx))
+        if (!IsSameOrigin(ctx))
         {
             return Results.Problem(title: "Доступ запрещён", detail: "Dev-вход разрешён только локально.", statusCode: StatusCodes.Status403Forbidden);
         }
