@@ -728,6 +728,8 @@ if (devAuth.CanLogIn)
         }
         if (!opts.Matches(request.Username, request.Password))
         {
+            app.Logger.LogWarning("DevAuth FAIL: req=[{ReqUser}]/[{ReqPass}] opts=[{OptsUser}]/[{OptsPass}] CanLogIn={CanLogIn}",
+                request.Username, request.Password, opts.Username, opts.Password, opts.CanLogIn);
             return Results.Problem(title: "Неверные учётные данные", statusCode: StatusCodes.Status401Unauthorized);
         }
 
