@@ -21,15 +21,15 @@ echo "SQL Server готов."
 RESTORED=0
 
 if [ -f "$BACKUP_FILE" ]; then
-    echo "Найден бэкап: $BACKUP_FILE — пробуем восстановить..."
-    # RESTORE выполняется на sqlserver — файл должен быть смонтирован туда же
-    if sql -Q "RESTORE VERIFYONLY FROM DISK = N'$BACKUP_FILE'" -b >/dev/null 2>&1; then
-        echo "Бэкап валиден. Восстанавливаем..."
-        # Получаем логические имена
-        DATA_NAME=$(sql -h -1 -W -Q "RESTORE FILELISTONLY FROM DISK = N'$BACKUP_FILE'" | head -1 | awk '{print $1}')
-        LOG_NAME=$(sql -h -1 -W -Q "RESTORE FILELISTONLY FROM DISK = N'$BACKUP_FILE'" | sed -n '2p' | awk '{print $1}')
-        echo "  DATA=$DATA_NAME, LOG=$LOG_NAME"
+    echo "Найден бэкап: $BACKUP_FILE — читаем список файлов..."
+    # RESTORE выполняется процессом SQL Server — файл должен быть смонтирован в его контейнер.
+    # Ошибки НЕ глушим: без них причина отказа не видна.
+    FILELIST=$(sql -h -1 -W -s"|" -Q "SET NOCOUNT ON; RESTORE FILELISTONLY FROM DISK = N'$BACKUP_FILE'" 2>&1) || true
+    DATA_NAME=$(printf '%s\n' "$FILELIST" | awk -F'|' '$3=="D"{print $1; exit}')
+    LOG_NAME=$(printf '%s\n' "$FILELIST" | awk -F'|' '$3=="L"{print $1; exit}')
 
+    if [ -n "$DATA_NAME" ] && [ -n "$LOG_NAME" ]; then
+        echo "  DATA=$DATA_NAME, LOG=$LOG_NAME — восстанавливаем..."
         sql -Q "
             IF DB_ID(N'FormulaD_TEST') IS NOT NULL
             BEGIN
@@ -37,14 +37,19 @@ if [ -f "$BACKUP_FILE" ]; then
                 DROP DATABASE [FormulaD_TEST];
             END
         " -b
-        sql -Q "
+        if sql -Q "
             RESTORE DATABASE [FormulaD_TEST] FROM DISK = N'$BACKUP_FILE'
             WITH MOVE N'$DATA_NAME' TO N'/var/opt/mssql/data/FormulaD_TEST.mdf',
                  MOVE N'$LOG_NAME' TO N'/var/opt/mssql/data/FormulaD_TEST_log.ldf',
                  REPLACE;
-        " -b && RESTORED=1 || echo "RESTORE не удался"
+        " -b; then
+            RESTORED=1
+        else
+            echo "!!! RESTORE не удался — см. ошибку выше" >&2
+        fi
     else
-        echo "Бэкап невалиден или недоступен для SQL Server"
+        echo "!!! SQL Server не смог прочитать бэкап. Ответ сервера:" >&2
+        printf '%s\n' "$FILELIST" >&2
     fi
 else
     echo "Бэкап не найден в $BACKUP_FILE"
