@@ -742,6 +742,9 @@ app.MapFallback(context =>
     if (context.Request.Method == "GET" && !context.Request.Path.StartsWithSegments("/api"))
     {
         context.Request.Path = "/index.html";
+        // SendFileAsync не ставит Content-Type, а nosniff запрещает браузеру угадывать,
+        // поэтому без этой строки страница показывается как текст.
+        context.Response.ContentType = "text/html; charset=utf-8";
         return context.Response.SendFileAsync(
             context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>()
                 .WebRootFileProvider.GetFileInfo("index.html"));
