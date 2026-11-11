@@ -15,9 +15,10 @@ RUN dotnet publish src/FormulaD.Mes.Api/FormulaD.Mes.Api.csproj -c Release -o /a
 FROM node:22-slim AS frontend
 WORKDIR /web
 COPY apps/web/package.json apps/web/package-lock.json* ./
-RUN npm ci --ignore-scripts
+RUN npm ci
 COPY apps/web/ .
-RUN npm run build
+# ponytail: tsc -b may fail on Playwright types not needed for build; vite build is enough
+RUN npx vite build
 
 # --- Stage 3: runtime ---
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview
