@@ -10,7 +10,7 @@ public sealed class ReworkTests
     [Fact]
     public async Task Rework_Requires_Authentication()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().PostAsync("/api/v1/production-plan/DEMO-VIN-00003/rework", null);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -19,7 +19,7 @@ public sealed class ReworkTests
     public async Task Send_To_Rework_Succeeds_From_Status_2()
     {
         // DEMO-VIN-00003: statusId=2.
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00003/rework", null);
@@ -35,7 +35,7 @@ public sealed class ReworkTests
     [InlineData("DEMO-VIN-00004")] // statusId 3
     public async Task Send_To_Rework_Rejects_Items_Not_In_Status_2(string vin)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync($"/api/v1/production-plan/{vin}/rework", null);
@@ -46,7 +46,7 @@ public sealed class ReworkTests
     [Fact]
     public async Task Send_To_Rework_Unknown_Vin_Returns_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-99999/rework", null);
@@ -57,7 +57,7 @@ public sealed class ReworkTests
     [Fact]
     public async Task Finish_Rework_Succeeds_When_No_Missing_Parts()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         await (await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00003/rework", null)).Content.ReadAsStringAsync();
@@ -73,7 +73,7 @@ public sealed class ReworkTests
     [Fact]
     public async Task Finish_Rework_Is_Blocked_By_Missing_Part_And_Unblocks_After_Install()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // DEMO-VIN-00001 стартует со статусом 1 с двумя открытыми NCP без детали — доводим
@@ -108,7 +108,7 @@ public sealed class ReworkTests
     [InlineData("DEMO-VIN-00004")] // statusId 3
     public async Task Finish_Rework_Rejects_Items_Not_In_Status_4(string vin)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync($"/api/v1/production-plan/{vin}/rework/finish", null);

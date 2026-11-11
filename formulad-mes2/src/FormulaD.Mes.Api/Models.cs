@@ -32,20 +32,13 @@ public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSi
 /// </summary>
 public sealed record ProductionPlanQuery(string? Vin, string? Status, int? StatusId, int Page, int PageSize);
 
-public sealed record DevAuthLoginRequest(string Username, string Password);
+/// <summary>
+/// Пользователь из dbo.tblUser. Пароля нет: прод опознаёт по доменной учётке Windows,
+/// а таблица отвечает только за «пускать ли» (IsActive) и «что можно» (UserRole).
+/// </summary>
+public sealed record MesUser(int Id, string Login, string? FullName, string? Role);
 
-public sealed record DevAuthOptions(bool Enabled, string? Username, string? Password)
-{
-    public bool HasCredentials => !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(Password);
-    public bool CanLogIn => Enabled && HasCredentials;
-
-    public bool Matches(string? username, string? password)
-        => CanLogIn
-           && string.Equals(username, Username, StringComparison.Ordinal)
-           && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
-               System.Text.Encoding.UTF8.GetBytes(password ?? string.Empty),
-               System.Text.Encoding.UTF8.GetBytes(Password!));
-}
+public sealed record LoginRequest(string Login);
 
 /// <summary>Запрос на перемещение изделия в плане. Только для демо-источника.</summary>
 public sealed record MoveRequest(int ToPosition);

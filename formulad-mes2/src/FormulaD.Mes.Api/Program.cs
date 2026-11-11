@@ -50,11 +50,10 @@ builder.Services.AddSingleton<IIncomingInspectionWriter>(sqlIncoming);
 // --- Dev-аутентификация ----------------------------------------------------
 // Включается только явно, только в Development и только при заданном секрете
 // (user-secrets / env). Пароля по умолчанию нет и быть не может.
-var devAuth = new DevAuthOptions(
-    Enabled: builder.Configuration.GetValue("DevAuth:Enabled", false) && builder.Environment.IsDevelopment(),
-    Username: builder.Configuration["DevAuth:Username"],
-    Password: builder.Configuration["DevAuth:Password"]);
-builder.Services.AddSingleton(devAuth);
+// Вход формой (логин без пароля) допустим только вне прода: на проде логин даёт Windows.
+// Прод и тест используют один и тот же справочник dbo.tblUser — отличается лишь источник логина.
+var formLogin = builder.Configuration.GetValue("Auth:FormLogin", false) && builder.Environment.IsDevelopment();
+builder.Services.AddSingleton<IUserDirectory>(sp => new SqlUserDirectory(sp.GetRequiredService<SqlOptions>()));
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -102,12 +101,10 @@ app.Logger.LogInformation("Источник данных: SQL Server");
 // T-029: Проверка версии схемы и наличия таблиц при старте (T-004: fail-fast вместо runtime DDL).
 await SqlStartupCheck.RunAsync(sqlOptions, app.Logger, app.Lifetime.ApplicationStopping);
 
-if (!devAuth.CanLogIn)
-{
-    app.Logger.LogWarning(
-        "Dev-аутентификация выключена (DevAuth:Enabled={Enabled}, секрет задан={HasSecret}). " +
-        "Защищённые эндпоинты будут возвращать 401.", devAuth.Enabled, devAuth.HasCredentials);
-}
+app.Logger.LogInformation(
+    formLogin
+        ? "Вход: форма с логином из dbo.tblUser (без пароля, как на проде)."
+        : "Вход формой выключен — логин должен приходить от Windows-аутентификации.");
 
 // T-014: Заголовки безопасности
 app.Use(async (ctx, next) =>
@@ -705,10 +702,11 @@ incoming.MapPost("/packages/{packageId:int}/reopen", async (
     };
 });
 
-api.MapGet("/auth/me", (ClaimsPrincipal user, DevAuthOptions opts) => Results.Ok(new
+api.MapGet("/auth/me", (ClaimsPrincipal user) => Results.Ok(new
 {
     userName = user.Identity?.Name,
-    mode = opts.CanLogIn ? "dev" : "closed",
+    fullName = user.FindFirstValue("full_name"),
+    role = user.FindFirstValue(ClaimTypes.Role),
 })).RequireAuthorization();
 
 api.MapPost("/auth/logout", async (HttpContext ctx) =>
@@ -717,27 +715,24 @@ api.MapPost("/auth/logout", async (HttpContext ctx) =>
     return Results.NoContent();
 }).RequireAuthorization();
 
-// Dev-login физически не существует вне Development/без секрета — путь не маппится.
-if (devAuth.CanLogIn)
+// Вход формой существует только вне прода — на проде путь не маппится, логин даёт Windows.
+if (formLogin)
 {
-    api.MapPost("/dev-auth/login", async (DevAuthLoginRequest request, HttpContext ctx, DevAuthOptions opts) =>
+    api.MapPost("/auth/login", async (LoginRequest request, HttpContext ctx, IUserDirectory directory, CancellationToken ct) =>
     {
         if (!IsSameOrigin(ctx))
         {
-            return Results.Problem(title: "Доступ запрещён", detail: "Dev-вход разрешён только локально.", statusCode: StatusCodes.Status403Forbidden);
-        }
-        if (!opts.Matches(request.Username, request.Password))
-        {
-            app.Logger.LogWarning("DevAuth FAIL: req=[{ReqUser}]/[{ReqPass}] opts=[{OptsUser}]/[{OptsPass}] CanLogIn={CanLogIn}",
-                request.Username, request.Password, opts.Username, opts.Password, opts.CanLogIn);
-            return Results.Problem(title: "Неверные учётные данные", statusCode: StatusCodes.Status401Unauthorized);
+            return Results.Problem(title: "Доступ запрещён", detail: "Вход разрешён только локально.", statusCode: StatusCodes.Status403Forbidden);
         }
 
-        var identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.Name, request.Username), new Claim("auth_mode", "dev")],
-            CookieAuthenticationDefaults.AuthenticationScheme);
-        await ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-        return Results.Ok(new { userName = request.Username, mode = "dev" });
+        var user = await directory.FindAsync(request.Login ?? string.Empty, ct);
+        if (user is null)
+        {
+            return Results.Problem(title: "Пользователь не найден или отключён", statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        await ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(ClaimsFor(user)));
+        return Results.Ok(new { userName = user.Login, fullName = user.FullName, role = user.Role });
     }).AllowAnonymous().RequireRateLimiting("login");
 }
 
@@ -773,10 +768,18 @@ static string StatusLabel(int? id) => id switch
 static ProblemHttpResult Problem(string title, string detail)
     => TypedResults.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);
 
-static bool IsLoopback(HttpContext ctx)
+static ClaimsIdentity ClaimsFor(MesUser user)
 {
-    var ip = ctx.Connection.RemoteIpAddress;
-    return ip is null || System.Net.IPAddress.IsLoopback(ip);
+    List<Claim> claims = [new(ClaimTypes.Name, user.Login)];
+    if (!string.IsNullOrEmpty(user.FullName))
+    {
+        claims.Add(new Claim("full_name", user.FullName));
+    }
+    if (!string.IsNullOrEmpty(user.Role))
+    {
+        claims.Add(new Claim(ClaimTypes.Role, user.Role));
+    }
+    return new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 }
 
 static bool IsSameOrigin(HttpContext ctx)

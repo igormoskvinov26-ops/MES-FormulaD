@@ -162,13 +162,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  me: () => request<{ userName: string | null; mode: string }>('/api/v1/auth/me'),
+  me: () => request<{ userName: string | null; fullName: string | null; role: string | null }>('/api/v1/auth/me'),
 
-  login: (username: string, password: string) =>
-    request<{ userName: string }>('/api/v1/dev-auth/login', {
+  login: (login: string) =>
+    request<{ userName: string; fullName: string | null; role: string | null }>('/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ login }),
     }),
 
   logout: () => request<void>('/api/v1/auth/logout', { method: 'POST' }),

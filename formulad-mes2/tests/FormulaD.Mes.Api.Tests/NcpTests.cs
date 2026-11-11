@@ -14,7 +14,7 @@ public sealed class NcpTests
     [InlineData("/api/v1/ncp/components")]
     public async Task Ncp_Endpoints_Require_Auth(string path)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().GetAsync(path);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -22,7 +22,7 @@ public sealed class NcpTests
     [Fact]
     public async Task List_Is_Sorted_Newest_First_And_Has_Known_Fixture_Count()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var page = await client.GetFromJsonAsync<PagedResult<NcpItem>>("/api/v1/ncp?pageSize=100");
@@ -35,7 +35,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Filter_By_Vin_And_Status_Work()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var byVin = await client.GetFromJsonAsync<PagedResult<NcpItem>>("/api/v1/ncp?vin=DEMO-VIN-00001");
@@ -51,7 +51,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Types_And_Stations_Are_Fixed_Lists()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var types = await client.GetFromJsonAsync<List<string>>("/api/v1/ncp/types");
@@ -66,7 +66,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Create_Succeeds_With_Valid_Data_And_Appears_In_List()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync("/api/v1/ncp", new CreateNcpRequest(
@@ -88,7 +88,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Create_Rejects_Unknown_Vin_With_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync("/api/v1/ncp", new CreateNcpRequest(
@@ -104,7 +104,7 @@ public sealed class NcpTests
     [InlineData("DEMO-VIN-00001", "1", "DEMO-CMP-014", 1, "Авария")] // типа нет в справочнике
     public async Task Create_Rejects_Invalid_Input_With_400(string vin, string station, string component, int qty, string type)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync("/api/v1/ncp", new CreateNcpRequest(vin, station, component, qty, type, null));
@@ -115,7 +115,7 @@ public sealed class NcpTests
     [Fact]
     public async Task PartInstalled_Is_Separate_From_Status()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // NC-2026-0001 (id=1) открыта, деталь не установлена.
@@ -132,7 +132,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Close_Sets_Status_And_Engineer_Comment_Without_Requiring_Part_Installed()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // NC-2026-0005 (id=5) открыта, деталь не установлена — закрытие не требует этого флага.
@@ -151,7 +151,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Close_Twice_Returns_400_Second_Time()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // NC-2026-0003 (id=3) уже закрыта в фикстуре.
@@ -163,7 +163,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Unknown_Id_Actions_Return_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var close = await client.PostAsJsonAsync("/api/v1/ncp/9999/close", new CloseNcpRequest(null));
@@ -184,7 +184,7 @@ public sealed class NcpTests
     [Fact]
     public async Task Components_Carry_Station_For_Client_Side_Filtering()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var components = await client.GetFromJsonAsync<List<ComponentItem>>("/api/v1/ncp/components");

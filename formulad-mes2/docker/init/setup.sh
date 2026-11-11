@@ -108,4 +108,7 @@ sql -b -Q "
     END
 "
 
+# tblUser: при RESTORE из прода уже есть — тогда guard'ы ничего не делают.
+sql -b -d FormulaD_TEST -i /migrations/003_create_user.sql
+
 echo "Инициализация завершена."

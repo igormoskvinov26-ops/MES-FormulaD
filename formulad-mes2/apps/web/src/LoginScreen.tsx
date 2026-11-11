@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { ApiError, api } from './api';
 
 export function LoginScreen({ onLoggedIn }: { onLoggedIn: (userName: string) => void }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [login, setLogin] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -12,13 +11,13 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: (userName: string) => 
     setBusy(true);
     setError('');
     try {
-      const result = await api.login(username, password);
+      const result = await api.login(login);
       onLoggedIn(result.userName);
     } catch (e) {
       setError(
         e instanceof ApiError && e.status === 404
-          ? 'Dev-вход не включён на сервере. Это нормальный режим вне локальной разработки.'
-          : 'Неверные учётные данные или сервер недоступен.',
+          ? 'Вход формой выключен: на этом сервере пользователь определяется учётной записью Windows.'
+          : 'Пользователь не найден или отключён.',
       );
     } finally {
       setBusy(false);
@@ -39,21 +38,12 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: (userName: string) => 
         <form onSubmit={submit} className="card">
           <h1>Вход в систему</h1>
           <p className="muted">
-            Учётные данные задаются через переменные среды или user-secrets.
+            Тестовый стенд: укажите логин из справочника пользователей. На рабочем сервере
+            пользователь определяется учётной записью Windows автоматически.
           </p>
           <label>
             Пользователь
-            <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />
-          </label>
-          <label>
-            Пароль
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
+            <input value={login} onChange={(e) => setLogin(e.target.value)} autoComplete="username" required />
           </label>
           {error && <p role="alert" className="error">{error}</p>}
           <button type="submit" className="primary" disabled={busy}>

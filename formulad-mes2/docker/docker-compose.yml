@@ -34,6 +34,7 @@ services:
         condition: service_healthy
     volumes:
       - ./init:/docker-entrypoint-initdb.d
+      - ../sql/migrations:/migrations:ro
       - ./backup:/backup
     entrypoint: /bin/bash
     command: /docker-entrypoint-initdb.d/setup.sh
@@ -57,9 +58,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       Sql__ConnectionString: "Server=sqlserver;Database=FormulaD_TEST;User ID=mes_reader;Password=MesReader2024!;TrustServerCertificate=True"
       Sql__WriteConnectionString: "Server=sqlserver;Database=FormulaD_TEST;User ID=mes_writer;Password=MesWriter2024!;TrustServerCertificate=True"
-      DevAuth__Enabled: "true"
-      DevAuth__Username: "admin"
-      DevAuth__Password: "F7mes"
+      # Вход по логину из dbo.tblUser без пароля — так же, как на проде (там логин даёт Windows).
+      Auth__FormLogin: "true"
 
 volumes:
   sqldata:

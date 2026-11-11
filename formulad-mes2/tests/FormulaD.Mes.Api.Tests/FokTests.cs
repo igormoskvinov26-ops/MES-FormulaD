@@ -10,7 +10,7 @@ public sealed class FokTests
     [Fact]
     public async Task Fok_Requires_Authentication()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().PostAsync("/api/v1/production-plan/DEMO-VIN-00003/fok", null);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -19,7 +19,7 @@ public sealed class FokTests
     public async Task Fok_Succeeds_When_No_Missing_Parts()
     {
         // DEMO-VIN-00003: statusId=2, единственная NCP закрыта и PartInstalled=true.
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00003/fok", null);
@@ -35,7 +35,7 @@ public sealed class FokTests
     [Fact]
     public async Task Fok_Is_Blocked_By_Missing_Part_Even_Though_Status_Is_Eligible()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // DEMO-VIN-00001 стартует со статусом 1 (в работе) с двумя открытыми NCP без детали.
@@ -59,7 +59,7 @@ public sealed class FokTests
     [Fact]
     public async Task Fok_Unblocks_After_Part_Installed_Is_Confirmed()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         await (await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00001/complete", null)).Content.ReadAsStringAsync();
@@ -80,7 +80,7 @@ public sealed class FokTests
     [InlineData("DEMO-VIN-00004")] // statusId 3 — уже FOK
     public async Task Fok_Rejects_Items_Not_In_Status_2(string vin)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync($"/api/v1/production-plan/{vin}/fok", null);
@@ -91,7 +91,7 @@ public sealed class FokTests
     [Fact]
     public async Task Fok_Unknown_Vin_Returns_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-99999/fok", null);
@@ -110,7 +110,7 @@ public sealed class FokTests
     [Fact]
     public async Task Missing_Parts_Endpoint_Lists_Blocking_Ncp_For_Proactive_Ui_Check()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var clean = await client.GetFromJsonAsync<List<NcpItem>>("/api/v1/ncp/missing-parts?vin=DEMO-VIN-00003");

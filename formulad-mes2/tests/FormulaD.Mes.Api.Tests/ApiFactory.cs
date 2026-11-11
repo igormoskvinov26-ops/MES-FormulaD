@@ -9,10 +9,10 @@ using Microsoft.Extensions.Hosting;
 namespace FormulaD.Mes.Api.Tests;
 
 /// <summary>Поднимает API в памяти. SQL не используется: сервисы заменяются in-memory реализациями.</summary>
-public sealed class ApiFactory(bool devAuthEnabled) : WebApplicationFactory<Program>
+public sealed class ApiFactory(bool userExists) : WebApplicationFactory<Program>
 {
     public const string Login = "demo-operator";
-    public const string Password = "test-only-secret";
+    public const string Role = "1";
 
     private static string FixtureDir =>
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "fixtures"));
@@ -25,15 +25,13 @@ public sealed class ApiFactory(bool devAuthEnabled) : WebApplicationFactory<Prog
         builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
         // ponytail: dummy SQL config so Program.cs doesn't throw; overridden by test services below
         builder.UseSetting("Sql:ConnectionString", "Server=test;Database=FormulaD_TEST;User ID=test;Password=test");
-        builder.UseSetting("DevAuth:Enabled", devAuthEnabled ? "true" : "false");
-        if (devAuthEnabled)
-        {
-            builder.UseSetting("DevAuth:Username", Login);
-            builder.UseSetting("DevAuth:Password", Password);
-        }
+        builder.UseSetting("Auth:FormLogin", userExists ? "true" : "false");
 
         builder.ConfigureTestServices(services =>
         {
+            services.AddSingleton<IUserDirectory>(new InMemoryUserDirectory(
+                userExists ? [new MesUser(1, Login, "Демо Оператор", Role)] : []));
+
             var eventLog = new InMemoryEventLog();
             services.AddSingleton<IEventLog>(eventLog);
 
@@ -66,11 +64,11 @@ public sealed class ApiFactory(bool devAuthEnabled) : WebApplicationFactory<Prog
         });
     }
 
-    /// <summary>Клиент с cookie-сессией после dev-входа.</summary>
+    /// <summary>Клиент с cookie-сессией после входа по логину из справочника.</summary>
     public async Task<HttpClient> CreateAuthenticatedClientAsync()
     {
         var client = CreateDefaultClient(new CookieHandler());
-        var response = await client.PostAsJsonAsync("/api/v1/dev-auth/login", new DevAuthLoginRequest(Login, Password));
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(Login));
         response.EnsureSuccessStatusCode();
         return client;
     }

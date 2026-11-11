@@ -9,7 +9,7 @@ namespace FormulaD.Mes.Api;
 public static class SqlStartupCheck
 {
     // ponytail: bump this when adding a migration; app warns if DB is behind.
-    public const int ExpectedSchemaVersion = 2;
+    public const int ExpectedSchemaVersion = 3;
 
     private static readonly string[] RequiredTables =
     [
@@ -24,6 +24,7 @@ public static class SqlStartupCheck
         "tblIncomingPackage",
         "tblIncomingPackingRow",
         "tblEventLog",
+        "tblUser",
     ];
 
     public static async Task RunAsync(SqlOptions options, ILogger logger, CancellationToken ct)

@@ -20,7 +20,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Reference_Requires_Authentication()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().GetAsync("/api/v1/plan-import/reference");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -28,7 +28,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Reference_Lists_Models_Colors_Specifications()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var reference = await client.GetFromJsonAsync<PlanReference>("/api/v1/plan-import/reference");
@@ -42,7 +42,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Valid_Row_Stages_Without_Errors()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync("/api/v1/plan-import/sessions",
@@ -62,7 +62,7 @@ public sealed class PlanImportTests
     [InlineData("", "VIN не указан")]
     public async Task Missing_Vin_Is_Reported(string? vin, string expectedError)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var row = ValidRow() with { Vin = vin };
 
@@ -77,7 +77,7 @@ public sealed class PlanImportTests
     public async Task Existing_Vin_Is_An_Error_Not_An_Update()
     {
         // DEMO-VIN-00001 уже есть в фикстуре — раздел 6.3, В-09: совпадение VIN всегда ошибка.
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var row = ValidRow() with { Vin = "DEMO-VIN-00001" };
 
@@ -91,7 +91,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Duplicate_Vin_Within_Batch_Is_Reported_On_Both_Rows()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var row1 = ValidRow(vin: "DEMO-VIN-90002", engine: "DEMO-ENGINE-A");
         var row2 = ValidRow(vin: "DEMO-VIN-90002", engine: "DEMO-ENGINE-B");
@@ -107,7 +107,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Unknown_Color_Model_And_Bad_Date_Are_Reported()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var row = ValidRow() with { ModelArticle = "NOPE", Color = "Розовый единорог", PlannedStartDate = "not-a-date" };
 
@@ -123,7 +123,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Edit_Row_Fixes_Error_And_Revalidates()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var staged = await (await client.PostAsJsonAsync("/api/v1/plan-import/sessions",
             new StageImportRequest([ValidRow() with { Color = "" }], "paste"))).Content.ReadFromJsonAsync<ImportSession>();
@@ -140,7 +140,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Publish_Is_Blocked_While_Errors_Remain()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var staged = await (await client.PostAsJsonAsync("/api/v1/plan-import/sessions",
             new StageImportRequest([ValidRow() with { Color = "" }], "paste"))).Content.ReadFromJsonAsync<ImportSession>();
@@ -153,7 +153,7 @@ public sealed class PlanImportTests
     [Fact]
     public async Task Publish_Appends_To_End_Of_Queue_And_Prevents_Double_Publish()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var before = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?page=1&pageSize=1");

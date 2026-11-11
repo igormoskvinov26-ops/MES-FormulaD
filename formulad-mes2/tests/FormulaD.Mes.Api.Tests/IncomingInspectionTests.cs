@@ -20,7 +20,7 @@ public sealed class IncomingInspectionTests
 
     private static async Task<DeliveryContext> CreateDeliveryAsync()
     {
-        var factory = new ApiFactory(devAuthEnabled: true);
+        var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var response = await client.PostAsJsonAsync("/api/v1/incoming-inspection/deliveries",
             new CreateDeliveryRequest("DEMO-SUP-01", "INV-2026-001", "2026-10-27", null));
@@ -42,7 +42,7 @@ public sealed class IncomingInspectionTests
     [Fact]
     public async Task Suppliers_Require_Authentication()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().GetAsync("/api/v1/incoming-inspection/suppliers");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -50,7 +50,7 @@ public sealed class IncomingInspectionTests
     [Fact]
     public async Task Suppliers_List_Includes_Parent_Plant_Flag()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var suppliers = await client.GetFromJsonAsync<List<SupplierRef>>("/api/v1/incoming-inspection/suppliers");
         Assert.Contains(suppliers!, s => s.IsParentPlant);
@@ -59,7 +59,7 @@ public sealed class IncomingInspectionTests
     [Fact]
     public async Task Create_Delivery_With_Unknown_Supplier_Is_Rejected()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var response = await client.PostAsJsonAsync("/api/v1/incoming-inspection/deliveries",
             new CreateDeliveryRequest("NOPE", "INV-1", "2026-10-27", null));

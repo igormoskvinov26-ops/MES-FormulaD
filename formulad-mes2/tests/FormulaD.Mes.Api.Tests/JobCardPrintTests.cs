@@ -10,7 +10,7 @@ public sealed class JobCardPrintTests
     [Fact]
     public async Task Print_Requires_Authentication()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().PostAsync("/api/v1/production-plan/DEMO-VIN-00002/print", null);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -21,7 +21,7 @@ public sealed class JobCardPrintTests
     [InlineData("DEMO-VIN-00004")] // statusId 3
     public async Task Print_Sets_PrintDate_Regardless_Of_Status(string vin)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var before = await client.GetFromJsonAsync<ProductionPlanItem>($"/api/v1/production-plan/{vin}");
@@ -38,7 +38,7 @@ public sealed class JobCardPrintTests
     [Fact]
     public async Task Print_Does_Not_Change_Status()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         await (await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00001/print", null)).Content.ReadAsStringAsync();
@@ -50,7 +50,7 @@ public sealed class JobCardPrintTests
     [Fact]
     public async Task Print_Unknown_Vin_Returns_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-99999/print", null);

@@ -10,7 +10,7 @@ public sealed class StationChecksTests
     [Fact]
     public async Task Checks_Require_Authentication()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().GetAsync("/api/v1/stations/DEMO-VIN-00001/checks");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -18,7 +18,7 @@ public sealed class StationChecksTests
     [Fact]
     public async Task Get_For_Unknown_Vin_Returns_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.GetAsync("/api/v1/stations/DEMO-VIN-99999/checks");
@@ -29,7 +29,7 @@ public sealed class StationChecksTests
     [Fact]
     public async Task New_Vin_Has_No_Checks_Yet()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var checks = await client.GetFromJsonAsync<Dictionary<string, ComponentCheck>>(
@@ -41,7 +41,7 @@ public sealed class StationChecksTests
     [Fact]
     public async Task Set_Checked_Then_Unchecked_Round_Trips()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var checkedResponse = await client.PostAsJsonAsync(
@@ -68,7 +68,7 @@ public sealed class StationChecksTests
     [Fact]
     public async Task Checks_Are_Scoped_To_Vin()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         await client.PostAsJsonAsync("/api/v1/stations/DEMO-VIN-00001/components/DEMO-CMP-014/check", new SetCheckRequest(true));
@@ -82,7 +82,7 @@ public sealed class StationChecksTests
     [Fact]
     public async Task Set_Checked_Unknown_Vin_Returns_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync(
@@ -94,7 +94,7 @@ public sealed class StationChecksTests
     [Fact]
     public async Task Set_Checked_Unknown_Component_Returns_400()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync(

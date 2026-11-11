@@ -10,7 +10,7 @@ public sealed class StartTests
     [Fact]
     public async Task Start_Requires_Authentication()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var response = await factory.CreateClient().PostAsync("/api/v1/production-plan/DEMO-VIN-00002/start", null);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -18,7 +18,7 @@ public sealed class StartTests
     [Fact]
     public async Task Start_Transitions_Status_0_To_1_And_Sets_StartDate()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var before = await client.GetFromJsonAsync<ProductionPlanItem>("/api/v1/production-plan/DEMO-VIN-00002");
@@ -38,7 +38,7 @@ public sealed class StartTests
     [Fact]
     public async Task Repeated_Start_Does_Not_Restart_And_Keeps_Original_StartDate()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var first = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00002/start", null);
@@ -57,7 +57,7 @@ public sealed class StartTests
     [InlineData("DEMO-VIN-00005")] // statusId null — без статуса
     public async Task Start_Rejects_Items_Not_In_Status_0(string vin)
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync($"/api/v1/production-plan/{vin}/start", null);
@@ -68,7 +68,7 @@ public sealed class StartTests
     [Fact]
     public async Task Start_Unknown_Vin_Returns_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-99999/start", null);
@@ -87,7 +87,7 @@ public sealed class StartTests
     [Fact]
     public async Task Pending_Start_List_Filters_By_StatusId_Not_Status_String()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var page = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?statusId=0&pageSize=100");

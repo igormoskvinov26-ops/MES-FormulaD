@@ -10,7 +10,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Full_Happy_Path_Start_Complete_Fok()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // DEMO-VIN-00002: statusId=0 — «Ожидает».
@@ -34,7 +34,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Rework_Then_Fok_Works()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // DEMO-VIN-00003: statusId=2. Send to rework, finish, then FOK.
@@ -55,7 +55,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Auth_Me_Returns_Current_User()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.GetAsync("/api/v1/auth/me");
@@ -67,7 +67,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Logout_Returns_Success()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var logout = await client.PostAsync("/api/v1/auth/logout", null);
@@ -77,7 +77,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Logout_Without_Session_Does_Not_Fail()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = factory.CreateClient();
 
         var logout = await client.PostAsync("/api/v1/auth/logout", null);
@@ -88,7 +88,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Ncp_Components_Lists_Items_With_Station()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var components = await client.GetFromJsonAsync<List<ComponentItem>>("/api/v1/ncp/components");
@@ -100,7 +100,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Incoming_Unknown_Delivery_Returns_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.GetAsync("/api/v1/incoming-inspection/deliveries/nonexistent-id");
@@ -110,7 +110,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Incoming_Unknown_Package_Actions_Return_404()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var close = await client.PostAsync("/api/v1/incoming-inspection/packages/999999/close", null);
@@ -124,7 +124,7 @@ public sealed class LifecycleTests
     [Fact]
     public async Task Double_Start_Does_Not_Change_Status()
     {
-        using var factory = new ApiFactory(devAuthEnabled: true);
+        using var factory = new ApiFactory(userExists: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // DEMO-VIN-00001 is already statusId=1.
