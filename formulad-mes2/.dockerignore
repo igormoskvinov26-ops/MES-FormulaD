@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+# Локальная сборка SPA: в образ фронт попадает только из frontend-стадии Dockerfile.
+# Без этого dotnet publish затаскивал старый wwwroot и он перекрывал свежий бандл.
+**/wwwroot/
+**/.git/
+**/test-results/
+**/playwright-report/
+tests/
+docs/
+*.md
+.github/
+.vscode/
