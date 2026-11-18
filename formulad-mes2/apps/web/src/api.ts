@@ -5,6 +5,7 @@ export type ProductionPlanItem = {
   modelArticle: string | null;
   modelName: string | null;
   engineNumber: string | null;
+  chassisNumber?: string | null;
   color: string | null;
   specificationName: string | null;
   status: string | null;
@@ -16,6 +17,7 @@ export type ProductionPlanItem = {
   startDate: string | null;
   completeDate: string | null;
   fokDate: string | null;
+  openNcpCount?: number;
 };
 
 export type NcpItem = {
@@ -35,11 +37,26 @@ export type NcpItem = {
   createdBy: string;
   closedAt: string | null;
   closedBy: string | null;
+  /** Из плана по VIN (подтягивает GET /ncp). */
+  modelArticle?: string | null;
+  modelName?: string | null;
+  color?: string | null;
 };
 
-export type ComponentItem = { code: string; name: string; station: string | null };
+export type ComponentItem = { code: string; name: string; station: string | null; modelIds?: string[] | null };
 
 export type ModelRef = { article: string; name: string };
+/** Пост контроля качества на линии: стоит после станции `afterStation` (по карте контроля). */
+export type ControlPost = { name: string; afterStation: string };
+export type CalendarSettings = { workdays: number[]; shiftStart: string; shiftEnd: string; breaks: { from: string; to: string }[]; perShift: number; controlPosts?: ControlPost[] };
+/** Отметка по дате: off — выходной/праздник; work — рабочий день (в т. ч. перенесённый), возможно с особыми часами. */
+export type CalendarDay = { date: string; kind: 'off' | 'work'; from: string | null; to: string | null; note: string | null };
+export type CalendarState = { settings: CalendarSettings; days: CalendarDay[] };
+/** kind = null — вернуть дату к стандартному графику. */
+export type CalendarDayChange = { date: string; kind: 'off' | 'work' | null; from?: string | null; to?: string | null; note?: string | null };
+
+export type EventLogEntry = { id: number; entityType: string; entityKey: string; action: string; oldValue: string | null; newValue: string | null; userName: string; occurredAt: string };
+
 export type PlanReference = { models: ModelRef[]; colors: string[]; specifications: string[] };
 
 export type ImportRawRow = {
@@ -62,6 +79,7 @@ export type ImportSession = {
   rows: ImportRowResult[];
   totalCount: number;
   errorCount: number;
+  acceptedCount: number;
 };
 
 export type ComponentCheck = { componentCode: string; checked: boolean; checkedBy: string | null; checkedAt: string | null };
@@ -141,9 +159,18 @@ export type Delivery = {
 
 export type Paged<T> = { items: T[]; page: number; pageSize: number; total: number };
 
+export type QcPost = { id: number; name: string; afterStation: string | null; sortOrder: number; todayComplete: boolean };
+export type ChecklistItem = { id: number; postId: number; seq: number; description: string; barcodeHint: string | null };
+export type QcResultItem = { id: number; itemId: number; seq: number; description: string; status: string; comment: string | null; checkedBy: string | null; checkedAt: string | null };
+export type QcSession = { id: number; postId: number; postName: string; vin: string; startedBy: string; startedAt: string; finishedAt: string | null; outcome: string | null; results: QcResultItem[] };
+export type QcSessionSummary = { id: number; postId: number; postName: string; vin: string; startedBy: string; startedAt: string; finishedAt: string | null; outcome: string | null };
+export type PrintTemplateItem = { id: number; name: string; bodyHtml: string; updatedAt: string };
+export type StationCount = { station: string; count: number };
+export type TypeCount = { type: string; count: number };
+
 /** Ошибка API с кодом — UI различает 401 (нет доступа) и 404 (не найдено). */
 export class ApiError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(readonly status: number, message: string, readonly detail?: string) {
     super(message);
   }
 }
@@ -156,19 +183,41 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(0, 'Нет связи с сервером');
   }
   if (!response.ok) {
-    throw new ApiError(response.status, `Ошибка запроса (${response.status})`);
+    // сервер объясняет отказ в поле detail (RFC 7807) — оставляем его для показа пользователю
+    const detail = await response.json().then((p: { detail?: unknown }) => (typeof p?.detail === 'string' ? p.detail : undefined)).catch(() => undefined);
+    throw new ApiError(response.status, `Ошибка запроса (${response.status})`, detail);
   }
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
 export const api = {
-  me: () => request<{ userName: string | null; fullName: string | null; role: string | null }>('/api/v1/auth/me'),
+  me: () => request<{ userName: string | null; mode: string; demo: boolean }>('/api/v1/auth/me'),
 
-  login: (login: string) =>
-    request<{ userName: string; fullName: string | null; role: string | null }>('/api/v1/auth/login', {
+  login: (username: string, password: string) =>
+    request<{ userName: string }>('/api/v1/dev-auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login }),
+      body: JSON.stringify({ username, password }),
+    }),
+
+  events: (params: { entityType?: string; entityKey?: string; limit: number }) => {
+    const query = new URLSearchParams({ limit: String(params.limit) });
+    if (params.entityType) query.set('entityType', params.entityType);
+    if (params.entityKey) query.set('entityKey', params.entityKey);
+    return request<EventLogEntry[]>(`/api/v1/events?${query}`);
+  },
+  calendar: () => request<CalendarState>('/api/v1/calendar'),
+  calendarSettings: (settings: CalendarSettings) =>
+    request<CalendarState>('/api/v1/calendar/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    }),
+  calendarApply: (changes: CalendarDayChange[]) =>
+    request<CalendarState>('/api/v1/calendar/days', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ changes }),
     }),
 
   logout: () => request<void>('/api/v1/auth/logout', { method: 'POST' }),
@@ -183,6 +232,7 @@ export const api = {
     return request<Paged<ProductionPlanItem>>(`/api/v1/production-plan?${query}`);
   },
 
+  /** Перестановка порядка. Существует только в демо-режиме сервера. */
   move: (vin: string, toPosition: number) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/move`, {
       method: 'POST',
@@ -192,12 +242,15 @@ export const api = {
 
   byVin: (vin: string) => request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}`),
 
+  /** Печать JobCard — отмечает PrintDate, статус не меняет. Существует только в демо-режиме сервера. */
   print: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/print`, { method: 'POST' }),
 
+  /** Запуск в производство (0 → 1). Существует только в демо-режиме сервера. */
   start: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/start`, { method: 'POST' }),
 
+  /** Завершение сборки (1 → 2). Существует только в демо-режиме сервера. */
   complete: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/complete`, { method: 'POST' }),
 
@@ -205,6 +258,7 @@ export const api = {
   fok: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/fok`, { method: 'POST' }),
 
+  /** Отправка в Rework (2 → 4). Существует только в демо-режиме сервера. */
   sendToRework: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/rework`, { method: 'POST' }),
 
@@ -214,6 +268,7 @@ export const api = {
 
   planImportReference: () => request<PlanReference>('/api/v1/plan-import/reference'),
 
+  /** Загружает сырые строки на проверку — временная область (раздел 6.1). Существует только в демо-режиме. */
   stageImport: (rows: ImportRawRow[], source: string) =>
     request<ImportSession>('/api/v1/plan-import/sessions', {
       method: 'POST',
@@ -239,16 +294,34 @@ export const api = {
   ncpStations: () => request<string[]>('/api/v1/ncp/stations'),
   ncpComponents: () => request<ComponentItem[]>('/api/v1/ncp/components'),
 
+  adminUpdateComponent: (code: string, station: string | null, modelIds: string[] | null) =>
+    request<void>(`/api/v1/admin/components/${encodeURIComponent(code)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ station, modelIds }),
+    }),
+
+  adminAddSupplier: (supplier: SupplierRef) =>
+    request<void>('/api/v1/admin/suppliers', {
+      method: 'POST',
+      body: JSON.stringify(supplier),
+    }),
+
+  adminDeleteSupplier: (code: string) =>
+    request<void>(`/api/v1/admin/suppliers/${encodeURIComponent(code)}`, { method: 'DELETE' }),
+
   /** NCP с неустановленной обязательной деталью по изделию — то, что блокирует допуск к FOK. */
   ncpMissingParts: (vin: string) => request<NcpItem[]>(`/api/v1/ncp/missing-parts?vin=${encodeURIComponent(vin)}`),
 
-  ncpList: (params: { vin?: string; status?: string | null; page: number; pageSize: number }) => {
+  ncpList: (params: { vin?: string; status?: string | null; type?: string | null; station?: string | null; page: number; pageSize: number }) => {
     const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });
     if (params.vin) query.set('vin', params.vin);
     if (params.status) query.set('status', params.status);
+    if (params.type) query.set('type', params.type);
+    if (params.station) query.set('station', params.station);
     return request<Paged<NcpItem>>(`/api/v1/ncp?${query}`);
   },
 
+  /** Регистрация несоответствия. Существует только в демо-режиме сервера. */
   ncpCreate: (data: {
     vin: string;
     station: string;
@@ -266,6 +339,7 @@ export const api = {
   /** Отметки проверки компонентов по изделию (Этап 5), ключ — код компонента. */
   stationChecks: (vin: string) => request<Record<string, ComponentCheck>>(`/api/v1/stations/${encodeURIComponent(vin)}/checks`),
 
+  /** Отметить/снять проверку компонента. Существует только в демо-режиме сервера. */
   setStationCheck: (vin: string, componentCode: string, checked: boolean) =>
     request<ComponentCheck>(`/api/v1/stations/${encodeURIComponent(vin)}/components/${encodeURIComponent(componentCode)}/check`, {
       method: 'POST',
@@ -313,6 +387,9 @@ export const api = {
       body: JSON.stringify({ supplierCode, invoiceNumber, invoiceDate, accompanyingDocument }),
     }),
 
+  deleteDelivery: (id: string) =>
+    request<void>(`/api/v1/incoming-inspection/deliveries/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
   packageByHu: (deliveryId: string, hu: string) =>
     request<DeliveryPackage>(`/api/v1/incoming-inspection/deliveries/${encodeURIComponent(deliveryId)}/packages/by-hu/${encodeURIComponent(hu)}`),
 
@@ -358,4 +435,55 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ comment }),
     }),
+
+  // --- QC Checklist (Этап 10, EPIC-13, T-153) --------------------------------
+
+  qcPosts: (vin?: string) => request<QcPost[]>(vin ? `/api/v1/qc/posts?vin=${encodeURIComponent(vin)}` : '/api/v1/qc/posts'),
+  qcPostSessions: (postId: number, limit = 20) =>
+    request<QcSessionSummary[]>(`/api/v1/qc/posts/${postId}/sessions?limit=${limit}`),
+
+  qcItems: (postId: number) => request<ChecklistItem[]>(`/api/v1/qc/posts/${postId}/items`),
+
+  qcStartSession: (postId: number, vin: string) =>
+    request<QcSession>('/api/v1/qc/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId, vin }),
+    }),
+
+  qcGetSession: (id: number) => request<QcSession>(`/api/v1/qc/sessions/${id}`),
+
+  qcRecordResult: (sessionId: number, itemId: number, status: string, comment: string | null) =>
+    request<QcResultItem>(`/api/v1/qc/sessions/${sessionId}/results`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId, status, comment }),
+    }),
+
+  qcFinishSession: (sessionId: number, outcome: string) =>
+    request<QcSession>(`/api/v1/qc/sessions/${sessionId}/finish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ outcome }),
+    }),
+
+  // --- Print templates (T-152) ---
+  printTemplates: () => request<PrintTemplateItem[]>('/api/v1/admin/print-templates'),
+  printTemplate: (id: number) => request<PrintTemplateItem>(`/api/v1/admin/print-templates/${id}`),
+  savePrintTemplate: (id: number, name: string, bodyHtml: string) =>
+    request<PrintTemplateItem>(`/api/v1/admin/print-templates/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, bodyHtml }),
+    }),
+  renderPrintTemplate: (id: number, vars: Record<string, string>) => {
+    const params = new URLSearchParams(vars);
+    return fetch(`/api/v1/print/${id}?${params.toString()}`, { method: 'POST' });
+  },
+  stationReport: (from: string, to: string) =>
+    request<StationCount[]>(`/api/v1/reports/stations?from=${from}&to=${to}`),
+  ncpCausesReport: (from: string, to: string) =>
+    request<TypeCount[]>(`/api/v1/reports/ncp-causes?from=${from}&to=${to}`),
+  // T-106: build version
+  info: () => request<{ version: string }>('/api/v1/info'),
 };

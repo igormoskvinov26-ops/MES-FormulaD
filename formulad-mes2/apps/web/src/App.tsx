@@ -2,19 +2,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Screen } from './AppHeader';
 import { ApiError, api, type Paged, type ProductionPlanItem } from './api';
 import { PlanScreen } from './PlanScreen';
+import { CommandPalette } from './CommandPalette';
 import { NcpScreen } from './NcpScreen';
 import { StartScreen } from './StartScreen';
 import { StationScreen } from './StationScreen';
 import { CompleteScreen } from './CompleteScreen';
 import { FokScreen } from './FokScreen';
 import { ReworkScreen } from './ReworkScreen';
+import { CalendarScreen } from './CalendarScreen';
 import { ImportScreen } from './ImportScreen';
 import { IncomingInspectionScreen } from './IncomingInspectionScreen';
+import { QcScreen } from './QcScreen';
+import { LineMapScreen } from './LineMapScreen';
 import { LoginScreen } from './LoginScreen';
 import { ReportsScreen } from './ReportsScreen';
 import { AdminScreen } from './AdminScreen';
 import { BootScreen } from './Skeleton';
-import { CommandPalette } from './CommandPalette';
 
 type Session = { userName: string | null; mode: string } | null;
 
@@ -22,8 +25,12 @@ export function App() {
   const [session, setSession] = useState<Session>(null);
   const [checking, setChecking] = useState(true);
   const [screen, setScreen] = useState<Screen>('plan');
+  const [pendingVin, setPendingVin] = useState<string | undefined>();
 
-  const handleVinSearch = useCallback((_vin: string) => { setScreen('plan'); }, []);
+  function handleVinSearch(vin: string) {
+    setPendingVin(vin);
+    setScreen('plan');
+  }
 
   useEffect(() => {
     api
@@ -32,6 +39,25 @@ export function App() {
       .catch(() => setSession(null))
       .finally(() => setChecking(false));
   }, []);
+
+  // T-016: 30-minute inactivity auto-logout
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetIdle = useCallback(() => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => {
+      api.logout().catch(() => undefined).finally(() => setSession(null));
+    }, 30 * 60 * 1000);
+  }, []);
+  useEffect(() => {
+    if (!session) return;
+    const events = ['mousemove', 'keydown', 'touchstart', 'click'] as const;
+    events.forEach((e) => window.addEventListener(e, resetIdle, { passive: true }));
+    resetIdle();
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, resetIdle));
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+  }, [session, resetIdle]);
 
   if (checking) {
     return <BootScreen />;
@@ -42,23 +68,45 @@ export function App() {
   }
 
   const onLogout = () => setSession(null);
+  const s = session;
 
-  const props = { session, onNavigate: setScreen, onLogout };
-  let content: React.ReactNode;
-  switch (screen) {
-    case 'plan': content = <PlanScreen {...props} />; break;
-    case 'import': content = <ImportScreen {...props} />; break;
-    case 'start': content = <StartScreen {...props} />; break;
-    case 'stations': content = <StationScreen {...props} />; break;
-    case 'complete': content = <CompleteScreen {...props} />; break;
-    case 'fok': content = <FokScreen {...props} />; break;
-    case 'rework': content = <ReworkScreen {...props} />; break;
-    case 'ncp': content = <NcpScreen {...props} />; break;
-    case 'incoming': content = <IncomingInspectionScreen {...props} />; break;
-    case 'reports': content = <ReportsScreen {...props} />; break;
-    case 'admin': content = <AdminScreen {...props} />; break;
-  }
-  return <>{content}<CommandPalette onNavigate={setScreen} onVinSearch={handleVinSearch} /></>;
+  return (
+    <>
+      <CommandPalette onSelectVin={handleVinSearch} />
+      {renderScreen()}
+    </>
+  );
+
+  function renderScreen() { switch (screen) {
+    case 'plan':
+      return <PlanScreen key={pendingVin ?? ''} initialVin={pendingVin} session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'calendar':
+      return <CalendarScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'import':
+      return <ImportScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'start':
+      return <StartScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'stations':
+      return <StationScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'complete':
+      return <CompleteScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'fok':
+      return <FokScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'rework':
+      return <ReworkScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'ncp':
+      return <NcpScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'incoming':
+      return <IncomingInspectionScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'qc':
+      return <QcScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'lineMap':
+      return <LineMapScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'reports':
+      return <ReportsScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'admin':
+      return <AdminScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+  } }
 }
 
 /** Загрузка страницы плана. Вынесено, чтобы PlanScreen оставался про разметку. */
@@ -83,7 +131,7 @@ export function usePlan(vin: string, status: string | null, page: number, pageSi
         setError(e instanceof ApiError && e.status === 401 ? 'Нет доступа' : 'Нет связи с сервером');
         setState('error');
       });
-  }, [vin, status, page, pageSize]);
+  }, [vin, status, page, pageSize, statusId]);
 
   useEffect(reload, [reload]);
 
