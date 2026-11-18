@@ -1,25 +1,28 @@
 import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import { api } from './api';
-import { SoundToggle } from './resultSignal';
-import { SettingsDialog } from './SettingsDialog';
 import { isSidebarCollapsed, setSidebarCollapsed, subscribeSidebar } from './sidebarPref';
-import { IconPlan, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports, IconAdmin } from './SidebarIcons';
+import { IconPlan, IconCalendar, IconImport, IconStart, IconStations, IconComplete, IconFok, IconRework, IconNcp, IconIncoming, IconReports, IconAdmin, IconQc, IconLineMap } from './SidebarIcons';
+import { SettingsDialog } from './SettingsDialog';
 
-export type Screen = 'plan' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'reports' | 'admin';
+export type Screen = 'plan' | 'calendar' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'qc' | 'reports' | 'admin' | 'lineMap';
 
-function ThemeToggle() {
-  const [dark, setDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
+
+function MobileToggle() {
+  const [mobile, setMobile] = useState(() => document.documentElement.getAttribute('data-layout') === 'mobile');
   function toggle() {
-    const next = dark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('f7-theme', next); } catch { /* тема действует до перезагрузки */ }
-    setDark(!dark);
+    const next = !mobile;
+    if (next) document.documentElement.setAttribute('data-layout', 'mobile');
+    else document.documentElement.removeAttribute('data-layout');
+    try { localStorage.setItem('f7-layout', next ? 'mobile' : 'desktop'); } catch { /* */ }
+    setMobile(next);
   }
   return (
-    <button type="button" className="ghost icon-btn" onClick={toggle} aria-label="Переключить тему" title={dark ? 'Светлая тема' : 'Тёмная тема'}>
+    <button type="button" className="ghost icon-btn" onClick={toggle} aria-pressed={mobile} aria-label="Мобильный вид" title={mobile ? 'Настольный вид' : 'Мобильный вид'}>
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        {dark ? <><circle cx="9" cy="9" r="3.4" /><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" /></> : <path d="M15 10.5A6.5 6.5 0 0 1 7.5 3a6.5 6.5 0 1 0 7.5 7.5z" />}
+        {mobile
+          ? <><rect x="2" y="1" width="14" height="16" rx="2" /><path d="M7 14h4" /></>
+          : <><rect x="4" y="3" width="6" height="10" rx="1.2" /><path d="M6 11.5h2" /></>}
       </svg>
     </button>
   );
@@ -47,6 +50,7 @@ type Tab = { key: Screen; label: string; Icon: ComponentType<{ className?: strin
 
 const TABS: Tab[] = [
   { key: 'plan', label: 'Производственный план', Icon: IconPlan },
+  { key: 'calendar', label: 'Календарь', Icon: IconCalendar },
   { key: 'import', label: 'Импорт плана', Icon: IconImport },
   { key: 'start', label: 'Старт', Icon: IconStart, group: 'Производство' },
   { key: 'stations', label: 'Станции', Icon: IconStations },
@@ -55,6 +59,8 @@ const TABS: Tab[] = [
   { key: 'rework', label: 'Rework', Icon: IconRework },
   { key: 'ncp', label: 'Несоответствия', Icon: IconNcp, group: 'Качество' },
   { key: 'incoming', label: 'Входной контроль', Icon: IconIncoming },
+  { key: 'qc', label: 'Контрольная карта', Icon: IconQc },
+  { key: 'lineMap', label: 'Карта линии', Icon: IconLineMap },
   { key: 'reports', label: 'Отчётность', Icon: IconReports },
   { key: 'admin', label: 'Администрирование', Icon: IconAdmin, group: 'Администрирование' },
 ];
@@ -83,6 +89,7 @@ export function AppHeader({
     if (tab.key === screen) break;
   }
   const [collapsed, setCollapsed] = useState(isSidebarCollapsed);
+  const [showSettings, setShowSettings] = useState(false);
   useEffect(() => subscribeSidebar(() => setCollapsed(isSidebarCollapsed())), []);
   const toggleSidebar = () => setSidebarCollapsed(!collapsed);
   return (
@@ -107,7 +114,6 @@ export function AppHeader({
             </li>
           ))}
         </ul>
-        <span className="sidebar-version sidebar-label" title={`${__BUILD_HASH__} · ${__BUILD_DATE__}`}>{__BUILD_DATE__} · {__BUILD_HASH__.slice(0, 7)}</span>
         <button
           type="button"
           className="sidebar-toggle"
@@ -123,12 +129,14 @@ export function AppHeader({
       <header className="topbar">
         <span className="topbar-crumb" title={current?.label}>{crumb}</span>
         <span className="spacer" />
-        <ThemeToggle />
-        <SoundToggle />
+        <span className="badge badge-demo" title="Синтетические данные, не производственные">DEMO</span>
+        <span className="topbar-commit" title="Версия сборки">{__COMMIT__}</span>
+        <MobileToggle />
+        <button type="button" className="ghost icon-btn" onClick={() => setShowSettings(true)} aria-label="Настройки" title="Настройки">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="9" r="2.5"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.2 3.2l1.4 1.4M13.4 13.4l1.4 1.4M3.2 14.8l1.4-1.4M13.4 4.6l1.4-1.4"/></svg>
+        </button>
         <Clock />
-        <span className="topbar-version" title="Версия сборки">{import.meta.env.VITE_APP_VERSION || 'dev'}</span>
         <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
-        <SettingsButton />
         <button
           type="button"
           className="ghost"
@@ -140,16 +148,7 @@ export function AppHeader({
           Выход
         </button>
       </header>
-    </>
-  );
-}
-
-function SettingsButton() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button type="button" className="ghost" onClick={() => setOpen(true)} title="Настройки" aria-label="Настройки">⚙</button>
-      <SettingsDialog open={open} onClose={() => setOpen(false)} />
+      {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
     </>
   );
 }

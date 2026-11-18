@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { getRefreshInterval } from './SettingsDialog';
 import { usePlan, usePlanCounts } from './App';
 import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
 import { api, type ProductionPlanItem } from './api';
 import { MoveDialog } from './MoveDialog';
-import { COLUMNS } from './columns';
+import { COLUMNS, COMPACT_VISIBLE } from './columns';
 import { ColumnPicker } from './ColumnPicker';
 import { pageList, rowState, statusCodeLabel } from './format';
 import { ProductCard } from './ProductCard';
@@ -13,7 +14,6 @@ import { IconBolt, IconCheckBox, IconHourglass, IconLayers, IconShieldCheck } fr
 import { JobCardDialog } from './JobCardDialog';
 import { NcpPrintDialog } from './NcpPrintDialog';
 import { DensityToggle } from './DensityToggle';
-import { FilterPresets, type FilterState } from './FilterPresets';
 import { EmptyState } from './EmptyState';
 import { TableSkeleton } from './Skeleton';
 import './f7-components.css';
@@ -29,8 +29,6 @@ const COUNT_TILES: { statusId: 0 | 1 | 2 | 3; toneClass: string; Icon: typeof Ic
 ];
 
 const PAGE_SIZE = 25;
-const ALL = '__all__';
-const NO_STATUS = '__null__';
 
 const LEGEND = [
   { key: 'waiting', label: 'В ожидании' },
@@ -43,15 +41,15 @@ export function PlanScreen({
   session,
   onNavigate,
   onLogout,
+  initialVin,
 }: {
   session: { userName: string | null; mode: string };
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
+  initialVin?: string;
 }) {
-  const [vin, setVin] = useState('');
-  const [statusChoice, setStatusChoice] = useState(ALL);
+  const [vin, setVin] = useState(initialVin ?? '');
   const [page, setPage] = useState(1);
-  const [statuses, setStatuses] = useState<(string | null)[]>([]);
   const [selected, setSelected] = useState<ProductionPlanItem | null>(null);
   const [cardError, setCardError] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -66,17 +64,43 @@ export function PlanScreen({
   const [printError, setPrintError] = useState('');
   const [jobCardItems, setJobCardItems] = useState<ProductionPlanItem[] | null>(null);
   const [ncpSummaryVin, setNcpSummaryVin] = useState<string | null>(null);
+  const [compact, setCompact] = useState(() => localStorage.getItem('f7-plan-compact') === '1');
+  const [dragOverVin, setDragOverVin] = useState<string | null>(null);
+  const dragVinRef = useRef<string | null>(null);
 
-  const statusFilter = statusChoice === ALL ? null : statusChoice === NO_STATUS ? '' : statusChoice;
-  const { data, state, error, reload } = usePlan(vin.trim(), filterStatusId !== null ? null : statusFilter, page, PAGE_SIZE, filterStatusId ?? undefined);
-  const columns = COLUMNS.filter((c) => c.locked || visible.includes(c.key));
+  function toggleCompact() {
+    setCompact((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('f7-plan-compact', next ? '1' : '0'); } catch { /* */ }
+      if (next && filterStatusId === null) setFilterStatusId(1);
+      return next;
+    });
+  }
+
+  const effectiveVisible = compact ? COMPACT_VISIBLE : visible;
+
+  const { data, state, error, reload } = usePlan(vin.trim(), null, page, PAGE_SIZE, filterStatusId ?? undefined);
+  const columns = COLUMNS.filter((c) => c.locked || effectiveVisible.includes(c.key));
   // VIN — главный идентификатор: сразу после чекбокса, затем «Состояние», затем остальные колонки.
   const vinColumn = columns.find((c) => c.key === 'vin');
   const otherColumns = columns.filter((c) => c.key !== 'vin');
   const counts = usePlanCounts();
 
+  // T-138: auto-refresh; interval configurable via SettingsDialog → f7-refresh-interval-change event.
+  const [refreshInterval, setRefreshInterval] = useState(getRefreshInterval);
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
   useEffect(() => {
-    api.statuses().then(setStatuses).catch(() => setStatuses([]));
+    if (refreshInterval <= 0) return;
+    const id = setInterval(() => reloadRef.current(), refreshInterval * 1000);
+    return () => clearInterval(id);
+  }, [refreshInterval]);
+  useEffect(() => {
+    function onIntervalChange(e: Event) {
+      setRefreshInterval((e as CustomEvent<number>).detail);
+    }
+    window.addEventListener('f7-refresh-interval-change', onIntervalChange);
+    return () => window.removeEventListener('f7-refresh-interval-change', onIntervalChange);
   }, []);
 
   // Ctrl/Cmd+K — фокус в поле VIN (сканер работает как клавиатура).
@@ -135,9 +159,7 @@ export function PlanScreen({
 
   // Раздел 8: «первые 12 строк актуальной очереди» — очередь целиком, не только текущая
   // страница/фильтр, поэтому запрашиваем первую страницу плана заново, без фильтров.
-  // ponytail: toggle — повторный клик снимает выделение
   async function selectFirstBatch() {
-    if (printSelection.size > 0) { setPrintSelection(new Set()); return; }
     setPrintError('');
     try {
       const page1 = await api.plan({ page: 1, pageSize: FIRST_BATCH_SIZE });
@@ -193,7 +215,7 @@ export function PlanScreen({
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
-    <div className="app f7plan">
+    <div className={`app f7plan${compact ? ' f7plan--compact' : ''}`}>
       <AppHeader screen="plan" onNavigate={onNavigate} session={session} onLogout={onLogout} />
 
       <div className="f7plan__title">
@@ -205,7 +227,7 @@ export function PlanScreen({
       </div>
 
       <section className="stat-tiles" aria-label="Сводка по статусам">
-        <div className="stat-tile" role="button" tabIndex={0} aria-pressed={filterStatusId === null && statusChoice === ALL} aria-label="Показать все" onClick={() => { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(null); setStatusChoice(ALL); setPage(1); } }}>
+        <div className="stat-tile" role="button" tabIndex={0} aria-pressed={filterStatusId === null} aria-label="Показать все" onClick={() => { setFilterStatusId(null); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(null); setPage(1); } }}>
           <span className="stat-tile-icon">
             <IconLayers />
           </span>
@@ -215,7 +237,7 @@ export function PlanScreen({
           </div>
         </div>
         {COUNT_TILES.map((tile) => (
-          <div key={tile.statusId} className="stat-tile" role="button" tabIndex={0} aria-pressed={filterStatusId === tile.statusId} aria-label={`Фильтр: ${statusCodeLabel(tile.statusId)}`} onClick={() => { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(tile.statusId); setStatusChoice(ALL); setPage(1); } }}>
+          <div key={tile.statusId} className="stat-tile" role="button" tabIndex={0} aria-pressed={filterStatusId === tile.statusId} aria-label={`Фильтр: ${statusCodeLabel(tile.statusId)}`} onClick={() => { setFilterStatusId(tile.statusId); setPage(1); }} onKeyDown={(e) => { if (e.key === 'Enter') { setFilterStatusId(tile.statusId); setPage(1); } }}>
             <span className={`stat-tile-icon ${tile.toneClass}`}>
               <tile.Icon />
             </span>
@@ -251,28 +273,10 @@ export function PlanScreen({
               setPage(1);
             }}
           />
-          <select
-            aria-label="Статус"
-            value={statusChoice}
-            onChange={(event) => {
-              setStatusChoice(event.target.value);
-              setFilterStatusId(null);
-              setPage(1);
-            }}
-          >
-            <option value={ALL}>Все статусы</option>
-            {statuses.map((status) => (
-              <option key={status ?? NO_STATUS} value={status ?? NO_STATUS}>
-                {status ?? 'Без статуса'}
-              </option>
-            ))}
-          </select>
-          <ColumnPicker visible={visible} onToggle={toggle} onReset={reset} />
-          <DensityToggle />
-          <FilterPresets
-            current={{ vin, statusChoice, filterStatusId }}
-            onApply={(s: FilterState) => { setVin(s.vin); setStatusChoice(s.statusChoice); setFilterStatusId(s.filterStatusId); setPage(1); }}
-          />
+          {!compact && <ColumnPicker visible={visible} onToggle={toggle} onReset={reset} />}
+          <button type="button" className={compact ? 'primary' : undefined} aria-pressed={compact} title={compact ? 'Стандартный вид' : 'Компактный вид'} onClick={toggleCompact}>
+            {compact ? 'Стандартный' : 'Компактный'}
+          </button>
           <button
             type="button"
             className={editOrder ? 'primary' : undefined}
@@ -284,7 +288,7 @@ export function PlanScreen({
           >
             {editOrder ? 'Готово' : 'Изменить порядок'}
           </button>
-          <button type="button" onClick={() => void selectFirstBatch()}>
+          <button type="button" onClick={() => printSelection.size > 0 ? setPrintSelection(new Set()) : void selectFirstBatch()}>
             {printSelection.size > 0 ? 'Снять выделение' : `Выбрать первые ${FIRST_BATCH_SIZE}`}
           </button>
           <button type="button" disabled={printSelection.size === 0} onClick={() => void printSelected()}>
@@ -293,7 +297,26 @@ export function PlanScreen({
         </form>
 
         <div className="meta">
-          <strong>{state === 'ready' && data ? `Позиций: ${data.total}` : 'Позиций: —'}</strong>
+          <strong>
+            {state === 'ready' && data ? `Позиций: ${data.total}` : 'Позиций: —'}
+            {(filterStatusId !== null || vin.trim()) && counts
+              ? <span className="filter-total"> из {counts.all} всего</span>
+              : null}
+          </strong>
+          {(filterStatusId !== null || vin.trim()) && (
+            <span className="active-filters">
+              {filterStatusId !== null && (
+                <button type="button" className="filter-chip" onClick={() => { setFilterStatusId(null); setPage(1); }}>
+                  {statusCodeLabel(filterStatusId)} ×
+                </button>
+              )}
+              {vin.trim() && (
+                <button type="button" className="filter-chip" onClick={() => setVin('')}>
+                  VIN: {vin.trim()} ×
+                </button>
+              )}
+            </span>
+          )}
           <ul className="legend">
             {LEGEND.map((entry) => (
               <li key={entry.key}>
@@ -322,6 +345,7 @@ export function PlanScreen({
 
       <main className={selected || cardError ? 'content' : 'content content-wide'}>
         <div className="table-wrap">
+          <DensityToggle />
           {state === 'loading' && <TableSkeleton />}
           {state === 'error' && (
             <p role="alert" className="error">
@@ -331,14 +355,14 @@ export function PlanScreen({
           {state === 'ready' && data && data.items.length === 0 && <EmptyState title="Ничего не найдено" hint="Измените фильтр или проверьте VIN" />}
           {state === 'ready' && data && data.items.length > 0 && (
             <table>
-              <caption className="sr-only">Производственный план, сортировка по порядку запуска</caption>
+              <caption className="sr-only">Производственный план (демо-данные), сортировка по порядку запуска</caption>
               <thead>
                 <tr>
                   <th scope="col">
                     <span className="sr-only">Выбор для печати</span>
                   </th>
                   {editOrder && <th scope="col">Перемещение</th>}
-                  {vinColumn && <th scope="col" className="vin">{vinColumn.label}</th>}
+                  {vinColumn && <th scope="col">{vinColumn.label}</th>}
                   <th scope="col">Состояние</th>
                   {otherColumns.map((column) => (
                     <th key={column.key} scope="col">
@@ -354,11 +378,13 @@ export function PlanScreen({
                     <tr
                       key={item.vin}
                       tabIndex={0}
+                      draggable={editOrder}
                       className={
                         [
                           `row-${row.key}`,
                           activeVin === item.vin || selected?.vin === item.vin ? 'selected' : '',
                           movedVin === item.vin ? 'moved' : '',
+                          editOrder && dragOverVin === item.vin ? 'drag-over' : '',
                         ]
                           .filter(Boolean)
                           .join(' ') || undefined
@@ -372,6 +398,19 @@ export function PlanScreen({
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') void openByVin(item.vin);
                       }}
+                      onDragStart={() => { dragVinRef.current = item.vin; }}
+                      onDragOver={(e) => { if (!editOrder) return; e.preventDefault(); setDragOverVin(item.vin); }}
+                      onDragLeave={() => setDragOverVin(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverVin(null);
+                        const src = dragVinRef.current;
+                        dragVinRef.current = null;
+                        if (src && src !== item.vin && item.seqn !== null) {
+                          setActiveVin(src);
+                          void move(src, item.seqn);
+                        }
+                      }}
                     >
                       <td className="select-cell">
                         <input
@@ -384,6 +423,7 @@ export function PlanScreen({
                       </td>
                       {editOrder && (
                         <td className="order-cell">
+                          <span className="drag-handle" aria-hidden="true" title="Перетащить">⠿</span>
                           <button
                             type="button"
                             aria-label={`Переместить ${item.vin} вверх`}
@@ -423,7 +463,14 @@ export function PlanScreen({
                         </td>
                       )}
                       {vinColumn && (
-                        <td className="mono vin" title={item.vin}>{item.vin}</td>
+                        <td className="mono vin" title={item.vin}>
+                          {item.vin}
+                          {(item.openNcpCount ?? 0) > 0 && (
+                            <span className="badge badge-warn ncp-warn-badge" title={`${item.openNcpCount} откр. NCP`} aria-label={`${item.openNcpCount} открытых NCP`}>
+                              {item.openNcpCount}
+                            </span>
+                          )}
+                        </td>
                       )}
                       <td className="state-cell">
                         <span className={`state-badge state-${row.key}`}>
