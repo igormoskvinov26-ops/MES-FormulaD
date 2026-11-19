@@ -2,15 +2,7 @@ import type { ProductionPlanItem } from './api';
 import { atvImageFor } from './atvVariant';
 import { dash, formatDate, statusBadge } from './format';
 
-export function ProductCard({
-  item,
-  onPrint,
-  onPrintNcpSummary,
-}: {
-  item: ProductionPlanItem;
-  onPrint?: () => void;
-  onPrintNcpSummary?: () => void;
-}) {
+export function ProductCard({ item, onPrint, onPrintNcpSummary }: { item: ProductionPlanItem; onPrint?: () => void; onPrintNcpSummary?: () => void; }) {
   const badge = statusBadge(item.status);
   const rows: [string, string][] = [
     ['Порядок', dash(item.seqn)],
@@ -31,7 +23,6 @@ export function ProductCard({
     <article className="card" aria-label={`Карточка изделия ${item.vin}`}>
       <h2 className="mono" style={{ fontSize: 18, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
         {item.vin}
-        {/* T-165: blocking NCP badge */}
         {(item.openNcpCount ?? 0) > 0 && (
           <span className="badge badge-warn" title={`${item.openNcpCount} откр. NCP — требуется деталь`} aria-label={`${item.openNcpCount} открытых NCP`}>⚠ {item.openNcpCount}</span>
         )}
@@ -44,10 +35,7 @@ export function ProductCard({
       {atvImageFor(item) && <img className="product-card__atv" src={atvImageFor(item)!} alt="" draggable={false} />}
       <dl>
         {rows.map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
+          <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
         ))}
       </dl>
     </article>

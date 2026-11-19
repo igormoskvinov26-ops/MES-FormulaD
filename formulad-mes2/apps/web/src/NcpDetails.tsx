@@ -3,10 +3,6 @@ import type { NcpItem } from './api';
 import { atvImageFor } from './atvVariant';
 import { dash, formatDate } from './format';
 
-/**
- * Карточка несоответствия. Статус заявки и признак «деталь установлена» — РАЗНЫЕ поля
- * (раздел 16 спецификации), поэтому и действия над ними разные кнопки, не одна.
- */
 export function NcpDetails({
   item,
   onSetPartInstalled,
@@ -16,8 +12,6 @@ export function NcpDetails({
   item: NcpItem;
   onSetPartInstalled: (installed: boolean) => void;
   onClose: (engineerComment: string | null) => void;
-  /** Печать индивидуального NCP-листа для Red Table (раздел 15, Этап 10) — необязательно:
-      в компактной панели Rework (ReworkScreen.tsx) печать не нужна, это не читальный зал. */
   onPrint?: () => void;
 }) {
   const [engineerComment, setEngineerComment] = useState(item.engineerComment ?? '');

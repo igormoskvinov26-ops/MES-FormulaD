@@ -1,6 +1,5 @@
 import { STATION_STATE_LABEL, type StationState } from './stationReadiness';
 
-/** idle — изделия нет; ready — можно подтверждать; blocked — FOK заблокирован; done — только что подтверждено. */
 export type TwinMode = 'idle' | 'ready' | 'blocked' | 'done';
 
 const CX = 180;
@@ -21,32 +20,15 @@ function arc(startDeg: number, endDeg: number) {
   return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
 }
 
-/**
- * Схема готовности изделия: кольцо из сегментов-станций (цвет — состояние станции) вокруг изображения
- * квадроцикла; фары горят, когда FOK можно подтверждать, и мигают красным, когда он заблокирован.
- * Состояние всегда дублируется текстом (подписи, список под кольцом), а не только цветом.
- */
-export function ReadinessTwin({
-  stations,
-  states,
-  percent,
-  green,
-  total,
-  mode,
-  selected = null,
-  onSelect,
-  image = null,
-}: {
+export function ReadinessTwin({ stations, states, percent, green, total, mode, selected = null, onSelect, image = null }: {
   stations: string[];
   states: StationState[];
   percent: number;
   green: number;
   total: number;
   mode: TwinMode;
-  /** Выбранная станция и обработчик выбора; без onSelect сегменты не интерактивны (нет изделия). */
   selected?: string | null;
   onSelect?: (station: string | null) => void;
-  /** Картинка изделия по модели и цвету (см. atvVariant.ts); null — нейтральная картинка с «лампами». */
   image?: string | null;
 }) {
   const n = stations.length;
@@ -65,41 +47,21 @@ export function ReadinessTwin({
           const label = `Станция ${station} — ${STATION_STATE_LABEL[state]}`;
           const isSelected = selected === station;
           const toggle = () => onSelect?.(isSelected ? null : station);
-          const interactive = onSelect
-            ? {
-                role: 'button' as const,
-                tabIndex: 0,
-                'aria-pressed': isSelected,
-                'aria-label': label,
-                onClick: toggle,
-                onKeyDown: (e: React.KeyboardEvent) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggle();
-                  }
-                },
-              }
-            : {};
+          const interactive = onSelect ? { role: 'button' as const, tabIndex: 0, 'aria-pressed': isSelected, 'aria-label': label, onClick: toggle, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } } } : {};
           return (
             <g key={station} className={`twin__stn${onSelect ? ' twin__stn--interactive' : ''}${isSelected ? ' twin__stn--selected' : ''}`} {...interactive}>
               {onSelect && <path className="twin__hit" d={arc(start, end)} fill="none" />}
-              <path className={`twin__seg twin__seg--${state}`} d={arc(start, end)} fill="none">
-                <title>{label}</title>
-              </path>
-              <text className="twin__label" x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central">
-                {station}
-              </text>
+              <path className={`twin__seg twin__seg--${state}`} d={arc(start, end)} fill="none"><title>{label}</title></path>
+              <text className="twin__label" x={mid.x} y={mid.y} textAnchor="middle" dominantBaseline="central">{station}</text>
             </g>
           );
         })}
       </svg>
-
       <div className="twin__car" aria-hidden="true" data-variant={image ? 'model' : undefined}>
         <img src={image ?? '/atv-hero.png'} alt="" draggable={false} />
         <span className="twin__lamp twin__lamp--l" />
         <span className="twin__lamp twin__lamp--r" />
       </div>
-
       <figcaption className="twin__caption">
         <b>{mode === 'done' ? 'FINAL OK' : `${percent}%`}</b>
         <span>{mode === 'done' ? 'изделие подтверждено' : summary}</span>

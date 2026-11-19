@@ -42,7 +42,7 @@ export function NcpCreateDialog({
   const vinRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (defaultVin) return; // VIN уже известен (создали из карточки изделия) — фокус на станцию не нужен
+    if (defaultVin) return;
     vinRef.current?.focus();
   }, [defaultVin]);
 
@@ -54,8 +54,6 @@ export function NcpCreateDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Компоненты сужаются до выбранной станции; если для неё ничего нет — показываем весь список,
-  // чтобы форма не оказалась пустой из-за демо-данных.
   const forStation = useMemo(() => components.filter((c) => c.station === station), [components, station]);
   const options = forStation.length > 0 ? forStation : components;
 

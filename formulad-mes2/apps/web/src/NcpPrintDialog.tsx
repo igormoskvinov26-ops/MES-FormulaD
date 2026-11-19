@@ -5,11 +5,6 @@ import { NcpSummarySheet } from './NcpSummarySheet';
 
 type Props = { onClose: () => void } & ({ mode: 'individual'; item: NcpItem } | { mode: 'summary'; vin: string });
 
-/**
- * Печать NCP-листа (раздел 15): индивидуальный — на деталь, для Red Table; сводный — по VIN,
- * после прохождения станций. Модель/производственный номер подгружаются на лету по VIN —
- * сам NcpItem их не содержит, а заводить ради одного поля постоянную связь не стал.
- */
 export function NcpPrintDialog(props: Props) {
   const { onClose } = props;
   const [formedAt] = useState(() => new Date().toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' }));
