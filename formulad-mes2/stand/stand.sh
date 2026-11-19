@@ -1,51 +1,31 @@
 #!/usr/bin/env bash
-# Тестовый стенд FormulaD MES: API + собранный UI на базе FormulaD_TEST (Docker).
+# Тестовый (демонстрационный) стенд FormulaD MES: API + собранный UI на синтетических данных.
+# Подключения к SQL/PROD нет: источник данных жёстко Demo, SQL-переменные окружения сбрасываются.
 #
-#   ./stand/stand.sh up       поднять Docker SQL + собрать и запустить API + UI
-#   ./stand/stand.sh smoke    быстрая проверка живого стенда
+#   ./stand/stand.sh up       сборка UI и API, запуск, ожидание готовности, печать входа
+#   ./stand/stand.sh smoke    быстрая проверка живого стенда (health, 401 без входа, вход, данные, статика)
 #   ./stand/stand.sh status   работает ли стенд и по какому адресу
-#   ./stand/stand.sh down     остановка API (Docker остаётся)
-#   ./stand/stand.sh reset    docker compose down -v + up (полный сброс БД)
+#   ./stand/stand.sh down     остановка
 #
-# Переменные: PORT (по умолчанию 5080), STAND_USER (admin), STAND_PASSWORD (F7mes).
-# SQL: Sql__ConnectionString — подставляется автоматически из Docker (можно переопределить).
+# Переменные: PORT (по умолчанию 5080), STAND_USER (demo-operator), STAND_PASSWORD (иначе случайный).
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.."; && pwd)"
 RUN="$ROOT/stand/.run"
 PORT="${PORT:-5080}"
 URL="http://localhost:$PORT"
 # На macOS нет утилиты setsid — запасной вариант через perl (есть и на macOS, и на Linux).
 if command -v setsid >/dev/null; then NEWSESSION=(setsid); else NEWSESSION=(perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' --); fi
-USER_NAME="${STAND_USER:-admin}"
-DOCKER_COMPOSE="$ROOT/docker/docker-compose.yml"
-DEFAULT_CONN="Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_writer;Password=MesWriter2024!;TrustServerCertificate=True"
+USER_NAME="${STAND_USER:-demo-operator}"
 API_DIR="$ROOT/src/FormulaD.Mes.Api"
 
 need() { command -v "$1" >/dev/null || { echo "Не найден '$1' — установите (см. README, раздел «Требования»)" >&2; exit 1; }; }
 is_up() { curl -fsS -o /dev/null "$URL/api/v1/health/live" 2>/dev/null; }
 
-ensure_docker() {
-  need docker
-  if docker ps --format '{{.Names}}' | grep -q '^formulad-test-sql$'; then
-    echo "▸ Docker SQL: уже запущен"
-  else
-    echo "▸ Docker SQL: запуск..."
-    docker compose -f "$DOCKER_COMPOSE" up -d --wait
-    echo "▸ Docker SQL: готов"
-  fi
-}
-
 up() {
   need dotnet; need node; need npm; need curl
   mkdir -p "$RUN"
   if is_up; then echo "Стенд уже запущен: $URL"; return; fi
-
-  # Автозапуск Docker SQL, если ConnectionString не задан извне
-  if [ -z "${Sql__ConnectionString:-}" ]; then
-    ensure_docker
-    export Sql__ConnectionString="$DEFAULT_CONN"
-  fi
 
   echo "▸ UI: сборка"
   (cd "$ROOT/apps/web" && { [ -d node_modules ] || npm ci --no-audit --no-fund; } \
@@ -54,15 +34,17 @@ up() {
   echo "▸ API: сборка (Release)"
   (cd "$ROOT" && dotnet build "$API_DIR" -c Release -v quiet --nologo >/dev/null)
 
-  local password="${STAND_PASSWORD:-F7mes}"
+  local password="${STAND_PASSWORD:-$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)}"
   printf '%s\n%s\n' "$USER_NAME" "$password" > "$RUN/credentials"
   chmod 600 "$RUN/credentials"
 
-  echo "▸ Запуск на $URL (SQL: FormulaD_TEST)"
+  echo "▸ Запуск на $URL (Demo, без SQL)"
+  # Любые SQL-настройки из окружения оператора намеренно сбрасываются.
   # `&` стоит на самой команде: так $! — это сам dotnet (лидер новой группы, её и гасит down),
   # а канал вывода вызывающего не удерживается.
   cd "$API_DIR"
-  ASPNETCORE_ENVIRONMENT=Development \
+  env -u Sql__ConnectionString -u Sql__IsTestEnvironment \
+    DataSource=Demo ASPNETCORE_ENVIRONMENT=Development \
     DevAuth__Enabled=true DevAuth__Username="$USER_NAME" DevAuth__Password="$password" \
     "${NEWSESSION[@]}" nohup dotnet run --no-build -c Release --no-launch-profile --urls "$URL" \
     > "$RUN/stand.log" 2>&1 < /dev/null &
@@ -107,7 +89,6 @@ smoke() {
 
   echo "Проверка стенда $URL"
   check "health/live"                         200 "$(code "$URL/api/v1/health/live")"
-  check "health/ready"                        200 "$(code "$URL/api/v1/health/ready")"
   check "план без входа закрыт (401)"         401 "$(code "$URL/api/v1/production-plan")"
   check "вход"                                200 "$(code -c "$jar" -H 'Content-Type: application/json' \
         -d "{\"username\":\"$user\",\"password\":\"$password\"}" "$URL/api/v1/dev-auth/login")"
@@ -122,17 +103,9 @@ smoke() {
 
   local rows
   rows="$(curl -s -b "$jar" "$URL/api/v1/production-plan?page=1&pageSize=25" | grep -o '"vin"' | wc -l | tr -d ' ')"
-  [ "$rows" -gt 0 ] && echo "  ✓ записей в плане: $rows" || { echo "  ✗ план пуст"; fails=$((fails+1)); }
+  [ "$rows" -gt 0 ] && echo "  ✓ в плане демо-записей: $rows" || { echo "  ✗ план пуст"; fails=$((fails+1)); }
 
   [ "$fails" -eq 0 ] && echo "Итог: всё в порядке" || { echo "Итог: провалено проверок — $fails" >&2; return 1; }
-}
-
-reset() {
-  down 2>/dev/null || true
-  need docker
-  echo "▸ Полный сброс Docker SQL..."
-  docker compose -f "$DOCKER_COMPOSE" down -v 2>/dev/null || true
-  up
 }
 
 case "${1:-}" in
@@ -140,6 +113,5 @@ case "${1:-}" in
   down) down ;;
   status) status ;;
   smoke) smoke ;;
-  reset) reset ;;
   *) sed -n '2,12p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac
