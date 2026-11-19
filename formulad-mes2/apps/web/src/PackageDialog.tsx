@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { api, type DeliveryPackage } from './api';
 
 const OUTCOMES = ['OK', 'Брак', 'Пересорт', 'Недостача'];
@@ -148,8 +148,56 @@ export function PackageDialog({ pkg, onChanged, onClose }: { pkg: DeliveryPackag
   const [reopenComment, setReopenComment] = useState('');
   const [reopenError, setReopenError] = useState('');
   const [reopening, setReopening] = useState(false);
+  const [scanValue, setScanValue] = useState('');
+  const [scanMsg, setScanMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [scanBusy, setScanBusy] = useState(false);
+  // T-171: two-scan flow — первый скан выделяет жёлтым, второй подтверждает OK.
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
+  const scanRef = useRef<HTMLInputElement>(null);
 
   const closed = pkg.status === 'Closed';
+
+  async function confirmScan(code: string) {
+    const row = pkg.rows.find((r) => r.componentCode.toLowerCase() === code.toLowerCase());
+    if (!row) return;
+    setScanBusy(true);
+    try {
+      onChanged(await api.recordRowResult(pkg.id, row.id, 'OK', 1, null));
+      setScanMsg({ ok: true, text: `${code}: +1 OK` });
+      setPendingCode(null);
+    } catch {
+      setScanMsg({ ok: false, text: 'Не удалось записать — превышен норматив?' });
+    } finally {
+      setScanBusy(false);
+      requestAnimationFrame(() => scanRef.current?.focus());
+    }
+  }
+
+  async function scanRecord(code: string) {
+    const row = pkg.rows.find((r) => r.componentCode.toLowerCase() === code.toLowerCase());
+    if (!row) {
+      setScanMsg({ ok: false, text: `Артикул «${code}» не найден в коробке` });
+      setPendingCode(null);
+      return;
+    }
+    if (row.isComplete) { setScanMsg({ ok: false, text: `Строка ${code} уже отработана` }); return; }
+    // Second scan of same code → confirm OK
+    if (pendingCode !== null && pendingCode.toLowerCase() === code.toLowerCase()) {
+      void confirmScan(code);
+      return;
+    }
+    // First scan → highlight yellow
+    setPendingCode(row.componentCode);
+    setScanMsg({ ok: true, text: `Найдено: «${code}» — отсканируйте ещё раз для подтверждения` });
+  }
+
+  function onScanSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const code = scanValue.trim();
+    if (!code || scanBusy) return;
+    setScanValue('');
+    void scanRecord(code);
+  }
 
   async function close() {
     setCloseError('');
@@ -202,10 +250,32 @@ export function PackageDialog({ pkg, onChanged, onClose }: { pkg: DeliveryPackag
           </button>
         </div>
 
+        {!closed && (
+          <form className="pkg-scan-bar" onSubmit={onScanSubmit}>
+            <input
+              ref={scanRef}
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Сканировать артикул (+1 OK)…"
+              aria-label="Сканировать штрих-код артикула"
+              value={scanValue}
+              disabled={scanBusy}
+              onChange={(e) => setScanValue(e.target.value)}
+            />
+            {scanMsg && (
+              <span role="status" className={scanMsg.ok ? 'scan-ok' : 'scan-bad'}>{scanMsg.text}</span>
+            )}
+          </form>
+        )}
+
         <table>
           <thead>
             <tr>
               <th scope="col">Артикул</th>
+              <th scope="col">Партия</th>
+              <th scope="col">Нетто, кг</th>
+              <th scope="col">Брутто, кг</th>
               <th scope="col">Поступило</th>
               <th scope="col">Норматив</th>
               <th scope="col">OK</th>
@@ -216,12 +286,24 @@ export function PackageDialog({ pkg, onChanged, onClose }: { pkg: DeliveryPackag
             </tr>
           </thead>
           <tbody>
-            {pkg.rows.map((row) => (
-              <tr key={row.id} className={row.hasIssues ? 'import-row-error' : undefined}>
+            {pkg.rows.map((row) => {
+              const isPending = pendingCode !== null && row.componentCode.toLowerCase() === pendingCode.toLowerCase();
+              return (
+              <tr key={row.id} className={isPending ? 'pkg-row-pending' : (row.hasIssues ? 'import-row-error' : undefined)}>
                 <td>
                   {row.componentName} <span className="muted">({row.componentCode})</span>
-                  <RowControls packageId={pkg.id} row={row} closed={closed} onChanged={onChanged} />
+                  {isPending && (
+                    <button type="button" className="primary" disabled={scanBusy}
+                      onClick={() => void confirmScan(row.componentCode)}
+                      aria-label={`Подтвердить OK для ${row.componentCode}`}>
+                      ✓ OK
+                    </button>
+                  )}
+                  {!isPending && <RowControls packageId={pkg.id} row={row} closed={closed} onChanged={onChanged} />}
                 </td>
+                <td>{row.batch ?? '—'}</td>
+                <td>{row.netWeight != null ? row.netWeight : '—'}</td>
+                <td>{row.grossWeight != null ? row.grossWeight : '—'}</td>
                 <td>{row.plannedQuantity}</td>
                 <td>{row.requiredQuantity}</td>
                 <td>{row.okQuantity}</td>
@@ -242,7 +324,8 @@ export function PackageDialog({ pkg, onChanged, onClose }: { pkg: DeliveryPackag
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
 

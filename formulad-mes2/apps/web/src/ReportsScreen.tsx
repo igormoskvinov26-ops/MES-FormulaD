@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { usePlanCounts } from './App';
 import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
-import { api, type Delivery, type NcpItem } from './api';
+import { api, type Delivery, type NcpItem, type StationCount, type TypeCount } from './api';
 import { statusCodeLabel } from './format';
 import { LinesSkeleton } from './Skeleton';
 
@@ -71,13 +71,18 @@ function BarLine({ label, value, max, tone, alert = false }: { label: string; va
   );
 }
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function monthAgoStr() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * Отчётность (раздел 26, Этап 10): сводки по тем срезам, которые реально существуют в системе.
- * «Сколько изделий на каждой станции» из [П] сознательно не делаю — в модели нет поля «изделие
- * сейчас физически на станции N» (экран «Станции» — это чек-лист компонентов по VIN, а не трекер
- * местоположения); отчёты за период тоже не делаю — [В-35] прямо говорит, что обязательный
- * комплект выгрузок не согласован. Здесь — агрегаты по уже существующим данным: план (переиспользует
- * тот же счётчик, что плашки экрана плана), NCP, входной контроль.
  */
 export function ReportsScreen({
   session,
@@ -94,6 +99,12 @@ export function ReportsScreen({
   const [incoming, setIncoming] = useState<IncomingSummary | null>(null);
   const [error, setError] = useState('');
 
+  const [dateFrom, setDateFrom] = useState(monthAgoStr);
+  const [dateTo, setDateTo] = useState(todayStr);
+  const [stationCounts, setStationCounts] = useState<StationCount[] | null>(null);
+  const [typeCounts, setTypeCounts] = useState<TypeCount[] | null>(null);
+  const [rangeError, setRangeError] = useState('');
+
   useEffect(() => {
     api.plan({ statusId: 4, page: 1, pageSize: 1 }).then((p) => setReworkCount(p.total)).catch(() => setReworkCount(null));
     api
@@ -105,6 +116,19 @@ export function ReportsScreen({
       .then((p) => setIncoming(summarizeIncoming(p.items)))
       .catch(() => setError('Нет связи с сервером'));
   }, []);
+
+  useEffect(() => {
+    if (!dateFrom || !dateTo) return;
+    setStationCounts(null);
+    setTypeCounts(null);
+    setRangeError('');
+    Promise.all([
+      api.stationReport(dateFrom, dateTo),
+      api.ncpCausesReport(dateFrom, dateTo),
+    ])
+      .then(([sc, tc]) => { setStationCounts(sc); setTypeCounts(tc); })
+      .catch(() => setRangeError('Не удалось загрузить отчёты за период'));
+  }, [dateFrom, dateTo]);
 
   const planStatuses: { id: 0 | 1 | 2 | 3; tone: string }[] = [
     { id: 0, tone: 'waiting' },
@@ -120,11 +144,25 @@ export function ReportsScreen({
     <div className="app f7plan">
       <AppHeader screen="reports" onNavigate={onNavigate} session={session} onLogout={onLogout} />
 
-      <div className="f7plan__title">
-        <span className="f7mes__slash" aria-hidden="true" />
-        <div>
-          <h1>ОТЧЁТНОСТЬ</h1>
-          <small>Сводки по плану, несоответствиям и входному контролю</small>
+      <div className="f7plan__scanbar">
+        <div className="f7plan__title f7plan__title--inline">
+          <span className="f7mes__slash" aria-hidden="true" />
+          <div>
+            <h1>ОТЧЁТНОСТЬ</h1>
+            <small>Сводки по плану, несоответствиям и входному контролю</small>
+          </div>
+        </div>
+        <div className="rep-date-range">
+          <label>
+            С&nbsp;
+            <input type="date" value={dateFrom} max={dateTo} onChange={(e) => setDateFrom(e.target.value)}
+              aria-label="Дата начала периода" />
+          </label>
+          <label>
+            По&nbsp;
+            <input type="date" value={dateTo} min={dateFrom} max={todayStr()} onChange={(e) => setDateTo(e.target.value)}
+              aria-label="Дата конца периода" />
+          </label>
         </div>
       </div>
 
@@ -221,6 +259,39 @@ export function ReportsScreen({
           ) : (
             <LinesSkeleton />
           )}
+        </article>
+
+        <article className="rep-card rep-card--wide">
+          <h2>НКС по станциям <small className="rep-period">({dateFrom} — {dateTo})</small></h2>
+          {rangeError && <p role="alert" className="error">{rangeError}</p>}
+          {!rangeError && stationCounts === null && <LinesSkeleton />}
+          {stationCounts !== null && stationCounts.length === 0 && <p className="muted">Нет данных за период</p>}
+          {stationCounts !== null && stationCounts.length > 0 && (() => {
+            const max = stationCounts[0].count;
+            return (
+              <dl className="rep-lines">
+                {stationCounts.map((s) => (
+                  <BarLine key={s.station} label={`Станция ${s.station}`} value={s.count} max={max} tone="rework" />
+                ))}
+              </dl>
+            );
+          })()}
+        </article>
+
+        <article className="rep-card rep-card--wide">
+          <h2>Причины НКС <small className="rep-period">({dateFrom} — {dateTo})</small></h2>
+          {!rangeError && typeCounts === null && <LinesSkeleton />}
+          {typeCounts !== null && typeCounts.length === 0 && <p className="muted">Нет данных за период</p>}
+          {typeCounts !== null && typeCounts.length > 0 && (() => {
+            const max = typeCounts[0].count;
+            return (
+              <dl className="rep-lines">
+                {typeCounts.map((t) => (
+                  <BarLine key={t.type} label={t.type || 'Не указано'} value={t.count} max={max} tone="waiting" />
+                ))}
+              </dl>
+            );
+          })()}
         </article>
       </main>
     </div>

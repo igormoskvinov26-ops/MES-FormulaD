@@ -14,7 +14,7 @@ const PAGE_SIZE = 25;
 const ALL = '__all__';
 
 /** Загрузка страницы NCP — тот же приём, что usePlan в App.tsx: отбрасываем устаревшие ответы. */
-function useNcpList(vin: string, status: string | null, page: number) {
+function useNcpList(vin: string, status: string | null, type: string | null, station: string | null, page: number) {
   const [data, setData] = useState<Paged<NcpItem> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
@@ -24,7 +24,7 @@ function useNcpList(vin: string, status: string | null, page: number) {
     const id = ++requestId.current;
     setState('loading');
     api
-      .ncpList({ vin, status, page, pageSize: PAGE_SIZE })
+      .ncpList({ vin, status, type, station, page, pageSize: PAGE_SIZE })
       .then((result) => {
         if (id !== requestId.current) return;
         setData(result);
@@ -35,7 +35,7 @@ function useNcpList(vin: string, status: string | null, page: number) {
         setError(e instanceof ApiError && e.status === 401 ? 'Нет доступа' : 'Нет связи с сервером');
         setState('error');
       });
-  }, [vin, status, page]);
+  }, [vin, status, type, station, page]);
 
   useEffect(reload, [reload]);
 
@@ -53,6 +53,8 @@ export function NcpScreen({
 }) {
   const [vin, setVin] = useState('');
   const [statusChoice, setStatusChoice] = useState(ALL);
+  const [typeChoice, setTypeChoice] = useState(ALL);
+  const [stationChoice, setStationChoice] = useState(ALL);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<NcpItem | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -62,14 +64,18 @@ export function NcpScreen({
   const [types, setTypes] = useState<string[]>([]);
   const [stations, setStations] = useState<string[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
+  const [inWorkVins, setInWorkVins] = useState<string[]>([]);
 
   const statusFilter = statusChoice === ALL ? null : statusChoice;
-  const { data, state, error, reload } = useNcpList(vin.trim(), statusFilter, page);
+  const typeFilter = typeChoice === ALL ? null : typeChoice;
+  const stationFilter = stationChoice === ALL ? null : stationChoice;
+  const { data, state, error, reload } = useNcpList(vin.trim(), statusFilter, typeFilter, stationFilter, page);
 
   useEffect(() => {
     api.ncpTypes().then(setTypes).catch(() => setTypes([]));
     api.ncpStations().then(setStations).catch(() => setStations([]));
     api.ncpComponents().then(setComponents).catch(() => setComponents([]));
+    api.plan({ statusId: 1, page: 1, pageSize: 100 }).then((r) => setInWorkVins(r.items.map((i) => i.vin))).catch(() => {});
   }, []);
 
   // Выбранная заявка могла устареть после перезагрузки списка — обновляем её из свежих данных.
@@ -154,6 +160,32 @@ export function NcpScreen({
             <option value="Открыто">Открыто</option>
             <option value="Закрыто">Закрыто</option>
           </select>
+          <select
+            aria-label="Тип несоответствия"
+            value={typeChoice}
+            onChange={(event) => {
+              setTypeChoice(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value={ALL}>Все типы</option>
+            {types.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Станция"
+            value={stationChoice}
+            onChange={(event) => {
+              setStationChoice(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value={ALL}>Все станции</option>
+            {stations.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
           <button type="button" className="primary" onClick={() => setShowCreate(true)}>
             Зарегистрировать несоответствие
           </button>
@@ -175,11 +207,11 @@ export function NcpScreen({
           {state === 'ready' && data && data.items.length === 0 && <EmptyState title="Ничего не найдено" hint="Измените фильтр или зарегистрируйте несоответствие" />}
           {state === 'ready' && data && data.items.length > 0 && (
             <table>
-              <caption className="sr-only">Несоответствия, новые сверху</caption>
+              <caption className="sr-only">Несоответствия (демо-данные), новые сверху</caption>
               <thead>
                 <tr>
                   <th scope="col">№</th>
-                  <th scope="col" className="vin">VIN</th>
+                  <th scope="col">VIN</th>
                   <th scope="col">Станция</th>
                   <th scope="col">Компонент</th>
                   <th scope="col">Кол-во</th>
@@ -272,6 +304,7 @@ export function NcpScreen({
           stations={stations}
           components={components}
           defaultVin=""
+          inWorkVins={inWorkVins}
           onCreate={(input) => void createNcp(input)}
           onClose={() => setShowCreate(false)}
         />
