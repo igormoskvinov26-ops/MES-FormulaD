@@ -20,7 +20,7 @@ public sealed class IncomingInspectionTests
 
     private static async Task<DeliveryContext> CreateDeliveryAsync()
     {
-        var factory = new ApiFactory(userExists: true);
+        var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var response = await client.PostAsJsonAsync("/api/v1/incoming-inspection/deliveries",
             new CreateDeliveryRequest("DEMO-SUP-01", "INV-2026-001", "2026-10-27", null));
@@ -42,7 +42,7 @@ public sealed class IncomingInspectionTests
     [Fact]
     public async Task Suppliers_Require_Authentication()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var response = await factory.CreateClient().GetAsync("/api/v1/incoming-inspection/suppliers");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -50,7 +50,7 @@ public sealed class IncomingInspectionTests
     [Fact]
     public async Task Suppliers_List_Includes_Parent_Plant_Flag()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var suppliers = await client.GetFromJsonAsync<List<SupplierRef>>("/api/v1/incoming-inspection/suppliers");
         Assert.Contains(suppliers!, s => s.IsParentPlant);
@@ -59,7 +59,7 @@ public sealed class IncomingInspectionTests
     [Fact]
     public async Task Create_Delivery_With_Unknown_Supplier_Is_Rejected()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var response = await client.PostAsJsonAsync("/api/v1/incoming-inspection/deliveries",
             new CreateDeliveryRequest("NOPE", "INV-1", "2026-10-27", null));
@@ -323,6 +323,26 @@ public sealed class IncomingInspectionTests
 
         var notFound = await client.GetAsync($"/api/v1/incoming-inspection/deliveries/{delivery.Id}/packages/by-hu/NOPE");
         Assert.Equal(HttpStatusCode.NotFound, notFound.StatusCode);
+    }
+
+    // T-040: повторное закрытие коробки не молчит — возвращает 400 с причиной.
+    [Fact]
+    public async Task Repeated_Close_Package_Returns_Error_Not_Silent()
+    {
+        using var ctx = await CreateDeliveryAsync();
+        var client = ctx.Client;
+        var delivery = ctx.Delivery;
+        var confirmed = await StageAndConfirmAsync(client, delivery.Id, Row(article: "DEMO-CMP-014", qty: "20"));
+        var package = confirmed.Packages[0];
+        var row = package.Rows[0];
+        await client.PostAsJsonAsync($"/api/v1/incoming-inspection/packages/{package.Id}/rows/{row.Id}/result",
+            new RecordRowResultRequest("OK", 5, null));
+
+        var first = await client.PostAsync($"/api/v1/incoming-inspection/packages/{package.Id}/close", null);
+        first.EnsureSuccessStatusCode();
+
+        var second = await client.PostAsync($"/api/v1/incoming-inspection/packages/{package.Id}/close", null);
+        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
     }
 
     [Fact]

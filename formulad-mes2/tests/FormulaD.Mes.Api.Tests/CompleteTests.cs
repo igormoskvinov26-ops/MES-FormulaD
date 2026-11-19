@@ -10,7 +10,7 @@ public sealed class CompleteTests
     [Fact]
     public async Task Complete_Requires_Authentication()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var response = await factory.CreateClient().PostAsync("/api/v1/production-plan/DEMO-VIN-00001/complete", null);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -18,7 +18,7 @@ public sealed class CompleteTests
     [Fact]
     public async Task Complete_Transitions_Status_1_To_2_And_Sets_CompleteDate()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var before = await client.GetFromJsonAsync<ProductionPlanItem>("/api/v1/production-plan/DEMO-VIN-00001");
@@ -40,7 +40,7 @@ public sealed class CompleteTests
     {
         // DEMO-VIN-00001 несёт две открытые NCP с неустановленной деталью (NC-2026-0001/2) —
         // завершение сборки по разделу 13 ([П]) ими не блокируется, в отличие от FOK.
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00001/complete", null);
@@ -53,7 +53,7 @@ public sealed class CompleteTests
     [InlineData("DEMO-VIN-00003")] // statusId 2 — уже завершено
     public async Task Complete_Rejects_Items_Not_In_Status_1(string vin)
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync($"/api/v1/production-plan/{vin}/complete", null);
@@ -64,7 +64,7 @@ public sealed class CompleteTests
     [Fact]
     public async Task Complete_Unknown_Vin_Returns_404()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-99999/complete", null);
@@ -78,5 +78,22 @@ public sealed class CompleteTests
         using var factory = new SqlConfiguredFactory();
         var response = await factory.CreateClient().PostAsync("/api/v1/production-plan/DEMO-VIN-00001/complete", null);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    // T-040: повторный скан Complete не тихий — возвращает 400, CompleteDate не сдвигается.
+    [Fact]
+    public async Task Repeated_Complete_Returns_Error_And_Date_Unchanged()
+    {
+        using var factory = new ApiFactory(devAuthEnabled: true);
+        var client = await factory.CreateAuthenticatedClientAsync();
+
+        var first = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00001/complete", null);
+        var completed = await first.Content.ReadFromJsonAsync<ProductionPlanItem>();
+
+        var second = await client.PostAsync("/api/v1/production-plan/DEMO-VIN-00001/complete", null);
+        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+
+        var unchanged = await client.GetFromJsonAsync<ProductionPlanItem>("/api/v1/production-plan/DEMO-VIN-00001");
+        Assert.Equal(completed!.CompleteDate, unchanged!.CompleteDate);
     }
 }

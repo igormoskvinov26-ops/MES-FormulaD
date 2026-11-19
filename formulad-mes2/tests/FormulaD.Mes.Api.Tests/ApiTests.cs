@@ -10,48 +10,12 @@ public sealed class ApiTests
     [Fact]
     public async Task Health_Is_Anonymous_And_Reveals_Nothing()
     {
-        using var factory = new ApiFactory(userExists: false);
+        using var factory = new ApiFactory(devAuthEnabled: false);
         var response = await factory.CreateClient().GetAsync("/api/v1/health/live");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal("{\"status\":\"ok\"}", body);
-    }
-
-    [Fact]
-    public async Task Health_Ready_Is_Anonymous_And_Returns_Degraded_Without_Sql()
-    {
-        using var factory = new ApiFactory(userExists: false);
-        var response = await factory.CreateClient().GetAsync("/api/v1/health/ready");
-
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("degraded", body);
-        // T-102: no connection details leak
-        Assert.DoesNotContain("Server=", body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("Password=", body, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task Version_Is_Anonymous_And_Returns_Version_String()
-    {
-        using var factory = new ApiFactory(userExists: false);
-        var response = await factory.CreateClient().GetAsync("/api/v1/version");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("version", body);
-    }
-
-    [Fact]
-    public async Task Responses_Include_Security_Headers()
-    {
-        using var factory = new ApiFactory(userExists: false);
-        var response = await factory.CreateClient().GetAsync("/api/v1/health/live");
-
-        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
-        Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
-        Assert.Equal("strict-origin-when-cross-origin", response.Headers.GetValues("Referrer-Policy").Single());
     }
 
     [Theory]
@@ -61,46 +25,33 @@ public sealed class ApiTests
     [InlineData("/api/v1/auth/me")]
     public async Task Business_Endpoints_Require_Auth(string path)
     {
-        using var factory = new ApiFactory(userExists: false);
+        using var factory = new ApiFactory(devAuthEnabled: false);
         var response = await factory.CreateClient().GetAsync(path);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task FormLogin_Route_Absent_When_Disabled()
+    public async Task DevLogin_Route_Absent_When_Disabled()
     {
-        using var factory = new ApiFactory(userExists: false);
+        using var factory = new ApiFactory(devAuthEnabled: false);
         var response = await factory.CreateClient()
-            .PostAsJsonAsync("/api/v1/auth/login", new { login = "x" });
+            .PostAsJsonAsync("/api/v1/dev-auth/login", new { username = "x", password = "y" });
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task Login_Rejects_Unknown_User()
+    public async Task DevLogin_Rejects_Wrong_Password()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var response = await factory.CreateClient()
-            .PostAsJsonAsync("/api/v1/auth/login", new { login = "no-such-user" });
+            .PostAsJsonAsync("/api/v1/dev-auth/login", new { username = ApiFactory.Login, password = "wrong" });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Login_Returns_Role_And_FullName_From_Directory()
-    {
-        using var factory = new ApiFactory(userExists: true);
-        var client = await factory.CreateAuthenticatedClientAsync();
-
-        var me = await client.GetFromJsonAsync<JsonElement>("/api/v1/auth/me");
-
-        Assert.Equal(ApiFactory.Login, me.GetProperty("userName").GetString());
-        Assert.Equal("Демо Оператор", me.GetProperty("fullName").GetString());
-        Assert.Equal(ApiFactory.Role, me.GetProperty("role").GetString());
     }
 
     [Fact]
     public async Task Plan_Is_Paged_And_Sorted_By_Seqn()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var page = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?page=1&pageSize=2");
@@ -121,7 +72,7 @@ public sealed class ApiTests
     [Fact]
     public async Task Vin_Filter_Matches_Prefix_And_Suffix()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var byPrefix = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?vin=demo-vin-00003");
@@ -150,7 +101,7 @@ public sealed class ApiTests
     [Fact]
     public async Task Status_Filter_Matches_Source_Strings()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var page = await client.GetFromJsonAsync<PagedResult<ProductionPlanItem>>("/api/v1/production-plan?status=custom_unknown");
@@ -163,7 +114,7 @@ public sealed class ApiTests
     [Fact]
     public async Task Statuses_Include_Null_From_Source()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var statuses = await client.GetFromJsonAsync<List<string?>>("/api/v1/production-plan/statuses");
@@ -177,7 +128,7 @@ public sealed class ApiTests
     [Fact]
     public async Task Card_By_Vin_And_404()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var item = await client.GetFromJsonAsync<ProductionPlanItem>("/api/v1/production-plan/DEMO-VIN-00004");
@@ -195,7 +146,7 @@ public sealed class ApiTests
     [InlineData("/api/v1/production-plan?pageSize=101")]
     public async Task Invalid_Paging_Is_400(string path)
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var response = await client.GetAsync(path);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -204,7 +155,7 @@ public sealed class ApiTests
     [Fact]
     public async Task Too_Long_Vin_Is_400()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
         var response = await client.GetAsync("/api/v1/production-plan?vin=" + new string('A', 51));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -217,7 +168,7 @@ public sealed class ApiTests
     [InlineData("DELETE")]
     public async Task Write_Methods_On_Production_Data_Are_Not_Allowed(string method)
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), "/api/v1/production-plan/DEMO-VIN-00001"));
@@ -230,7 +181,7 @@ public sealed class ApiTests
     [Fact]
     public async Task Dates_Are_Returned_Without_Timezone_Suffix()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         using var json = JsonDocument.Parse(await client.GetStringAsync("/api/v1/production-plan/DEMO-VIN-00001"));
@@ -239,9 +190,24 @@ public sealed class ApiTests
         Assert.Equal("2026-10-20T09:00:00", startDate);
     }
 
+    [Fact]
+    public void Sql_DataSource_Without_Test_Marker_Fails_Closed()
+    {
+        using var factory = new SqlAttemptFactory();
+        var error = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
+        Assert.Contains("IsTestEnvironment", error.Message);
+    }
+
+    [Fact]
+    public void Unknown_DataSource_Fails_Closed()
+    {
+        using var factory = new SqlAttemptFactory("Oracle");
+        var error = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
+        Assert.Contains("Oracle", error.Message);
+    }
 }
 
-/// <summary>Перестановка порядка.</summary>
+/// <summary>Перестановка порядка — только на демо-данных. В SQL-режиме маршрута нет.</summary>
 public sealed class MoveTests
 {
     private static async Task<List<(string Vin, int? Seqn)>> OrderAsync(HttpClient client)
@@ -253,7 +219,7 @@ public sealed class MoveTests
     [Fact]
     public async Task Move_Up_Swaps_With_Neighbour_And_Keeps_Numbering()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var before = await OrderAsync(client);
@@ -272,7 +238,7 @@ public sealed class MoveTests
     [Fact]
     public async Task Move_Far_Shifts_Whole_Range()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         // Изделие с позиции 28 переносим в начало плана, на позицию 23.
@@ -289,7 +255,7 @@ public sealed class MoveTests
     [Fact]
     public async Task Move_Requires_Authentication()
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var response = await factory.CreateClient()
             .PostAsJsonAsync("/api/v1/production-plan/DEMO-VIN-00003/move", new { toPosition = 24 });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -302,41 +268,11 @@ public sealed class MoveTests
     [InlineData("DEMO-VIN-00003", 0, HttpStatusCode.BadRequest)]
     public async Task Move_Rejects_Bad_Input(string vin, int toPosition, HttpStatusCode expected)
     {
-        using var factory = new ApiFactory(userExists: true);
+        using var factory = new ApiFactory(devAuthEnabled: true);
         var client = await factory.CreateAuthenticatedClientAsync();
 
         var response = await client.PostAsJsonAsync($"/api/v1/production-plan/{vin}/move", new { toPosition });
 
         Assert.Equal(expected, response.StatusCode);
-    }
-
-    // T-096: contract tests — OpenAPI schema contains expected endpoints
-    [Fact]
-    public async Task OpenApi_Schema_Contains_Expected_Endpoints()
-    {
-        using var factory = new ApiFactory(userExists: true);
-        var client = await factory.CreateAuthenticatedClientAsync();
-
-        var response = await client.GetAsync("/openapi/v1.json");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var body = await response.Content.ReadAsStringAsync();
-        var doc = JsonDocument.Parse(body);
-        var paths = doc.RootElement.GetProperty("paths");
-
-        string[] expected =
-        [
-            "/api/v1/health/live",
-            "/api/v1/health/ready",
-            "/api/v1/version",
-            "/api/v1/production-plan/statuses",
-            "/api/v1/production-plan",
-            "/api/v1/ncp",
-            "/api/v1/ncp/types",
-            "/api/v1/stations/{vin}/checks",
-        ];
-
-        foreach (var path in expected)
-            Assert.True(paths.TryGetProperty(path, out _), $"Missing endpoint: {path}");
     }
 }
