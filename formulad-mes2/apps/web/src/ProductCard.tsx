@@ -1,4 +1,5 @@
 import type { ProductionPlanItem } from './api';
+import { atvImageFor } from './atvVariant';
 import { dash, formatDate, statusBadge } from './format';
 
 export function ProductCard({
@@ -28,12 +29,19 @@ export function ProductCard({
 
   return (
     <article className="card" aria-label={`Карточка изделия ${item.vin}`}>
-      <h2 className="mono" style={{ fontSize: 18, margin: '0 0 4px' }}>{item.vin}</h2>
+      <h2 className="mono" style={{ fontSize: 18, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {item.vin}
+        {/* T-165: blocking NCP badge */}
+        {(item.openNcpCount ?? 0) > 0 && (
+          <span className="badge badge-warn" title={`${item.openNcpCount} откр. NCP — требуется деталь`} aria-label={`${item.openNcpCount} открытых NCP`}>⚠ {item.openNcpCount}</span>
+        )}
+      </h2>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
         <span className={`badge status-${badge.tone}`} title={badge.title}>{badge.label}</span>
         {onPrint && <button type="button" style={{ padding: '4px 10px', fontSize: 13 }} onClick={onPrint}>Печать</button>}
         {onPrintNcpSummary && <button type="button" style={{ padding: '4px 10px', fontSize: 13 }} onClick={onPrintNcpSummary}>NCP-лист</button>}
       </div>
+      {atvImageFor(item) && <img className="product-card__atv" src={atvImageFor(item)!} alt="" draggable={false} />}
       <dl>
         {rows.map(([label, value]) => (
           <div key={label}>

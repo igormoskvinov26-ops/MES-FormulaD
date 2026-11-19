@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { NcpItem } from './api';
+import { atvImageFor } from './atvVariant';
 import { dash, formatDate } from './format';
 
 /**
@@ -24,6 +25,8 @@ export function NcpDetails({
 
   const rows: [string, string][] = [
     ['VIN', item.vin],
+    ['Модель', dash(item.modelName ?? item.modelArticle ?? null)],
+    ['Цвет', dash(item.color ?? null)],
     ['Станция', item.station],
     ['Компонент', `${item.componentName} (${item.componentCode})`],
     ['Количество', String(item.quantity)],
@@ -44,6 +47,7 @@ export function NcpDetails({
         </span>
       </p>
 
+      {atvImageFor(item) && <img className="product-card__atv" src={atvImageFor(item)!} alt="" draggable={false} />}
       <dl>
         {rows.map(([label, value]) => (
           <div key={label}>

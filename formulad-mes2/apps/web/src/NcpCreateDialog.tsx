@@ -8,6 +8,7 @@ export function NcpCreateDialog({
   stations,
   components,
   defaultVin,
+  inWorkVins,
   defaultStation,
   defaultComponentCode,
   onCreate,
@@ -17,6 +18,7 @@ export function NcpCreateDialog({
   stations: string[];
   components: ComponentItem[];
   defaultVin: string;
+  inWorkVins?: string[];
   /** Контекст станции — экран «Станции» открывает форму уже с нужной станцией/компонентом
       («Зафиксировать расхождение», раздел 11.2: VIN и привязка к станции не теряются). */
   defaultStation?: string;
@@ -53,7 +55,7 @@ export function NcpCreateDialog({
   }, [onClose]);
 
   // Компоненты сужаются до выбранной станции; если для неё ничего нет — показываем весь список,
-  // чтобы форма не оказалась пустой при отсутствии привязки к станции.
+  // чтобы форма не оказалась пустой из-за демо-данных.
   const forStation = useMemo(() => components.filter((c) => c.station === station), [components, station]);
   const options = forStation.length > 0 ? forStation : components;
 
@@ -96,9 +98,15 @@ export function NcpCreateDialog({
             value={vin}
             maxLength={50}
             readOnly={Boolean(defaultVin)}
+            list={defaultVin ? undefined : 'ncp-vin-list'}
             onChange={(event) => setVin(event.target.value)}
             required
           />
+          {!defaultVin && (
+            <datalist id="ncp-vin-list">
+              {(inWorkVins ?? []).map((v) => <option key={v} value={v} />)}
+            </datalist>
+          )}
         </label>
 
         <label>

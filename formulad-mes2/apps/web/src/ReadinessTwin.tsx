@@ -35,6 +35,7 @@ export function ReadinessTwin({
   mode,
   selected = null,
   onSelect,
+  image = null,
 }: {
   stations: string[];
   states: StationState[];
@@ -45,6 +46,8 @@ export function ReadinessTwin({
   /** Выбранная станция и обработчик выбора; без onSelect сегменты не интерактивны (нет изделия). */
   selected?: string | null;
   onSelect?: (station: string | null) => void;
+  /** Картинка изделия по модели и цвету (см. atvVariant.ts); null — нейтральная картинка с «лампами». */
+  image?: string | null;
 }) {
   const n = stations.length;
   const span = n > 0 ? 360 / n : 360;
@@ -91,8 +94,8 @@ export function ReadinessTwin({
         })}
       </svg>
 
-      <div className="twin__car" aria-hidden="true">
-        <img src="/atv-hero.png" alt="" draggable={false} />
+      <div className="twin__car" aria-hidden="true" data-variant={image ? 'model' : undefined}>
+        <img src={image ?? '/atv-hero.png'} alt="" draggable={false} />
         <span className="twin__lamp twin__lamp--l" />
         <span className="twin__lamp twin__lamp--r" />
       </div>
