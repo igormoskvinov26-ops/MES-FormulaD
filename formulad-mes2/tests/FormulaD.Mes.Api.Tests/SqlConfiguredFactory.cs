@@ -19,5 +19,7 @@ public sealed class SqlConfiguredFactory : WebApplicationFactory<Program>
         builder.UseSetting("Sql:IsTestEnvironment", "true");
         builder.UseSetting("Sql:ConnectionString",
             "Server=mes-test-sql,1433;Database=FormulaD_TEST;User ID=mes_reader;Password=x;TrustServerCertificate=True");
+        // ponytail: migrations skip when directory doesn't exist — no real SQL needed on startup
+        builder.UseSetting("Sql:MigrationsPath", "/nonexistent-migrations-path");
     }
 }
