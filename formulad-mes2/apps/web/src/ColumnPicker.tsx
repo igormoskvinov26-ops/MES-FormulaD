@@ -32,8 +32,13 @@ export function ColumnPicker({
 
   return (
     <div className="picker" ref={root}>
-      <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        Поля ({visible.length})
+      <button type="button" className="picker-btn" aria-expanded={open} aria-label={`Выбор полей (${visible.length} видимых)`} title="Выбор полей" onClick={() => setOpen((v) => !v)}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+          <rect x="1" y="1" width="4" height="14" rx="1" />
+          <rect x="6" y="1" width="4" height="14" rx="1" />
+          <rect x="11" y="1" width="4" height="14" rx="1" />
+        </svg>
+        {visible.length > 0 && <span className="picker-count">{visible.length}</span>}
       </button>
       {open && (
         <div className="picker-menu" role="group" aria-label="Видимые колонки">
