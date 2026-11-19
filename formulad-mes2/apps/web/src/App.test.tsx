@@ -42,7 +42,7 @@ function mockFetch(route: Route) {
   return fetchMock;
 }
 
-const session = { userName: 'demo-operator', mode: 'dev' };
+const session = { userName: 'demo-operator', mode: 'dev', demo: true };
 
 beforeEach(() => vi.restoreAllMocks());
 afterEach(() => vi.unstubAllGlobals());
@@ -59,6 +59,7 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByText('DEMO-VIN-00001')).toBeInTheDocument();
+    expect(screen.getByText('DEMO')).toBeInTheDocument();
     expect(screen.getByText('Позиций: 1')).toBeInTheDocument();
     // Состояние строки подписано словом, а не только цветом.
     expect(screen.getAllByText('В производстве').length).toBeGreaterThan(0);
