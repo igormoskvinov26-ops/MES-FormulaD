@@ -6,17 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:watch": "vite build --watch",
     "preview": "vite preview",
-    "test": "vitest run",
-    "e2e": "npx playwright test --trace off"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@tiptap/extension-table": "^3.34.0",
+    "@tiptap/extension-table-cell": "^3.34.0",
+    "@tiptap/extension-table-header": "^3.34.0",
+    "@tiptap/extension-table-row": "^3.34.0",
+    "@tiptap/pm": "^3.34.0",
+    "@tiptap/react": "^3.34.0",
+    "@tiptap/starter-kit": "^3.34.0",
     "qrcode": "1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "6.6.3",
     "@testing-library/react": "16.1.0",
     "@testing-library/user-event": "14.5.2",
@@ -25,11 +31,9 @@
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.4",
     "@vitest/coverage-v8": "^2.1.8",
-    "axe-core": "^4.14.0",
     "jsdom": "25.0.1",
     "typescript": "5.6.3",
     "vite": "5.4.11",
-    "vitest": "2.1.8",
-    "vitest-axe": "^0.1.0"
+    "vitest": "2.1.8"
   }
 }

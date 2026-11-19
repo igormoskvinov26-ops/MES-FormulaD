@@ -156,3 +156,27 @@ describe('PlanScreen — плитки-фильтры', () => {
     expect(all).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+describe('PlanScreen — фильтр по плашкам сводки', () => {
+  it('клик по плашке запрашивает план с statusId, клик «Показать все» снимает фильтр', async () => {
+    const planRequests: string[] = [];
+    mockFetch((url, method) => {
+      if (url.includes('/production-plan?') && url.includes('pageSize=25')) {
+        planRequests.push(url);
+        const filtered = url.includes('statusId=0');
+        return { body: { items: filtered ? [ITEMS[0]] : ITEMS, page: 1, pageSize: 25, total: filtered ? 1 : ITEMS.length } };
+      }
+      return baseRoutes()(url, method);
+    });
+    render(<PlanScreen session={session} onNavigate={noop} onLogout={noop} />);
+
+    await screen.findByText('DEMO-VIN-00002');
+    await userEvent.click(screen.getByRole('button', { name: 'Фильтр: Запланировано' }));
+
+    await waitFor(() => expect(planRequests.some((u) => u.includes('statusId=0'))).toBe(true));
+    await waitFor(() => expect(screen.queryByText('DEMO-VIN-00002')).not.toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: 'Показать все' }));
+    expect(await screen.findByText('DEMO-VIN-00002')).toBeInTheDocument();
+  });
+});
