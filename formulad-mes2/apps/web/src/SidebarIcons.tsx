@@ -14,6 +14,15 @@ const b = (className?: string) => ({
   height: 20,
 });
 
+export function IconCalendar({ className }: P) {
+  return (
+    <svg {...b(className)}>
+      <rect x="3" y="4" width="14" height="13" rx="2" />
+      <path d="M3 8h14M7 2.5v3M13 2.5v3M7 12h2M11 12h2" />
+    </svg>
+  );
+}
+
 export function IconPlan({ className }: P) {
   return (
     <svg {...b(className)}>
@@ -106,11 +115,38 @@ export function IconReports({ className }: P) {
   );
 }
 
+export function IconQc({ className }: P) {
+  return (
+    <svg {...b(className)}>
+      <rect x="3" y="2" width="14" height="16" rx="2" />
+      <path d="M7 7h6M7 10.5h4" />
+      <path d="M6.5 14l1.5 1.5 3-3" />
+    </svg>
+  );
+}
+
 export function IconAdmin({ className }: P) {
   return (
     <svg {...b(className)}>
       <circle cx="10" cy="10" r="3" />
       <path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.2 4.2l1.8 1.8M14 14l1.8 1.8M15.8 4.2L14 6M6 14l-1.8 1.8" />
+    </svg>
+  );
+}
+
+export function IconLineMap({ className }: P) {
+  return (
+    <svg {...b(className)}>
+      {/* horizontal line with stations */}
+      <path d="M2 10h16" />
+      <circle cx="5"  cy="10" r="2" fill="currentColor" />
+      <circle cx="10" cy="10" r="2" fill="currentColor" />
+      <circle cx="15" cy="10" r="2" fill="currentColor" />
+      {/* QC post markers above the line */}
+      <path d="M7.5 10V6.5" />
+      <rect x="6" y="4.5" width="3" height="2" rx="0.5" />
+      <path d="M12.5 10V6.5" />
+      <rect x="11" y="4.5" width="3" height="2" rx="0.5" />
     </svg>
   );
 }

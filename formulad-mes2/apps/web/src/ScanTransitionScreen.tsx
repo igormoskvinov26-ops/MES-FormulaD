@@ -4,6 +4,7 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ProductionPlanItem } from './api';
 import { dash, statusCodeLabel } from './format';
 import { EmptyState } from './EmptyState';
+import { atvImageFor } from './atvVariant';
 import { isQueueCollapsed, setQueueCollapsed, subscribeQueue } from './queuePref';
 import { ResultFlash, useResultSignal } from './resultSignal';
 import './f7-components.css';
@@ -77,10 +78,24 @@ export function ScanTransitionScreen({
   const listRef = useRef<HTMLUListElement>(null);
   const inQueue = found !== null && pending.some((item) => item.vin === found.vin);
   const requestId = useRef(0);
+  const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Разрешено подтверждать только когда что-то найдено и ни одна проверка (статус, extraCheck)
   // не оставила сообщение об ошибке — единая точка истины вместо двух раздельных флагов.
   const eligible = found !== null && message === null;
+
+  // T-169: 30 с на второй скан; по истечении — сброс карточки.
+  useEffect(() => {
+    if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+    if (!eligible) return;
+    confirmTimeoutRef.current = setTimeout(() => {
+      setFound(null);
+      setMessage({ kind: 'error', text: 'Время истекло — повторите сканирование' });
+      focusInput();
+    }, 30_000);
+    return () => { if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eligible, found?.vin]);
 
   const reloadPending = useCallback(() => {
     api
@@ -235,7 +250,7 @@ export function ScanTransitionScreen({
 
           {found ? (
             <article
-              className={`card scan-found${eligible ? '' : ' scan-found-blocked'}${extraContent ? ' scan-found--split' : ''}`}
+              className={`card scan-found${eligible ? '' : ' scan-found-blocked'}${extraContent ? ' scan-found--split' : ''}${atvImageFor(found) && !extraContent ? ' scan-found--atv' : ''}`}
               aria-label={`Найдено изделие ${found.vin}`}
             >
               <div className="scan-found__head">
@@ -244,6 +259,7 @@ export function ScanTransitionScreen({
                   {eligible ? 'Можно подтвердить' : 'Подтверждение недоступно'}
                 </span>
               </div>
+              {atvImageFor(found) && <img className="scan-found__atv" src={atvImageFor(found)!} alt="" draggable={false} />}
               <dl>
                 <div>
                   <dt>Модель</dt>
@@ -327,8 +343,14 @@ export function ScanTransitionScreen({
                         aria-current={selected ? 'true' : undefined}
                         onClick={() => { setInput(''); void lookup(item.vin); }}
                       >
-                        <span className="mono">{item.vin}</span>
-                        <span className="muted">{dash(item.modelName)}</span>
+                        <span className="queue-vin-row">
+                          <span className="mono">{item.vin}</span>
+                          {item.color && <span className="queue-color">{item.color}</span>}
+                          {(item.openNcpCount ?? 0) > 0 && (
+                            <span className="badge badge-warn ncp-warn-badge" title={`${item.openNcpCount} откр. NCP`} aria-label={`${item.openNcpCount} открытых NCP`}>{item.openNcpCount}</span>
+                          )}
+                        </span>
+                        {item.modelName && <span className="queue-model">{item.modelName}</span>}
                         <span className="f7mes__queue-chevron" aria-hidden="true">›</span>
                       </button>
                     </li>

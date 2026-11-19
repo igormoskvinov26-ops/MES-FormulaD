@@ -4,6 +4,7 @@ import { AppHeader } from './AppHeader';
 import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem } from './api';
 import { NcpCreateDialog } from './NcpCreateDialog';
 import { formatDate } from './format';
+import { atvImageFor } from './atvVariant';
 import { STATION_STATE_LABEL, stationState as computeStationState, type StationState } from './stationReadiness';
 import './f7-components.css';
 
@@ -20,6 +21,7 @@ export function StationScreen({
   const [vin, setVin] = useState<string | null>(null);
   const [item, setItem] = useState<ProductionPlanItem | null>(null);
   const [lookupError, setLookupError] = useState('');
+  const [inWorkVins, setInWorkVins] = useState<string[]>([]);
 
   const [stationsList, setStationsList] = useState<string[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
@@ -34,6 +36,7 @@ export function StationScreen({
     api.ncpStations().then(setStationsList).catch(() => setStationsList([]));
     api.ncpComponents().then(setComponents).catch(() => setComponents([]));
     api.ncpTypes().then(setTypes).catch(() => setTypes([]));
+    api.plan({ statusId: 1, page: 1, pageSize: 100 }).then((r) => setInWorkVins(r.items.map((i) => i.vin))).catch(() => {});
   }, []);
 
   async function reloadVinData(value: string) {
@@ -70,7 +73,13 @@ export function StationScreen({
   }
 
   function componentsFor(station: string): ComponentItem[] {
-    return components.filter((c) => c.station === station);
+    const article = item?.modelArticle ?? null;
+    return components.filter((c) => {
+      if (c.station !== station) return false;
+      // null modelIds = применим ко всем моделям
+      if (!c.modelIds || c.modelIds.length === 0) return true;
+      return article !== null && c.modelIds.includes(article);
+    });
   }
 
   // Расчёт состояния станции общий с экраном FOK: см. stationReadiness.ts.
@@ -149,8 +158,12 @@ export function StationScreen({
               autoFocus
               autoComplete="off"
               spellCheck={false}
+              list="station-vin-list"
               onChange={(event) => setVinInput(event.target.value)}
             />
+            <datalist id="station-vin-list">
+              {inWorkVins.map((v) => <option key={v} value={v} />)}
+            </datalist>
           </div>
           <button type="submit" className="primary">
             Открыть
@@ -165,6 +178,7 @@ export function StationScreen({
           <span className="muted">
             {item.modelName ?? item.modelArticle ?? '—'} · {item.color ?? '—'}
           </span>
+          {atvImageFor(item) && <img className="f7plan__unit-atv" src={atvImageFor(item)!} alt="" draggable={false} />}
         </div>
       )}
 
@@ -281,6 +295,7 @@ export function StationScreen({
           stations={stationsList}
           components={components}
           defaultVin={vin}
+          inWorkVins={inWorkVins}
           defaultStation={ncpDraft.station}
           defaultComponentCode={ncpDraft.componentCode}
           onCreate={(input) => void createNcp(input)}

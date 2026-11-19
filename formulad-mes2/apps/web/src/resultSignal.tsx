@@ -8,6 +8,22 @@ import { useEffect, useRef, useState } from 'react';
 const SOUND_KEY = 'f7-sound';
 const SOUND_EVENT = 'f7-sound-change';
 const SHOW_MS = 1800;
+const MAX_SOUND_BYTES = 500 * 1024;
+const SOUND_OK_KEY = 'f7-sound-ok-data';
+const SOUND_ERR_KEY = 'f7-sound-error-data';
+
+// T-063: custom sound file stored as base64 data URL in localStorage
+export function getCustomSoundDataUrl(kind: 'ok' | 'error'): string | null {
+  try { return localStorage.getItem(kind === 'ok' ? SOUND_OK_KEY : SOUND_ERR_KEY); } catch { return null; }
+}
+
+export function setCustomSoundDataUrl(kind: 'ok' | 'error', dataUrl: string | null): void {
+  try {
+    const key = kind === 'ok' ? SOUND_OK_KEY : SOUND_ERR_KEY;
+    if (dataUrl) localStorage.setItem(key, dataUrl); else localStorage.removeItem(key);
+  } catch { /* ignore */ }
+  window.dispatchEvent(new Event(SOUND_EVENT));
+}
 
 export function isSoundOn(): boolean {
   try {
@@ -33,6 +49,9 @@ export function subscribeSound(listener: () => void): () => void {
 
 function beep(kind: 'ok' | 'error') {
   if (!isSoundOn()) return;
+  // T-063: custom file first
+  const dataUrl = getCustomSoundDataUrl(kind);
+  if (dataUrl) { try { const a = new Audio(dataUrl); void a.play(); } catch { /* fall through */ } return; }
   try {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) return;
@@ -88,6 +107,49 @@ export function ResultFlash({ signal }: { signal: ResultSignal | null }) {
   return (
     <div key={signal.key} className="result-flash" data-kind={signal.kind} aria-hidden="true">
       <div className="result-flash__card" data-text={signal.text} />
+    </div>
+  );
+}
+
+/** T-063: settings panel to upload custom ok/error sounds (MP3/WAV/OGG ≤ 500 KB). */
+export function SoundFileSettings() {
+  const [okName, setOkName] = useState(() => getCustomSoundDataUrl('ok') ? 'файл загружен' : '');
+  const [errName, setErrName] = useState(() => getCustomSoundDataUrl('error') ? 'файл загружен' : '');
+  const [err, setErr] = useState('');
+
+  function handleFile(kind: 'ok' | 'error', file: File | null) {
+    setErr('');
+    if (!file) { setCustomSoundDataUrl(kind, null); kind === 'ok' ? setOkName('') : setErrName(''); return; }
+    if (file.size > MAX_SOUND_BYTES) { setErr('Файл больше 500 КБ'); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setCustomSoundDataUrl(kind, dataUrl);
+      kind === 'ok' ? setOkName(file.name) : setErrName(file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 12 }}>Звук «Успех» (MP3/WAV/OGG, ≤ 500 КБ)</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" onChange={e => handleFile('ok', e.target.files?.[0] ?? null)} />
+          {okName && <button type="button" onClick={() => handleFile('ok', null)} title="Удалить файл">×</button>}
+        </div>
+        {okName && <small className="muted">{okName}</small>}
+      </label>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 12 }}>Звук «Ошибка» (MP3/WAV/OGG, ≤ 500 КБ)</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" onChange={e => handleFile('error', e.target.files?.[0] ?? null)} />
+          {errName && <button type="button" onClick={() => handleFile('error', null)} title="Удалить файл">×</button>}
+        </div>
+        {errName && <small className="muted">{errName}</small>}
+      </label>
+      {err && <p role="alert" className="error" style={{ fontSize: 12 }}>{err}</p>}
+      <small className="muted">Файл хранится в браузере (localStorage). Если не задан — используется встроенный тон.</small>
     </div>
   );
 }

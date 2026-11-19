@@ -32,3 +32,6 @@ export const COLUMNS: Column[] = [
 export const DEFAULT_VISIBLE = COLUMNS.filter(
   (c) => !['startDate', 'completeDate', 'fokDate', 'plannedShipmentDate', 'status', 'modelName'].includes(c.key),
 ).map((c) => c.key);
+
+/** Компактный вид: только ключевые колонки (Состояние всегда видно отдельно). */
+export const COMPACT_VISIBLE = ['seqn', 'vin', 'modelArticle', 'color'];
