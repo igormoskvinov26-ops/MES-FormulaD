@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentItem } from './api';
 
+/** Регистрация несоответствия. Поля — раздел 14 спецификации: VIN, станция, компонент,
+    количество, тип (брак/пересорт/недостача/прочее), комментарий оператора. */
 export function NcpCreateDialog({
   types,
   stations,
@@ -17,6 +19,8 @@ export function NcpCreateDialog({
   components: ComponentItem[];
   defaultVin: string;
   inWorkVins?: string[];
+  /** Контекст станции — экран «Станции» открывает форму уже с нужной станцией/компонентом
+      («Зафиксировать расхождение», раздел 11.2: VIN и привязка к станции не теряются). */
   defaultStation?: string;
   defaultComponentCode?: string;
   onCreate: (data: {
@@ -38,7 +42,7 @@ export function NcpCreateDialog({
   const vinRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (defaultVin) return;
+    if (defaultVin) return; // VIN уже известен (создали из карточки изделия) — фокус на станцию не нужен
     vinRef.current?.focus();
   }, [defaultVin]);
 
@@ -50,6 +54,8 @@ export function NcpCreateDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  // Компоненты сужаются до выбранной станции; если для неё ничего нет — показываем весь список,
+  // чтобы форма не оказалась пустой из-за демо-данных.
   const forStation = useMemo(() => components.filter((c) => c.station === station), [components, station]);
   const options = forStation.length > 0 ? forStation : components;
 
