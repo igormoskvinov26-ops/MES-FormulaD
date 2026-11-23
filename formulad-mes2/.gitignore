@@ -15,15 +15,13 @@ appsettings.*.local.json
 # Референсные картинки концептов (docs/design/) не коммитим — как и *.png выше,
 # это материал для сверки, а не часть репозитория.
 docs/design/*.webp
-wwwroot/
 *.tsbuildinfo
-
-# Playwright
-test-results/
-playwright-report/
 
 # Стенд: пароль и лог текущего запуска
 stand/.run/
 
-# Бэкап БД — хранится локально, не в репо (бинарный, ~768K+)
-docker/backup/*.bak
+# Сгенерированный UI; собирается stand.sh up / npm run build.
+src/FormulaD.Mes.Api/wwwroot/
+
+# SQL-дамп рабочей базы (если есть) — хранится локально, никогда в репозиторий.
+sql/local/

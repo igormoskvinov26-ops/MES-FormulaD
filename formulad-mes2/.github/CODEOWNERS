@@ -1,0 +1,11 @@
+# Владельцы кода: GitHub автоматически запрашивает ревью у владельца изменённых файлов.
+# Добавьте разработчиков и команды по областям, когда они появятся (например: /apps/web/ @org/frontend).
+*                                   @igormoskvinov26-ops
+
+# Область повышенной осторожности: работа с базой, безопасность, выпуск и сборка
+/src/FormulaD.Mes.Api/Sql*.cs       @igormoskvinov26-ops
+/src/FormulaD.Mes.Api/SqlOptions.cs @igormoskvinov26-ops
+/sql/                               @igormoskvinov26-ops
+/deploy/                            @igormoskvinov26-ops
+/.github/                           @igormoskvinov26-ops
+/docs/handbook/09-SECURITY-AND-CONSTRAINTS.md @igormoskvinov26-ops
