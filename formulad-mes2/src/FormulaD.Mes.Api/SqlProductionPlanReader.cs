@@ -3,11 +3,6 @@ using Microsoft.Data.SqlClient;
 
 namespace FormulaD.Mes.Api;
 
-/// <summary>
-/// Чтение производственного плана из TEST-экземпляра SQL Server.
-/// Только SELECT, только параметры, без NOLOCK и без динамических имён объектов.
-/// Класс физически не содержит кода изменения данных.
-/// </summary>
 public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPlanReader
 {
     public async Task<PagedResult<ProductionPlanItem>> GetPageAsync(ProductionPlanQuery query, CancellationToken ct)
@@ -18,15 +13,12 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
         var filterByStatusId = query.StatusId.HasValue;
 
         await using var connection = await OpenAsync(ct);
-        await using var command = new SqlCommand(ProductionPlanSql.Page(filterByVin, filterByStatus, statusIsNull, filterByStatusId), connection)
-        {
-            CommandTimeout = options.CommandTimeoutSeconds,
-        };
+        await using var command = new SqlCommand(
+            ProductionPlanSql.Page(filterByVin, filterByStatus, statusIsNull, filterByStatusId), connection)
+        { CommandTimeout = options.CommandTimeoutSeconds };
 
         if (filterByVin)
         {
-            // Режим выбирается по виду ввода: сканер и начало VIN — быстрый поиск по индексу,
-            // только цифры — поиск по концу VIN сканом.
             var needle = query.Vin!.Trim();
             var pattern = VinSearch.IsSuffixSearch(needle)
                 ? ProductionPlanSql.LikeEndsWith(needle)
@@ -34,26 +26,20 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
             command.Parameters.Add("@vin", SqlDbType.NVarChar, 101).Value = pattern;
         }
         if (filterByStatus && !statusIsNull)
-        {
             command.Parameters.Add("@status", SqlDbType.NVarChar, 50).Value = query.Status!;
-        }
         if (filterByStatusId)
-        {
             command.Parameters.Add("@statusId", SqlDbType.Int).Value = query.StatusId!.Value;
-        }
         command.Parameters.Add("@offset", SqlDbType.Int).Value = (query.Page - 1) * query.PageSize;
         command.Parameters.Add("@pageSize", SqlDbType.Int).Value = query.PageSize;
 
         var items = new List<ProductionPlanItem>(query.PageSize);
         var total = 0;
-
         await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleResult, ct);
         while (await reader.ReadAsync(ct))
         {
             items.Add(Map(reader));
             total = reader.GetInt32(reader.GetOrdinal("TotalRows"));
         }
-
         return new PagedResult<ProductionPlanItem>(items, query.Page, query.PageSize, total);
     }
 
@@ -61,11 +47,8 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
     {
         await using var connection = await OpenAsync(ct);
         await using var command = new SqlCommand(ProductionPlanSql.ByVin(), connection)
-        {
-            CommandTimeout = options.CommandTimeoutSeconds,
-        };
+        { CommandTimeout = options.CommandTimeoutSeconds };
         command.Parameters.Add("@vin", SqlDbType.NVarChar, 50).Value = vin;
-
         await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow, ct);
         return await reader.ReadAsync(ct) ? Map(reader) : null;
     }
@@ -74,16 +57,11 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
     {
         await using var connection = await OpenAsync(ct);
         await using var command = new SqlCommand(ProductionPlanSql.Statuses(), connection)
-        {
-            CommandTimeout = options.CommandTimeoutSeconds,
-        };
-
+        { CommandTimeout = options.CommandTimeoutSeconds };
         var statuses = new List<string?>();
         await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SingleResult, ct);
         while (await reader.ReadAsync(ct))
-        {
             statuses.Add(reader.IsDBNull(0) ? null : reader.GetString(0));
-        }
         return statuses;
     }
 
@@ -101,36 +79,24 @@ public sealed class SqlProductionPlanReader(SqlOptions options) : IProductionPla
         ModelArticle: GetNullableString(reader, "ModelArticle"),
         ModelName: GetNullableString(reader, "ModelName"),
         EngineNumber: GetNullableString(reader, "EngineNumber"),
+        ChassisNumber: GetNullableString(reader, "ChassisNumber"),
         Color: GetNullableString(reader, "Color"),
         SpecificationName: GetNullableString(reader, "SpecificationName"),
         Status: GetNullableString(reader, "Status"),
         StatusId: GetNullableInt(reader, "statusid"),
         PrintDate: GetNullableDate(reader, "PrintDate"),
         PlannedStartDate: GetNullableDate(reader, "plannedstartdate"),
-        // ponytail: «Дата завершения План» на экране Access — допущение, что это PlannedShipmentDate.
-        // Сверить на TEST-базе перед включением SQL-режима (см. docs/OPEN_QUESTIONS.md).
         PlannedCompleteDate: GetNullableDate(reader, "PlannedShipmentDate"),
-        // datetime без зоны отдаём как есть: политика часовых поясов не согласована.
         PlannedShipmentDate: GetNullableDate(reader, "PlannedShipmentDate"),
         StartDate: GetNullableDate(reader, "StartDate"),
         CompleteDate: GetNullableDate(reader, "CompleteDate"),
-        FokDate: GetNullableDate(reader, "FOK_date"));
+        FokDate: GetNullableDate(reader, "FOK_date"),
+        OpenNcpCount: GetNullableInt(reader, "OpenNcpCount") ?? 0);
 
     private static string? GetNullableString(SqlDataReader reader, string column)
-    {
-        var ordinal = reader.GetOrdinal(column);
-        return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
-    }
-
+    { var o = reader.GetOrdinal(column); return reader.IsDBNull(o) ? null : reader.GetString(o); }
     private static int? GetNullableInt(SqlDataReader reader, string column)
-    {
-        var ordinal = reader.GetOrdinal(column);
-        return reader.IsDBNull(ordinal) ? null : reader.GetInt32(ordinal);
-    }
-
+    { var o = reader.GetOrdinal(column); return reader.IsDBNull(o) ? null : reader.GetInt32(o); }
     private static DateTime? GetNullableDate(SqlDataReader reader, string column)
-    {
-        var ordinal = reader.GetOrdinal(column);
-        return reader.IsDBNull(ordinal) ? null : reader.GetDateTime(ordinal);
-    }
+    { var o = reader.GetOrdinal(column); return reader.IsDBNull(o) ? null : reader.GetDateTime(o); }
 }
