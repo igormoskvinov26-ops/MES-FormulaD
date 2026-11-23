@@ -2,7 +2,15 @@ import type { ProductionPlanItem } from './api';
 import { atvImageFor } from './atvVariant';
 import { dash, formatDate, statusBadge } from './format';
 
-export function ProductCard({ item, onPrint, onPrintNcpSummary }: { item: ProductionPlanItem; onPrint?: () => void; onPrintNcpSummary?: () => void; }) {
+export function ProductCard({
+  item,
+  onPrint,
+  onPrintNcpSummary,
+}: {
+  item: ProductionPlanItem;
+  onPrint?: () => void;
+  onPrintNcpSummary?: () => void;
+}) {
   const badge = statusBadge(item.status);
   const rows: [string, string][] = [
     ['Порядок', dash(item.seqn)],
@@ -35,7 +43,10 @@ export function ProductCard({ item, onPrint, onPrintNcpSummary }: { item: Produc
       {atvImageFor(item) && <img className="product-card__atv" src={atvImageFor(item)!} alt="" draggable={false} />}
       <dl>
         {rows.map(([label, value]) => (
-          <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
         ))}
       </dl>
     </article>
