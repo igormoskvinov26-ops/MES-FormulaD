@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { api, type ProductionPlanItem } from './api';
 import { JobCard } from './JobCard';
 
+/**
+ * Печать одной или нескольких JobCard (раздел 8).
+ */
 export function JobCardDialog({ items, onClose }: { items: ProductionPlanItem[]; onClose: () => void }) {
   const [formedAt] = useState(() => new Date().toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' }));
   const [error, setError] = useState('');

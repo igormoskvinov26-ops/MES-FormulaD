@@ -2,6 +2,9 @@ import type { ProductionPlanItem } from './api';
 import { dash } from './format';
 import { Qr } from './Qr';
 
+/**
+ * Бланк JobCard (раздел 8 спецификации).
+ */
 export function JobCard({ item, formedAt }: { item: ProductionPlanItem; formedAt: string }) {
   const rows: [string, string][] = [
     ['Производственный номер', String(item.id)],
