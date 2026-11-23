@@ -1,27 +1,16 @@
 namespace FormulaD.Mes.Api;
 
-/// <summary>
-/// Отметка проверки компонента на конкретном изделии (раздел 11.2 спецификации): «проверенная
-/// позиция должна иметь сохраняемую отметку, связанную с конкретным изделием, станцией,
-/// пользователем и временем». Станция здесь не хранится отдельно — она уже есть у компонента
-/// в справочнике (<see cref="ComponentItem.Station"/>), дублировать её незачем.
-/// </summary>
 public sealed record ComponentCheck(string ComponentCode, bool Checked, string? CheckedBy, DateTime? CheckedAt);
 
 public enum SetCheckOutcome { Ok, VinNotFound, ComponentNotFound }
 
 public interface IStationChecks
 {
-    /// <summary>Отметки по изделию, ключ — код компонента. Компонент без отметки в словаре не
-    /// значит ошибку — значит «ещё не проверялся» (раздел 203, [П]: история не стирается, но
-    /// начальное состояние — просто отсутствие записи).</summary>
     Task<IReadOnlyDictionary<string, ComponentCheck>> GetForVinAsync(string vin, CancellationToken ct);
-
     Task<(SetCheckOutcome Outcome, ComponentCheck? Updated)> SetCheckedAsync(
         string vin, string componentCode, bool @checked, string author, CancellationToken ct);
 }
 
-/// <summary>Демо-хранилище отметок в памяти процесса — как и остальные писатели Этапов 1-4.</summary>
 public sealed class DemoStationChecks : IStationChecks
 {
     private readonly Lock _gate = new();
@@ -55,15 +44,11 @@ public sealed class DemoStationChecks : IStationChecks
         string vin, string componentCode, bool @checked, string author, CancellationToken ct)
     {
         if (await _plan.GetByVinAsync(vin, ct) is null)
-        {
             return (SetCheckOutcome.VinNotFound, null);
-        }
         var components = await _components.GetComponentsAsync(ct);
         var component = components.FirstOrDefault(c => string.Equals(c.Code, componentCode, StringComparison.OrdinalIgnoreCase));
         if (component is null)
-        {
             return (SetCheckOutcome.ComponentNotFound, null);
-        }
 
         lock (_gate)
         {
@@ -75,10 +60,8 @@ public sealed class DemoStationChecks : IStationChecks
             _checks[key] = updated;
 
             if (wasChecked != @checked)
-            {
                 _eventLog.Record("StationCheck", $"{vin}/{component.Code}", @checked ? "Checked" : "Unchecked",
                     wasChecked.ToString(), @checked.ToString(), author);
-            }
             return (SetCheckOutcome.Ok, updated);
         }
     }

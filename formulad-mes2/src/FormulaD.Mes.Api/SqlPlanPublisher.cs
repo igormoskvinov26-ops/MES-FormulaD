@@ -3,10 +3,6 @@ using Microsoft.Data.SqlClient;
 
 namespace FormulaD.Mes.Api;
 
-/// <summary>
-/// INSERT новых строк плана в dbo.tblProductionPlan.
-/// Все строки одной транзакцией: частично загруженный план не должен остаться.
-/// </summary>
 public sealed class SqlPlanPublisher(SqlOptions options, IEventLog eventLog) : IPlanPublisher
 {
     public async Task<int> PublishAsync(IReadOnlyList<NewPlanRow> rows, string userName, CancellationToken ct)
@@ -19,7 +15,6 @@ public sealed class SqlPlanPublisher(SqlOptions options, IEventLog eventLog) : I
 
         try
         {
-            // ponytail: SEQN = MAX(SEQN)+1 per row, sequential. Fine for batch sizes under 1000.
             var nextSeqn = await GetNextSeqnAsync(connection, tx, ct);
 
             foreach (var row in rows)

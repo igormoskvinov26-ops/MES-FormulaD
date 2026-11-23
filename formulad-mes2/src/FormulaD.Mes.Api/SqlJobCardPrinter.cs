@@ -3,10 +3,6 @@ using Microsoft.Data.SqlClient;
 
 namespace FormulaD.Mes.Api;
 
-/// <summary>
-/// Отметка печати JobCard: UPDATE PrintDate в dbo.tblProductionPlan.
-/// Допустима в любом статусе, не меняет statusid/Status.
-/// </summary>
 public sealed class SqlJobCardPrinter(SqlOptions options, IEventLog eventLog) : IJobCardPrinter
 {
     public async Task<ProductionPlanItem?> MarkPrintedAsync(string vin, string userName, CancellationToken ct)
@@ -25,7 +21,6 @@ public sealed class SqlJobCardPrinter(SqlOptions options, IEventLog eventLog) : 
 
         eventLog.Record("ProductionPlan", vin, "Print", null, DateTime.Now.ToString("O"), userName);
 
-        // Read back
         await using var read = new SqlCommand(
             $"SELECT {ProductionPlanSql.Columns} FROM [dbo].[tblProductionPlan] WHERE [VIN] = @vin",
             connection) { CommandTimeout = options.CommandTimeoutSeconds };
