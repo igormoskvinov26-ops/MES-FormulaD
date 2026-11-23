@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { COLUMNS } from './columns';
 
-/** Меню выбора видимых колонок. Раскладка запоминается на этом рабочем месте. */
 export function ColumnPicker({
   visible,
   onToggle,
