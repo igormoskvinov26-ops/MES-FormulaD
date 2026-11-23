@@ -64,14 +64,13 @@ describe('ReportsScreen', () => {
     render(<ReportsScreen session={session} onNavigate={noop} onLogout={noop} />);
 
     const planCard = (await screen.findByRole('heading', { name: 'Производственный план' })).closest('article')!;
-    expect(within(planCard).getByText('4')).toBeInTheDocument(); // всего в плане
+    expect(within(planCard).getByText('4')).toBeInTheDocument();
 
     const ncpCard = screen.getByRole('heading', { name: 'Несоответствия (NCP)' }).closest('article')!;
     expect(within(ncpCard).getByText('Брак')).toBeInTheDocument();
     expect(within(ncpCard).getByText('Пересорт')).toBeInTheDocument();
 
     const incomingCard = screen.getByRole('heading', { name: 'Входной контроль' }).closest('article')!;
-    // поставок=1, брак=1, недостача=1 из тестовой строки.
     expect(within(incomingCard).getAllByText('1').length).toBeGreaterThanOrEqual(3);
     expect(within(incomingCard).getByText('с замеч.')).toBeInTheDocument();
   });
