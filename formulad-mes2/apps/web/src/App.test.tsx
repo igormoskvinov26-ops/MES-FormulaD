@@ -81,7 +81,10 @@ describe('App', () => {
     expect(await screen.findByLabelText('Карточка изделия DEMO-VIN-00001')).toBeInTheDocument();
     expect(screen.getAllByText('DEMO-ENGINE-01').length).toBeGreaterThan(0);
     const card = screen.getByLabelText('Карточка изделия DEMO-VIN-00001');
-    expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual(['Печать', 'NCP-лист']);
+    expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Печать',
+      'NCP-лист',
+    ]);
   });
 
   it('сообщает «не найден» для отсутствующего VIN', async () => {

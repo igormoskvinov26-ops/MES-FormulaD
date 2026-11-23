@@ -8,6 +8,7 @@ import { SoundFileSettings, SoundToggle } from './resultSignal';
 import { api, type ComponentItem, type ModelRef, type SupplierRef } from './api';
 import './f7-components.css';
 
+// T-063
 type AdminTab = 'models' | 'colors' | 'specs' | 'components' | 'stations' | 'suppliers' | 'calendar' | 'events' | 'print-templates' | 'sound';
 
 const ADMIN_TABS: { key: AdminTab; label: string }[] = [
