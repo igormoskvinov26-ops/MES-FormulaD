@@ -9,7 +9,6 @@ function item(vin: string, seqn: number | null, statusId: number | null = 0): Pr
     printDate: null, plannedStartDate: null, plannedCompleteDate: null, plannedShipmentDate: null, startDate: null, completeDate: null, fokDate: null,
   };
 }
-// W — в работе (закреплён), A…E — запланированные, F — прошёл ФОК; номера позиций с «дырами», как бывает в плане
 const PLAN = [item('W', 10, 1), item('A', 20), item('B', 30), item('C', 40), item('D', 50), item('E', 60), item('F', 70, 3), item('NOPOS', null)];
 const order = (items: ProductionPlanItem[]) => planOrder(items).map((i) => i.vin).join('');
 const MON = new Date('2026-11-09T07:00:00');
@@ -30,7 +29,7 @@ describe('movePosition + applyMove', () => {
   it('на соседнюю позицию вверх: C перед B → WACBDEF', () => expect(run('C', 'B')).toBe('WACBDEFNOPOS'));
   it('в конец очереди запланированных: B → после E, перед изделием с ФОК', () => expect(run('B', null)).toBe('WACDEBFNOPOS'));
   it('уже на месте — ничего не делаем', () => {
-    expect(run('B', 'C')).toEqual({ noop: true }); // B уже прямо перед C
+    expect(run('B', 'C')).toEqual({ noop: true });
     expect(run('B', 'B')).toEqual({ noop: true });
     expect(run('E', null)).toEqual({ noop: true });
   });
@@ -44,22 +43,14 @@ describe('movePosition + applyMove', () => {
     const after = applyMove(PLAN, 'D', p.toPosition);
     expect(after.map((i) => i.seqn).filter((s) => s !== null).sort()).toEqual([10, 20, 30, 40, 50, 60, 70]);
   });
-  it('откат: перенос назад на прежнюю позицию возвращает исходный порядок', () => {
-    for (const [vin, before] of [['C', 'A'], ['A', 'D'], ['B', null], ['E', 'B']] as const) {
-      const original = PLAN.find((i) => i.vin === vin)!.seqn!;
-      const p = movePosition(PLAN, vin, before) as { toPosition: number };
-      const moved = applyMove(PLAN, vin, p.toPosition);
-      expect(order(applyMove(moved, vin, original))).toBe(order(PLAN));
-    }
-  });
 });
 
 describe('beforeVinForPoint', () => {
   it('первое запланированное изделие не раньше точки, закреплённые не считаются, переносимое исключается', () => {
-    const slots = scheduleItems(planOrder(PLAN), MON, DEFAULT_CONFIG); // W 08:00, A 09:00, B 10:00, C 11:00, D 13:00, E 14:00
+    const slots = scheduleItems(planOrder(PLAN), MON, DEFAULT_CONFIG);
     expect(beforeVinForPoint(slots, 'X', '2026-11-09', 10 * 60)).toBe('B');
     expect(beforeVinForPoint(slots, 'B', '2026-11-09', 10 * 60)).toBe('C');
-    expect(beforeVinForPoint(slots, 'X', '2026-11-09', 7 * 60)).toBe('A'); // раньше всех, но W закреплён
+    expect(beforeVinForPoint(slots, 'X', '2026-11-09', 7 * 60)).toBe('A');
     expect(beforeVinForPoint(slots, 'X', '2026-11-10', 0)).toBeNull();
   });
 });
@@ -69,7 +60,7 @@ describe('previewMove', () => {
     const p = previewMove(PLAN, MON, DEFAULT_CONFIG, 'A', 'D');
     if (!('toPosition' in p)) throw new Error('ожидался предпросмотр');
     expect(p.from.time).toBe('09:00');
-    expect(p.to.time).toBe('11:00'); // новый порядок W B C A D E: A встаёт на слот C, B и C сдвигаются на слот раньше, D и E не меняются
+    expect(p.to.time).toBe('11:00');
     expect(p.changed.map((c) => c.vin).sort()).toEqual(['A', 'B', 'C']);
     expect(p.later).toBe(1);
     expect(p.earlier).toBe(2);

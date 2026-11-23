@@ -10,18 +10,17 @@ function item(vin: string, statusId: number | null, plannedCompleteDate: string 
   };
 }
 const many = (n: number, statusId: number | null = 0) => Array.from({ length: n }, (_, i) => item(`V${i + 1}`, statusId));
-// 2026-11-09 — понедельник; 2026-11-06 — пятница
 const morning = (d: string) => new Date(`${d}T07:00:00`);
 
 describe('даты', () => {
   it('понедельник недели, сложение дней, разница', () => {
     expect(mondayOf('2026-11-06')).toBe('2026-11-02');
-    expect(mondayOf('2026-11-08')).toBe('2026-11-02'); // воскресенье
+    expect(mondayOf('2026-11-08')).toBe('2026-11-02');
     expect(addDays('2026-11-30', 1)).toBe('2026-12-01');
     expect(diffDays('2026-11-09', '2026-11-06')).toBe(3);
   });
   it('выходные и праздники — нерабочие', () => {
-    expect(isWorkday('2026-11-07')).toBe(false); // сб
+    expect(isWorkday('2026-11-07')).toBe(false);
     expect(isWorkday('2026-11-09')).toBe(true);
     expect(isWorkday('2026-11-09', { ...DEFAULT_CONFIG, overrides: { '2026-11-09': { kind: 'off', from: null, to: null, note: 'Праздник' } } })).toBe(false);
   });
@@ -42,19 +41,19 @@ describe('время слотов', () => {
 });
 
 describe('особые часы дня', () => {
-  it('сокращённый день 08–16 вмещает 7 изделий: производительность пропорциональна рабочему времени', () => {
+  it('сокращённый день 08–16 вмещает 7 изделий', () => {
     const cfg: CalendarConfig = { ...DEFAULT_CONFIG, overrides: { '2026-11-09': { kind: 'work', from: '08:00', to: '16:00', note: null } } };
     expect(dayInfo('2026-11-09', cfg).capacity).toBe(7);
     const s = scheduleItems(many(8), morning('2026-11-09'), cfg);
     expect(s.filter((x) => x.date === '2026-11-09')).toHaveLength(7);
     expect(s[7].date).toBe('2026-11-10');
   });
-  it('удлинённый день 08–19 вмещает 10; перерыв вне часов дня не вычитается', () => {
+  it('удлинённый день 08–19 вмещает 10', () => {
     const cfg: CalendarConfig = { ...DEFAULT_CONFIG, overrides: { '2026-11-09': { kind: 'work', from: '08:00', to: '19:00', note: null }, '2026-11-10': { kind: 'work', from: '14:00', to: '17:00', note: null } } };
     expect(dayInfo('2026-11-09', cfg).capacity).toBe(10);
     expect(dayInfo('2026-11-10', cfg).capacity).toBe(3);
   });
-  it('выходной по отметке пропускается при раскладке; день короче одного слота — тоже', () => {
+  it('выходной по отметке пропускается; день короче одного слота — тоже', () => {
     const cfg: CalendarConfig = { ...DEFAULT_CONFIG, overrides: { '2026-11-09': { kind: 'off', from: null, to: null, note: null }, '2026-11-10': { kind: 'work', from: '08:00', to: '08:30', note: null } } };
     expect(scheduleItems(many(1), morning('2026-11-09'), cfg)[0].date).toBe('2026-11-11');
   });
@@ -91,7 +90,7 @@ describe('scheduleItems', () => {
       [item('A', 0, '2026-11-06T00:00:00'), item('B', 0, '2026-11-12T00:00:00'), item('C', 0)],
       morning('2026-11-09'),
     );
-    expect(late.deltaDays).toBe(3); // прогноз 09.11, план 06.11
+    expect(late.deltaDays).toBe(3);
     expect(early.deltaDays).toBe(-3);
     expect(none.deltaDays).toBeNull();
   });
@@ -151,6 +150,6 @@ describe('releasedSlots — история выпуска', () => {
     const r = releasedSlots([fok('B', '2026-11-05T15:30:00'), fok('A', '2026-11-05T09:10:00', '2026-11-03T00:00:00'), fok('NODATE', null), fok('DATEONLY', '2026-11-04T00:00:00'), item('PLAN', 0)]);
     expect(r.map((s) => [s.item.vin, s.date, s.time])).toEqual([['DATEONLY', '2026-11-04', '—'], ['A', '2026-11-05', '09:10'], ['B', '2026-11-05', '15:30']]);
     expect(r.every((s) => s.done && s.pinned)).toBe(true);
-    expect(r[1].deltaDays).toBe(2); // ФОК 05.11, план 03.11
+    expect(r[1].deltaDays).toBe(2);
   });
 });

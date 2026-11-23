@@ -58,7 +58,7 @@ describe('parseCalendarImport', () => {
   });
 });
 
-describe('матрица «год × месяцы» (по описанию формата, не проверено на файле с официального сайта)', () => {
+describe('матрица «год × месяцы»', () => {
   const header = ['Год/Месяц', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь', 'Всего рабочих дней'];
   const row = (year: string, months: Record<number, string>) => [year, ...Array.from({ length: 12 }, (_, i) => months[i + 1] ?? ''), '247'];
   const text = [header.join(';'), row('2026', { 1: '1,2,3,4,10,11', 2: '22*,23,28', 11: '3*,4,7,8,14+', 12: '31*' }).join(';')].join('\n');
@@ -71,12 +71,12 @@ describe('матрица «год × месяцы» (по описанию фо�
     expect(by['2026-01-01']).toMatchObject({ kind: 'off' });
     expect(by['2026-02-22']).toMatchObject({ kind: 'work', from: '08:00', to: '16:00', note: 'Сокращённый день' });
     expect(by['2026-11-14']).toMatchObject({ kind: 'work', from: null, note: 'Рабочий день (перенос)' });
-    expect(by['2026-11-04'].kind).toBe('off'); // «4» без пометки — нерабочий
-    expect(by['2026-11-03'].kind).toBe('work'); // «3*» — сокращённый
+    expect(by['2026-11-04'].kind).toBe('off');
+    expect(by['2026-11-03'].kind).toBe('work');
     expect(r.rows).toHaveLength(6 + 3 + 5 + 1);
   });
 
-  it('разделитель — табуляция (вставка из Excel); итоговые столбцы и строки без года игнорируются', () => {
+  it('разделитель — табуляция; итоговые столбцы и строки без года игнорируются', () => {
     const tabs = [header.join('\t'), row('2026', { 5: '1,2,9,10' }).join('\t'), 'Всего\t\t\t'].join('\n');
     const r = parseCalendarImport(tabs, D);
     expect(r.format).toBe('months');
