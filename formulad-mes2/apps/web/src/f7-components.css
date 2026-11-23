@@ -20,11 +20,14 @@
 /* ── Intro: heading + scan ──────────────────────────────── */
 .f7mes__intro {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.f7mes__intro .f7mes__scan {
+  width: 100%;
+  max-width: 560px;
 }
 .f7mes__heading {
   display: flex;
@@ -126,7 +129,7 @@
   background: none;
   border: 1px solid currentColor;
   color: inherit;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 5px 12px;
   cursor: pointer;
   font: 600 12px/1 Inter, sans-serif;
@@ -175,7 +178,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 .f7mes__tag[data-type="blocked"] { background: color-mix(in srgb, var(--f7-accent) 15%, transparent); color: var(--f7-accent); }
 .f7mes__tag[data-type="ready"]   { background: color-mix(in srgb, var(--st-work) 15%, transparent); color: var(--st-work); }
@@ -237,7 +240,7 @@
 .f7mes__btn {
   padding: 10px 18px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   font: 600 14px/1 Inter, sans-serif;
   cursor: pointer;
   transition: background .15s, opacity .15s;
@@ -249,7 +252,7 @@
   border: 1px solid var(--f7-border);
 }
 .f7mes__btn--accent {
-  background: var(--f7-accent);
+  background: var(--f7-action, var(--f7-accent));
   color: #fff;
 }
 .f7mes__btn--warn {
@@ -372,7 +375,7 @@
 
 /* robustness: win over :root[data-theme="dark"] button */
 :root .f7mes button.f7mes__btn { white-space: nowrap; padding: 12px 22px; border: 0; }
-:root .f7mes button.f7mes__btn--accent, :root .f7mes button.f7mes__btn--accent:hover:not([disabled]) { background: var(--f7-accent); color: #fff; }
+:root .f7mes button.f7mes__btn--accent, :root .f7mes button.f7mes__btn--accent:hover:not([disabled]) { background: var(--f7-action); color: #fff; }
 :root .f7mes button.f7mes__btn--secondary { background: color-mix(in srgb, var(--f7-muted) 18%, var(--f7-surface)); color: var(--f7-text); }
 :root .f7mes button.f7mes__btn--warn { background: color-mix(in srgb, var(--st-wait, #f59e0b) 18%, var(--f7-surface)); color: var(--st-wait, #b45309); }
 :root .f7mes .f7mes__scan { padding: 12px 18px 14px; }
@@ -399,28 +402,14 @@
 .f7plan__filters-label { font: 700 14px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .08em; color: var(--text); padding-right: 6px; }
 .f7plan .search { min-width: 260px; font-size: var(--fs-md); border-radius: 0; }
 .f7plan select, .f7plan .search { border-radius: 0; }
-:root .f7plan .controls button.primary { background: var(--f7-red, #e31e24); color: #fff; border-color: transparent; }
+:root .f7plan .controls button.primary { background: var(--f7-action); color: #fff; border-color: transparent; }
 
 /* table */
-/* T-084: horizontal scroll shadow */
-.f7plan .table-wrap {
-  max-height: calc(100vh - 300px); overflow: auto;
-  background:
-    linear-gradient(to right, var(--surface) 30%, transparent) left center / 40px 100% no-repeat local,
-    linear-gradient(to left, var(--surface) 30%, transparent) right center / 40px 100% no-repeat local,
-    linear-gradient(to right, rgba(16,18,22,.12), transparent) left center / 14px 100% no-repeat scroll,
-    linear-gradient(to left, rgba(16,18,22,.12), transparent) right center / 14px 100% no-repeat scroll;
-}
 .f7plan table { border-collapse: separate; border-spacing: 0 4px; }
 .f7plan thead th {
-  position: sticky; top: 0; z-index: 2;
   text-transform: uppercase; letter-spacing: .06em; font-size: var(--fs-xs); font-weight: 700;
   background: color-mix(in srgb, var(--muted) 14%, var(--surface)); color: var(--text);
-  box-shadow: 0 2px 4px rgba(16, 18, 22, .08);
 }
-/* T-084: sticky VIN column */
-.f7plan .vin { position: sticky; left: 0; z-index: 1; background: inherit; }
-.f7plan thead .vin { z-index: 3; }
 .f7plan tbody tr { background: var(--surface); }
 .f7plan tbody tr:nth-child(even) { background: var(--surface); }
 .f7plan tbody tr td:first-child { box-shadow: inset 3px 0 0 transparent; }
@@ -440,7 +429,7 @@
 .f7plan__pages { display: flex; align-items: center; gap: 6px; }
 .f7plan__gap { color: var(--muted); padding: 0 4px; }
 :root .f7plan__pages button { min-width: 36px; height: 34px; padding: 0 8px; border-radius: 0; font-weight: 700; }
-:root .f7plan__pages button.is-current { background: var(--f7-red, #e31e24); color: #fff; border-color: transparent; }
+:root .f7plan__pages button.is-current { background: var(--f7-action); color: #fff; border-color: transparent; }
 .f7plan .controls { flex-wrap: wrap; }
 .f7plan .controls button { white-space: nowrap; }
 .f7plan .search { min-width: 200px; flex: 1 1 200px; max-width: 320px; }
@@ -465,7 +454,7 @@
 .f7plan .pending-list button .f7mes__queue-chevron { margin-left: auto; }
 .f7plan .pending-list button:hover .f7mes__queue-chevron { color: var(--f7-red, #e31e24); }
 :root .f7plan .modal-actions button { border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 11px 22px; border: 0; white-space: nowrap; }
-:root .f7plan .modal-actions button.primary { background: var(--f7-red, #e31e24); color: #fff; }
+:root .f7plan .modal-actions button.primary { background: var(--f7-action); color: #fff; }
 .f7plan .rework-ncp-summary strong { color: var(--f7-red, #e31e24); }
 :root .f7plan .f7mes__scan { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border-strong); border-top: 3px solid var(--border-strong); border-radius: 0; padding: 10px 18px 12px; min-width: 320px; max-width: 460px; flex: 1 1 320px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); }
 :root .f7plan .f7mes__scan-symbol { color: var(--muted); font-size: 22px; }
@@ -474,7 +463,7 @@
 .f7plan .pending-list .mono { white-space: nowrap; }
 
 /* ── Stations ───────────────────────────────────────────── */
-:root .f7plan .f7mes__scan button.primary { background: var(--f7-red, #e31e24); color: #fff; border: 0; border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 10px 20px; white-space: nowrap; }
+:root .f7plan .f7mes__scan button.primary { background: var(--f7-action); color: #fff; border: 0; border-radius: 0; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 10px 20px; white-space: nowrap; }
 .f7plan__unit { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14px; margin: 0 24px; padding: 12px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); }
 .f7plan__unit .vin { font: 700 22px/1.2 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
 .f7plan .station-line { gap: 6px; }
@@ -494,66 +483,34 @@
 
 /* ── Admin tabs ─────────────────────────────────────────── */
 :root .f7plan .f7plan__tabs button { border-radius: 0; border: 0; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); padding: 11px 24px; font-weight: 600; white-space: nowrap; background: color-mix(in srgb, var(--muted) 16%, var(--surface)); color: var(--text); box-shadow: none; }
-:root .f7plan .f7plan__tabs button.primary { background: var(--f7-red, #e31e24); color: #fff; }
+:root .f7plan .f7plan__tabs button.primary { background: var(--f7-action); color: #fff; }
 
 /* ── Button hover fill: colour sweeps in left → right ───────
-   Base colours stay as defined above; only the fill layer animates.
-   !important on the image/size longhands so older `background:` shorthands
-   (incl. the dark-theme global button rule) cannot reset the animation. */
+   T-144: fill animation only on primary/accent/active buttons — not on secondary/nav/service ones.
+   !important on image/size longhands so older `background:` shorthands can't reset the animation. */
 :root .f7mes button.f7mes__btn--accent,
 :root .f7plan .controls button.primary,
 :root .f7plan .modal-actions button.primary,
 :root .f7plan .f7mes__scan button.primary,
 :root .f7plan .f7plan__pages button.is-current {
-  --fill: var(--f7-accent-dark, #b8171c);
-}
-:root .f7mes button.f7mes__btn--secondary,
-:root .f7mes button.f7mes__btn--warn,
-:root .f7plan .controls button:not(.primary),
-:root .f7plan .f7plan__pages button:not(.is-current),
-:root .f7plan .modal-actions button:not(.primary),
-:root .f7plan .station-components button,
-:root .f7plan .ncp-actions button {
-  --fill: var(--f7-red, #e31e24);
-}
-
-:root .f7mes button.f7mes__btn,
-:root .f7plan .controls button,
-:root .f7plan .modal-actions button,
-:root .f7plan .f7mes__scan button.primary,
-:root .f7plan .f7plan__pages button,
-:root .f7plan .station-components button,
-:root .f7plan .ncp-actions button {
+  --fill: var(--f7-action-hover);
   background-image: linear-gradient(var(--fill), var(--fill)) !important;
   background-repeat: no-repeat !important;
   background-position: left center !important;
   background-size: 0% 100% !important;
   transition: background-size .38s cubic-bezier(.22, .61, .36, 1), color .12s ease .17s, border-color .2s ease;
 }
-:root .f7mes button.f7mes__btn:hover:not(:disabled),
-:root .f7mes button.f7mes__btn:focus-visible:not(:disabled),
-:root .f7plan .controls button:hover:not(:disabled),
-:root .f7plan .controls button:focus-visible:not(:disabled),
-:root .f7plan .modal-actions button:hover:not(:disabled),
-:root .f7plan .modal-actions button:focus-visible:not(:disabled),
+:root .f7mes button.f7mes__btn--accent:hover:not(:disabled),
+:root .f7mes button.f7mes__btn--accent:focus-visible:not(:disabled),
+:root .f7plan .controls button.primary:hover:not(:disabled),
+:root .f7plan .controls button.primary:focus-visible:not(:disabled),
+:root .f7plan .modal-actions button.primary:hover:not(:disabled),
+:root .f7plan .modal-actions button.primary:focus-visible:not(:disabled),
 :root .f7plan .f7mes__scan button.primary:hover:not(:disabled),
-:root .f7plan .f7plan__pages button:hover:not(:disabled),
-:root .f7plan .f7plan__pages button:focus-visible:not(:disabled),
-:root .f7plan .station-components button:hover:not(:disabled),
-:root .f7plan .ncp-actions button:hover:not(:disabled) {
+:root .f7plan .f7plan__pages button.is-current:hover:not(:disabled) {
   background-size: 100% 100% !important;
 }
-/* neutral buttons turn white-on-red once filled */
-:root .f7mes button.f7mes__btn--secondary:hover:not(:disabled),
-:root .f7mes button.f7mes__btn--warn:hover:not(:disabled),
-:root .f7plan .controls button:not(.primary):hover:not(:disabled),
-:root .f7plan .f7plan__pages button:not(.is-current):hover:not(:disabled),
-:root .f7plan .modal-actions button:not(.primary):hover:not(:disabled),
-:root .f7plan .station-components button:hover:not(:disabled),
-:root .f7plan .ncp-actions button:hover:not(:disabled) {
-  color: #fff;
-  border-color: transparent;
-}
+/* secondary/nav/service buttons: no fill sweep — just shadow + border on hover (from global rule) */
 @media (prefers-reduced-motion: reduce) {
   :root .f7mes button.f7mes__btn,
   :root .f7plan .controls button,
@@ -791,16 +748,14 @@
   box-shadow: 0 -10px 12px -10px rgba(16, 18, 22, .2);
 }
 
-/* ponytail: сенсорный терминал — цели касания ≥ 52 px, главные действия 56 px (T-077) */
+/* сенсорный терминал: цели касания ≥ 48 px, главные действия 56 px */
 @media (pointer: coarse) {
   :root .f7mes button, :root .f7plan button,
-  :root .f7plan input:not([type="checkbox"]), :root .f7plan select { min-height: 52px; }
+  :root .f7plan input:not([type="checkbox"]), :root .f7plan select { min-height: 48px; }
   :root .f7mes button.f7mes__btn { min-height: 56px; }
   :root .f7plan input[type="checkbox"] { width: 26px; height: 26px; }
   .f7plan tbody td { padding-top: 14px; padding-bottom: 14px; }
-  .sidebar-link { min-height: 52px; }
-  /* pin main scan action to bottom on touch screens */
-  .scan-found__actions { position: sticky; bottom: 0; z-index: 3; background: var(--surface); padding: 12px 0; border-top: 1px solid var(--border); }
+  .sidebar-link { min-height: 48px; }
 }
 
 /* ── Вспышка результата скана ───────────────────────────── */
@@ -903,7 +858,7 @@
 /* кнопка-язычок на середине левой грани очереди */
 :root .scanx button.scanx__queue-toggle {
   position: absolute; z-index: 3; left: -15px; top: 50%; transform: translateY(-50%); width: 30px; height: 60px; padding: 0;
-  display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 6px;
+  display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-md);
   background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); cursor: pointer;
 }
 :root .scanx button.scanx__queue-toggle:hover { border-color: var(--f7-red); color: var(--f7-red); }
@@ -1020,8 +975,213 @@
 :root[data-theme="dark"] .f7plan tbody tr.import-row-error:hover { background: var(--surface); }
 .f7plan tbody tr.import-row-error td:first-child { box-shadow: inset 3px 0 0 var(--f7-red); }
 .f7plan .import-errors { font-size: var(--fs-sm); }
-.f7plan tbody td input, .f7plan tbody td select { border-radius: 4px; }
+.f7plan tbody td input, .f7plan tbody td select { border-radius: var(--radius-sm); }
 /* Импорт: колонка проверки сразу после номера, поля не обрезают VIN и двигатель */
 .f7imp__result tbody td:nth-child(2) { min-width: 200px; }
 .f7imp__result tbody td input:not([type="checkbox"]) { min-width: 160px; }
 .f7imp__result .badge.status-ok { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, transparent); color: var(--st-work, #16a34a); border-color: transparent; }
+
+/* картинка по модели и цвету: «лампы» подобраны под нейтральный растр, здесь их нет */
+.twin__car[data-variant] .twin__lamp { display: none; }
+
+/* картинка изделия в карточке скана (по модели и цвету, см. atvVariant.ts) */
+.scan-found__atv { display: block; width: auto; max-width: 100%; max-height: 190px; object-fit: contain; justify-self: start; }
+@media (min-width: 1100px) {
+  :root .f7plan .scan-found--atv { grid-template-columns: minmax(0, 1fr) minmax(220px, 38%); column-gap: 28px; }
+  .scan-found--atv > :not(.scan-found__atv) { grid-column: 1; }
+  .scan-found--atv .scan-found__atv { grid-column: 2; grid-row: 1 / 4; align-self: center; justify-self: center; max-height: 230px; }
+}
+
+/* картинка изделия в боковой карточке плана */
+.product-card__atv { display: block; width: 100%; max-height: 170px; object-fit: contain; margin: 4px 0 10px; }
+
+/* картинка изделия в плашке «Текущее изделие» на станциях */
+.f7plan__unit { align-items: center; }
+.f7plan__unit-atv { height: 72px; width: auto; margin-left: auto; object-fit: contain; }
+
+/* ── Производственный календарь (этап 1: неделя, только чтение) ───────────── */
+.cal__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 14px var(--page-gutter, 24px) 0; }
+.cal__views { display: inline-flex; border: 1px solid var(--border); background: var(--surface); }
+.cal__views button { border: 0; border-radius: 0; background: transparent; color: var(--text); padding: 8px 18px; font-weight: 600; }
+.cal__views button + button { border-left: 1px solid var(--border); }
+.cal__views button[aria-pressed="true"] { background: var(--f7-action); color: #fff; }
+.cal__views button:disabled { color: var(--muted); cursor: default; }
+.cal__nav { display: flex; align-items: center; gap: 8px; }
+.cal__nav button { padding: 8px 14px; }
+.cal__range { min-width: 220px; text-align: center; font: 700 18px/1.2 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .02em; }
+.cal__assumptions { margin: 8px var(--page-gutter, 24px) 0; color: var(--muted); font-size: var(--fs-sm); max-width: 110ch; }
+
+.cal__week { display: grid; grid-template-columns: repeat(7, minmax(140px, 1fr)); gap: 10px; margin: 14px var(--page-gutter, 24px) 32px; overflow-x: auto; align-items: start; }
+.cal__day { background: var(--surface); border: 1px solid var(--border); min-width: 0; }
+.cal__day[data-working="false"] { background: color-mix(in srgb, var(--muted) 7%, var(--surface)); }
+.cal__day[data-today="true"] { border-color: var(--f7-action); box-shadow: inset 0 3px 0 var(--f7-action); }
+.cal__day-head { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.cal__weekday { font: 700 16px/1 var(--f7-font, Rajdhani, sans-serif); letter-spacing: .04em; text-transform: uppercase; }
+.cal__date { color: var(--muted); font-size: var(--fs-sm); }
+.cal__load, .cal__off { grid-column: 1 / -1; font-size: var(--fs-xs); color: var(--muted); }
+.cal__load-bar { display: block; height: 4px; margin-top: 4px; background: color-mix(in srgb, var(--muted) 20%, transparent); }
+.cal__load-bar i { display: block; height: 100%; background: var(--f7-action); }
+.cal__cards { display: flex; flex-direction: column; gap: 8px; padding: 8px; min-height: 64px; }
+.cal__empty { color: var(--muted); font-size: var(--fs-sm); text-align: center; padding: 12px 0; }
+
+.cal__card { display: grid; gap: 2px; padding: 8px 10px 8px 12px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border-strong, var(--border)); box-shadow: var(--shadow-sm, none); }
+.cal__card[data-pinned="true"] { border-left-color: var(--st-work, #16a34a); background: color-mix(in srgb, var(--st-work, #16a34a) 6%, var(--surface)); }
+.cal__card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cal__time { font: 700 var(--fs-sm)/1 Inter, sans-serif; font-variant-numeric: tabular-nums; }
+.cal__pin { font-size: var(--fs-xs); color: var(--st-work, #16a34a); font-weight: 600; }
+.cal__delta { margin-left: auto; padding: 2px 6px; font: 700 var(--fs-xs)/1.2 Inter, sans-serif; background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.cal__delta[data-tone="late"] { background: color-mix(in srgb, var(--f7-red) 14%, transparent); color: var(--f7-red); }
+.cal__delta[data-tone="early"], .cal__delta[data-tone="ok"] { background: color-mix(in srgb, var(--st-work, #16a34a) 16%, transparent); color: var(--st-work, #16a34a); }
+.cal__vin { font-size: var(--fs-sm); }
+.cal__model, .cal__color { font-size: var(--fs-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal__atv { display: block; width: 100%; max-height: 56px; object-fit: contain; margin-top: 4px; }
+
+/* настройка дня, панель «Пересчитать план» */
+:root .f7plan button.cal__gear { padding: 4px; min-height: 0; color: var(--text); background: transparent; border: 1px solid var(--border); }
+:root .f7plan button.cal__gear:hover:not(:disabled) { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--text); }
+.cal__hours-line, .cal__draft { grid-column: 1 / -1; font-size: var(--fs-xs); color: var(--muted); }
+.cal__draft { color: var(--f7-action); font-weight: 700; }
+.cal__day[data-draft="true"] { outline: 2px dashed var(--f7-action); outline-offset: -2px; }
+.cal__recalc { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 12px var(--page-gutter, 24px) 0; padding: 10px 14px; background: color-mix(in srgb, var(--st-wait, #f59e0b) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--st-wait, #f59e0b) 45%, var(--border)); border-left: 4px solid var(--st-wait, #f59e0b); }
+.cal__notice { margin: 10px var(--page-gutter, 24px) 0; color: var(--st-work, #16a34a); font-weight: 600; }
+.modal .cal__check { flex-direction: row; align-items: center; gap: 10px; font-weight: 600; }
+.modal .cal__check input { width: 20px; height: 20px; }
+.cal__hours { display: flex; gap: 16px; }
+.cal__hours[aria-disabled="true"] { opacity: .5; }
+.cal__hours label { flex: 1; }
+
+/* администрирование: производственный календарь */
+.calendar-admin { display: grid; gap: 16px; }
+.calendar-admin .rep-card { display: grid; gap: 12px; }
+.calendar-admin textarea { width: 100%; font-size: var(--fs-sm); }
+.cal__add { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.cal__add label { display: grid; gap: 4px; font-size: var(--fs-sm); }
+.cal__list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cal__list-head h2 { margin: 0; }
+.cal__list-head label { display: flex; align-items: center; gap: 8px; }
+
+/* календарь: шапка дня как ссылка, ракурсы «День» и «Месяц», окно «Прогресс сборки» */
+.cal__day-link { grid-column: 1 / 3; display: flex; align-items: baseline; gap: 8px; }
+:root .f7plan button.cal__day-link { background: transparent; border: 0; padding: 0; min-height: 0; color: var(--text); text-align: left; cursor: pointer; }
+:root .f7plan button.cal__day-link:hover:not(:disabled) { background: transparent; color: var(--text); text-decoration: underline; }
+.cal__card { cursor: pointer; }
+.cal__card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.cal__card[data-wide="true"] { width: min(340px, 100%); }
+
+.cal__dayview { margin: 14px var(--page-gutter, 24px) 32px; max-width: 980px; }
+.cal__hourlist { list-style: none; margin: 0; padding: 0; }
+.cal__hour { display: grid; grid-template-columns: 64px 1fr; border-top: 1px solid var(--border); min-height: 56px; }
+.cal__hour-label { padding: 10px 8px; color: var(--muted); font: 600 var(--fs-sm)/1 Inter, sans-serif; font-variant-numeric: tabular-nums; border-right: 1px solid var(--border); }
+.cal__hour-cards { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 10px; align-items: flex-start; }
+.cal__hour[data-break="true"] { background: repeating-linear-gradient(135deg, transparent 0 8px, color-mix(in srgb, var(--muted) 10%, transparent) 8px 16px); }
+.cal__break { color: var(--muted); font-size: var(--fs-sm); padding: 8px 0; }
+.cal__empty--big { padding: 32px 16px; }
+
+.cal__month { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap: 6px; margin: 14px var(--page-gutter, 24px) 32px; overflow-x: auto; }
+.cal__month-wd { font: 700 var(--fs-sm)/1 var(--f7-font, Rajdhani, sans-serif); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 4px 6px; }
+:root .f7plan button.cal__cell { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-height: 112px; padding: 8px; text-align: left; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 0; cursor: pointer; }
+:root .f7plan button.cal__cell:hover:not(:disabled) { background: color-mix(in srgb, var(--muted) 9%, var(--surface)); color: var(--text); }
+.cal__cell[data-working="false"] { background: color-mix(in srgb, var(--muted) 8%, var(--surface)); }
+.cal__cell[data-other="true"] { opacity: .5; }
+.cal__cell[data-today="true"] { border-color: var(--f7-action); box-shadow: inset 0 3px 0 var(--f7-action); }
+.cal__cell[data-draft="true"] { outline: 2px dashed var(--f7-action); outline-offset: -2px; }
+.cal__cell[data-over="true"] .cal__load-bar i { background: var(--f7-red); }
+.cal__cell-num { font: 700 18px/1 var(--f7-font, Rajdhani, sans-serif); }
+.cal__cell-load, .cal__cell-off { font-size: var(--fs-xs); color: var(--muted); }
+.cal__chip { font-size: var(--fs-xs); padding: 2px 4px; background: color-mix(in srgb, var(--muted) 12%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal__chip--more { font-family: Inter, sans-serif; color: var(--muted); }
+
+.modal.cal__progress { width: min(980px, 94vw); max-width: none; max-height: 90vh; overflow: auto; }
+.cal__progress-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.cal__progress-head h2 { margin: 4px 0; font-size: 28px; }
+.cal__progress-head p { margin: 0; color: var(--muted); }
+:root .f7plan button.cal__close, .modal button.cal__close { font-size: 22px; line-height: 1; padding: 2px 10px; color: var(--text); background: transparent; border: 1px solid var(--border); }
+.cal__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px 24px; margin: 12px 0 0; }
+.cal__facts > div { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.cal__facts dt { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.cal__facts dd { margin: 2px 0 0; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; text-align: left; }
+.cal__line { display: grid; gap: 0 6px; margin-top: 18px; }
+.cal__car { grid-row: 1; position: relative; min-width: 0; height: 120px; }
+.cal__car img { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); width: 170px; max-width: none; height: auto; }
+.cal__car[data-edge="start"] img { left: 0; transform: none; }
+.cal__car[data-edge="end"] img { left: auto; right: 0; transform: none; }
+.cal__car span { position: absolute; bottom: 0; left: 0; right: 0; font: 700 var(--fs-xs)/1.2 Inter, sans-serif; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: center; }
+.cal__car[data-edge="start"] span { text-align: left; }
+.cal__car[data-edge="end"] span { text-align: right; }
+.cal__car[data-kind="before"] img { opacity: .55; }
+.cal__stations { display: contents; list-style: none; margin: 0; padding: 0; }
+.cal__stations li { grid-row: 2; display: grid; gap: 2px; justify-items: center; padding: 10px 4px 8px; background: var(--surface); border: 1px solid var(--border); border-bottom: 5px solid #9aa3af; text-align: center; }
+.cal__stations li strong { font: 700 22px/1 var(--f7-font, Rajdhani, sans-serif); }
+.cal__stations li span { font-size: var(--fs-xs); color: var(--muted); }
+.cal__stations li[data-state="blue"] { border-bottom-color: #2563eb; }
+.cal__stations li[data-state="green"] { border-bottom-color: var(--st-work, #16a34a); }
+.cal__stations li[data-state="yellow"] { border-bottom-color: var(--st-wait, #f59e0b); }
+.cal__stations li[data-state="red"] { border-bottom-color: var(--f7-red); }
+.cal__stations li[data-current="true"] { border-color: var(--f7-action); box-shadow: inset 0 0 0 1px var(--f7-action); background: color-mix(in srgb, var(--f7-action) 8%, var(--surface)); }
+.cal__hint { margin: 14px 0 0; font-size: var(--fs-sm); }
+:root .cal__facts > div { display: block; padding: 8px 0; }
+:root .cal__facts dt, :root .cal__facts dd { text-align: left; padding: 0; }
+:root .cal__facts dd { margin: 2px 0 0; justify-content: flex-start; }
+
+/* перетаскивание карточек и подтверждение переноса */
+.cal__card[data-movable="true"] { cursor: grab; }
+.cal__card[data-dragging="true"] { opacity: .4; }
+.cal__card[data-over="true"] { box-shadow: 0 -3px 0 0 var(--f7-action); }
+.cal__cards[data-over="true"], .cal__hour-cards[data-over="true"] { background: color-mix(in srgb, var(--f7-action) 8%, transparent); outline: 2px dashed var(--f7-action); outline-offset: -2px; }
+.cal__undo { margin-left: 12px; padding: 4px 12px; }
+.modal.cal__confirm { width: min(560px, 94vw); }
+.cal__move-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 18px; margin: 8px 0; }
+.cal__move-list { margin: 0 0 8px; padding-left: 18px; font-size: var(--fs-sm); max-height: 180px; overflow: auto; }
+
+/* график работы в администрировании */
+.cal__weekdays, .cal__breaks { border: 1px solid var(--border); padding: 10px 14px; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.cal__weekdays legend, .cal__breaks legend { padding: 0 6px; font-weight: 600; font-size: var(--fs-sm); }
+.cal__weekdays .cal__check { flex-direction: row; align-items: center; gap: 6px; font-weight: 500; }
+.cal__breaks { flex-direction: column; align-items: flex-start; }
+
+/* пост контроля качества на линии станций */
+.cal__stations li.cal__post { grid-row: 2; display: grid; justify-items: center; align-content: center; gap: 2px; padding: 6px 2px; background: color-mix(in srgb, var(--f7-action) 8%, var(--surface)); border: 1px dashed var(--f7-action); border-bottom-width: 1px; color: var(--f7-action); }
+.cal__post span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted); }
+
+/* меню «⋮» на карточке: перенос кнопками (сенсорные экраны) */
+.cal__menu { position: relative; margin-left: auto; }
+.cal__card-top .cal__delta + .cal__menu { margin-left: 4px; }
+:root .f7plan button.cal__menu-btn { padding: 0 8px; min-height: 0; line-height: 1.4; font-size: 18px; background: transparent; border: 0; color: var(--muted); cursor: pointer; }
+:root .f7plan button.cal__menu-btn:hover:not(:disabled) { color: var(--text); background: color-mix(in srgb, var(--muted) 14%, transparent); }
+.cal__menu-list { position: absolute; right: 0; top: 100%; z-index: 30; min-width: 190px; margin: 2px 0 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--border-strong, var(--border)); box-shadow: var(--shadow-md); }
+:root .f7plan .cal__menu-list button { display: block; width: 100%; text-align: left; padding: 8px 10px; background: transparent; border: 0; border-radius: 0; color: var(--text); min-height: 0; }
+:root .f7plan .cal__menu-list button:hover:not(:disabled) { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--text); }
+
+/* выпущенные изделия (история) и блок «без времени» */
+.cal__card[data-done="true"] { border-left-color: #7c3aed; background: color-mix(in srgb, #7c3aed 5%, var(--surface)); }
+.cal__card[data-done="true"] .cal__pin { color: #7c3aed; }
+.cal__orphans { border-top: 1px solid var(--border); padding: 8px 10px; }
+.cal__car span { white-space: nowrap; }
+
+/* ── Карта линии (T-174) ──────────────────────────────────────────────── */
+.line-map { display: flex; flex-wrap: wrap; align-items: center; gap: 0; padding: 24px 0; }
+.line-map-node { display: flex; align-items: center; }
+.line-map-connector { display: block; width: 24px; height: 2px; background: var(--border-strong, #ccc); flex-shrink: 0; }
+.line-map-node--station .line-map-label { display: flex; align-items: center; justify-content: center; min-width: 56px; height: 44px; padding: 0 10px; background: var(--surface); border: 2px solid var(--border-strong); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+.line-map-node--qc { flex-direction: column; align-items: center; gap: 0; }
+.qc-node { display: flex; flex-direction: column; align-items: center; padding: 6px 10px; min-width: 80px; border: 2px solid var(--border-strong); background: var(--surface); cursor: pointer; gap: 2px; }
+.qc-node--demo { pointer-events: none; font-size: 11px; min-width: 70px; padding: 4px 8px; }
+.qc-node[aria-pressed='true'] { outline: 3px solid var(--accent, #2563eb); outline-offset: 2px; }
+.qc-node-name { font-size: 11px; font-weight: 700; text-align: center; text-transform: uppercase; }
+.qc-node-status { font-size: 10px; text-align: center; }
+.qc-node--pass { border-color: #16a34a; background: color-mix(in srgb, #16a34a 12%, var(--surface)); color: #15803d; }
+.qc-node--fail { border-color: #dc2626; background: color-mix(in srgb, #dc2626 12%, var(--surface)); color: #b91c1c; }
+.qc-node--pending { border-color: var(--border-strong); color: var(--muted); }
+.line-map-legend { display: flex; gap: 10px; padding: 8px 0 16px; flex-wrap: wrap; }
+.line-map-history { margin-top: 16px; }
+.line-map-history h2 { font-size: var(--fs-md); font-weight: 700; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* T-175: Reports date range picker and wide cards */
+.rep-date-range { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.rep-date-range label { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.rep-date-range input[type="date"] { font-size: 13px; padding: 4px 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: var(--radius-sm); }
+.rep-card--wide { grid-column: 1 / -1; }
+.rep-period { font-size: 11px; font-weight: 400; color: var(--muted); text-transform: none; letter-spacing: 0; }
+
+/* T-150: FOK scan field vertically centred — intro takes ≥40 vh so the form lands mid-screen */
+.f7mes--fok .f7mes__intro { min-height: 40vh; justify-content: center; }
