@@ -2,7 +2,15 @@ import type { Screen } from './AppHeader';
 import { api } from './api';
 import { ScanTransitionScreen } from './ScanTransitionScreen';
 
-export function StartScreen({ session, onNavigate, onLogout }: { session: { userName: string | null; mode: string }; onNavigate: (screen: Screen) => void; onLogout: () => void; }) {
+export function StartScreen({
+  session,
+  onNavigate,
+  onLogout,
+}: {
+  session: { userName: string | null; mode: string };
+  onNavigate: (screen: Screen) => void;
+  onLogout: () => void;
+}) {
   return (
     <ScanTransitionScreen
       screen="start"
