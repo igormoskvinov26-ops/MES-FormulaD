@@ -17,7 +17,6 @@ const VIEWS: { key: View; label: string }[] = [
   { key: 'month', label: 'Месяц' },
 ];
 
-/** Весь план: страницы по 100 (предел API) до исчерпания. */
 async function loadPlan(): Promise<ProductionPlanItem[]> {
   const all: ProductionPlanItem[] = [];
   for (let page = 1; page <= 50; page++) {
@@ -237,7 +236,7 @@ export function CalendarScreen({
         <p className="cal__assumptions">
           Прогноз по графику: {cfg.perShift} изделий в смену, смена {cfg.shiftStart}–{cfg.shiftEnd}
           {cfg.breaks.map((b) => ` (перерыв ${b.from}–${b.to})`).join('')}, рабочие дни: {cfg.workdays.map((d) => WEEKDAYS_SHORT[d - 1]).join(', ')}.
-          Выходные, праздники и особые часы дня — кнопкой ⚙ в шапке дня или в «Администрирование → Производственный календарь».
+          Выходные, праздники и особые часы дня — кнопкой ⦿ в шапке дня или в «Администрирование → Производственный календарь».
           Плановые даты в данных не меняются; «+N дн» — прогноз позже плановой даты завершения. Клик по изделию открывает «Прогресс сборки».
         </p>
       )}

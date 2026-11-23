@@ -41,7 +41,7 @@ export function ColumnPicker({
       </button>
       {open && (
         <div className="picker-menu" role="group" aria-label="Видимые колонки">
-          <p className="picker-hint">Раскладка сохраняется на этом компьютере</p>
+          <p className="picker-hint">Разкладка сохраняется на этом компьютере</p>
           {COLUMNS.map((column) => (
             <label key={column.key} className={column.locked ? 'locked' : undefined}>
               <input
@@ -55,7 +55,7 @@ export function ColumnPicker({
             </label>
           ))}
           <button type="button" className="link" onClick={onReset}>
-            Вернуть стандартную раскладку
+            Вернуть стандартную разкладку
           </button>
         </div>
       )}

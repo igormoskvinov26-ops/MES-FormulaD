@@ -12,6 +12,7 @@ export function CommandPalette({ onSelectVin }: Props) {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // T-085: Ctrl/Cmd+K — открыть палитру
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {

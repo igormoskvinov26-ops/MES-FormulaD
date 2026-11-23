@@ -3,7 +3,6 @@ import { atvImageFor } from './atvVariant';
 import { WEEKDAYS_SHORT, dayHourRows, dayInfo, isoWeekday, monthGrid, parseYmd, weekColumns, type CalendarConfig, type DayColumn, type Slot } from './calendar';
 import type { DayDraft } from './DaySettingsDialog';
 
-/** Перетаскивание карточек (нативный HTML5 drag-and-drop) и перенос с клавиатуры. */
 export type Dnd = {
   dragVin: string | null;
   over: string | null;
@@ -206,7 +205,7 @@ export function DayView({ anchor, cfg, slots, today, drafts, onEditDay, onOpenIt
       <section className="cal__day" data-working={String(day.working)} data-today={anchor === today ? 'true' : undefined} data-draft={drafts[anchor] ? 'true' : undefined} aria-label={`${weekdayOf(anchor)} ${dayLabel(anchor)}`}>
         <DayHead day={day} draft={drafts[anchor]} onEdit={() => onEditDay(anchor)} />
         {!day.working ? (
-          <p className="cal__empty cal__empty--big">Выходной день. Кнопка ⚙ в шапке дня делает его рабочим или меняет часы работы.</p>
+          <p className="cal__empty cal__empty--big">Выходной день. Кнопка ⦿ в шапке дня делает его рабочим или меняет часы работы.</p>
         ) : (
           <>
           <ol className="cal__hourlist" aria-label="Часы дня">
