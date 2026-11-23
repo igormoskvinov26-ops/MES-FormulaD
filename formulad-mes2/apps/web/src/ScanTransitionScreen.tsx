@@ -9,12 +9,6 @@ import { isQueueCollapsed, setQueueCollapsed, subscribeQueue } from './queuePref
 import { ResultFlash, useResultSignal } from './resultSignal';
 import './f7-components.css';
 
-/**
- * Общая механика перехода по сканеру (раздел 9 спецификации): первое сканирование ищет
- * изделие среди допустимого статуса, второе сканирование того же VIN (или кнопка)
- * подтверждает переход. Один компонент — используют экраны Старт (Этап 3), а дальше
- * Завершение и FOK (Этап 4) и Rework (Этап 6), не копируя механику заново.
- */
 export function ScanTransitionScreen({
   screen,
   session,
@@ -37,31 +31,13 @@ export function ScanTransitionScreen({
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
   title: string;
-  /** Изделие учитывается только в этом статусе — раздел 9/10: ошибочный статус не проходит переход. */
   eligibleStatusId: number;
-  /** Статус, в который перейдёт изделие после подтверждения — только для текста сообщения. */
   afterStatusId: number;
   confirmLabel: string;
   listTitle: string;
   onConfirm: (vin: string) => Promise<ProductionPlanItem>;
-  /**
-   * Дополнительная проверка сверх статуса — например, FOK проверяет незакрытую обязательную
-   * деталь (раздел 16). Возвращает причину блокировки или null, если можно подтверждать.
-   * Проверяется на этапе поиска, чтобы отказ был виден ДО попытки подтверждения (раздел 18, [П]).
-   */
   extraCheck?: (item: ProductionPlanItem) => Promise<string | null>;
-  /**
-   * Произвольный блок внутри карточки найденного изделия — например, Rework показывает здесь
-   * список открытых NCP с действиями прямо в этом окне (раздел 17, [С]). `refresh` заново
-   * прогоняет поиск/extraCheck для того же VIN — нужно вызвать после изменения NCP, чтобы кнопка
-   * подтверждения обновилась без повторного скана.
-   */
   extraContent?: (item: ProductionPlanItem, refresh: () => void) => React.ReactNode;
-  /**
-   * Альтернативное действие, доступное ТОЛЬКО когда статус подошёл, но extraCheck заблокировал
-   * переход — например, «Отправить в Rework» на экране FOK (раздел 225: изделие с незакрытой
-   * проблемой не должно теряться). Не показывается при простом несовпадении статуса.
-   */
   secondaryActionLabel?: string;
   secondaryAfterStatusId?: number;
   onSecondaryAction?: (vin: string) => Promise<ProductionPlanItem>;
@@ -80,11 +56,9 @@ export function ScanTransitionScreen({
   const requestId = useRef(0);
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Разрешено подтверждать только когда что-то найдено и ни одна проверка (статус, extraCheck)
-  // не оставила сообщение об ошибке — единая точка истины вместо двух раздельных флагов.
   const eligible = found !== null && message === null;
 
-  // T-169: 30 с на второй скан; по истечении — сброс карточки.
+  // T-169: 30s timeout for second scan
   useEffect(() => {
     if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
     if (!eligible) return;
@@ -107,7 +81,6 @@ export function ScanTransitionScreen({
   useEffect(reloadPending, [reloadPending]);
   useEffect(() => subscribeQueue(() => setQueueCollapsedState(isQueueCollapsed())), []);
 
-  // Выбранное изделие должно быть видно в длинной очереди.
   useEffect(() => {
     listRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView?.({ block: 'nearest' });
   }, [found?.vin, pending]);
@@ -160,9 +133,6 @@ export function ScanTransitionScreen({
       setMessage({ kind: 'ok', text: `Готово: ${vin} → «${statusCodeLabel(afterStatusId)}»` });
       reloadPending();
     } catch {
-      // Между поиском и подтверждением кто-то мог изменить статус — переспрашиваем заново,
-      // а не доверяем устаревшей карточке (раздел 28, п.5 спецификации: конфликт не должен
-      // тихо потеряться).
       setFound(null);
       setMessage({ kind: 'error', text: 'Не удалось выполнить переход — отсканируйте VIN ещё раз' });
     } finally {
@@ -223,7 +193,7 @@ export function ScanTransitionScreen({
 
         <div className="scanx__main">
           <form className="scanx__scan" onSubmit={onSubmit}>
-            <span className="scanx__scan-symbol" aria-hidden="true">▅</span>
+            <span className="scanx__scan-symbol" aria-hidden="true">▥</span>
             <div className="scanx__scan-field">
               <span className="scanx__scan-label" aria-hidden="true">ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</span>
               <input
