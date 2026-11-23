@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
-import { api, type Delivery, type DeliveryPackage, type PackingListRawRow, type PackingListSession, type SupplierRef } from './api';
+import { ApiError, api, type Delivery, type DeliveryPackage, type PackingListRawRow, type PackingListSession, type SupplierRef } from './api';
 import { DeliveryCreateDialog } from './DeliveryCreateDialog';
 import { PackageDialog } from './PackageDialog';
 import { PACKING_LIST_COLUMNS, parsePackingListRows } from './importParse';
@@ -48,19 +48,42 @@ export function IncomingInspectionScreen({
   const [scanError, setScanError] = useState('');
   const [openPackage, setOpenPackage] = useState<DeliveryPackage | null>(null);
 
-  function reloadDeliveries() {
-    api.deliveries().then((p) => setDeliveries(p.items)).catch(() => setListError('Нет связи с сервером'));
+  const [filterInvoice, setFilterInvoice] = useState('');
+  const [filterSupplier, setFilterSupplier] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PAGE_SIZE = 25;
+
+  const filteredDeliveries = deliveries.filter((d) => {
+    if (filterInvoice && !d.invoiceNumber.toLowerCase().includes(filterInvoice.toLowerCase())) return false;
+    if (filterSupplier && d.supplierCode !== filterSupplier) return false;
+    if (filterStatus && d.status !== filterStatus) return false;
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function reloadDeliveries(p = page) {
+    api.deliveries(p, PAGE_SIZE)
+      .then((r) => { setDeliveries(r.items); setTotal(r.total); })
+      .catch(() => setListError('Нет связи с сервером'));
   }
 
   useEffect(() => {
     api.suppliers().then(setSuppliers).catch(() => setSuppliers([]));
-    reloadDeliveries();
+    reloadDeliveries(1);
   }, []);
+
+  useEffect(() => {
+    if (page > 1) reloadDeliveries();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   useEffect(() => {
     if (!selectedId) {
       setDelivery(null);
-      reloadDeliveries(); // список мог устареть — коробки/статус поставки менялись на экране карточки
+      reloadDeliveries(page); // список мог устареть — коробки/статус поставки менялись на экране карточки
       return;
     }
     api.delivery(selectedId).then(setDelivery).catch(() => setDelivery(null));
@@ -71,10 +94,26 @@ export function IncomingInspectionScreen({
     try {
       const created = await api.createDelivery(data.supplierCode, data.invoiceNumber, data.invoiceDate, data.accompanyingDocument);
       setShowCreate(false);
-      reloadDeliveries();
+      setPage(1);
+      reloadDeliveries(1);
       setSelectedId(created.id);
-    } catch {
-      setCreateError('Не удалось создать поставку');
+    } catch (e) {
+      setCreateError(e instanceof ApiError && e.status === 409
+        ? 'Поставка с таким инвойсом у этого поставщика уже существует'
+        : 'Не удалось создать поставку');
+    }
+  }
+
+  async function deleteDelivery(id: string) {
+    if (!window.confirm('Удалить поставку? Это действие необратимо.')) return;
+    try {
+      await api.deleteDelivery(id);
+      setSelectedId(null);
+      setDelivery(null);
+      setPage(1);
+      reloadDeliveries(1);
+    } catch (e) {
+      window.alert(e instanceof ApiError && e.status === 409 ? e.detail ?? e.message : 'Не удалось удалить поставку');
     }
   }
 
@@ -174,6 +213,23 @@ export function IncomingInspectionScreen({
         </div>
         <section className="toolbar">
           <span className="f7plan__filters-label">ПОСТАВКИ</span>
+          <input
+            aria-label="Фильтр по номеру инвойса"
+            placeholder="Инвойс…"
+            value={filterInvoice}
+            onChange={(e) => setFilterInvoice(e.target.value)}
+            style={{ maxWidth: 160 }}
+          />
+          <select aria-label="Фильтр по поставщику" value={filterSupplier} onChange={(e) => setFilterSupplier(e.target.value)}>
+            <option value="">Все поставщики</option>
+            {suppliers.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+          </select>
+          <select aria-label="Фильтр по статусу" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <option value="">Все статусы</option>
+            <option value="Open">В работе</option>
+            <option value="Verified">Проверено</option>
+            <option value="VerifiedWithIssues">С замечаниями</option>
+          </select>
           <div className="controls">
             <button type="button" className="primary" onClick={() => setShowCreate(true)}>
               Новая поставка
@@ -196,7 +252,7 @@ export function IncomingInspectionScreen({
                 </tr>
               </thead>
               <tbody>
-                {deliveries.map((d) => (
+                {filteredDeliveries.map((d) => (
                   <tr key={d.id} className={d.status === 'VerifiedWithIssues' ? 'row-ncp-open' : d.status === 'Verified' ? 'row-done' : 'row-waiting'} onClick={() => setSelectedId(d.id)} style={{ cursor: 'pointer' }}>
                     <td>{d.supplierName}</td>
                     <td>{d.invoiceNumber}</td>
@@ -209,7 +265,7 @@ export function IncomingInspectionScreen({
                     </td>
                   </tr>
                 ))}
-                {deliveries.length === 0 && (
+                {filteredDeliveries.length === 0 && (
                   <tr>
                     <td colSpan={5} className="center muted">
                       Поставок пока нет
@@ -219,6 +275,18 @@ export function IncomingInspectionScreen({
               </tbody>
             </table>
           </div>
+          {totalPages > 1 && (
+            <nav aria-label="Страницы поставок" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0' }}>
+              <span className="f7plan__shown">
+                {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} из {total}
+              </span>
+              <div className="f7plan__pages">
+                <button type="button" aria-label="Назад" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>‹</button>
+                <button type="button" aria-current={undefined} className="is-current">{page} / {totalPages}</button>
+                <button type="button" aria-label="Вперёд" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>›</button>
+              </div>
+            </nav>
+          )}
         </main>
 
         {showCreate && (
@@ -243,9 +311,16 @@ export function IncomingInspectionScreen({
             <span className={delivery.status === 'VerifiedWithIssues' ? 'badge badge-warn' : delivery.status === 'Verified' ? 'badge badge-ok' : 'badge'}>
               {DELIVERY_STATUS_LABEL[delivery.status]}
             </span>
+            {' · '}{delivery.packages.filter(p => p.status === 'Closed').length} из {delivery.packages.length} уп. проверено
+            {delivery.accompanyingDocument && <> · <span>Сопр. докум.: {delivery.accompanyingDocument}</span></>}
           </p>
         </div>
         <div className="controls">
+          {delivery.status === 'Open' && delivery.packages.length === 0 && (
+            <button type="button" onClick={() => void deleteDelivery(delivery.id)}>
+              Удалить
+            </button>
+          )}
           <button type="button" onClick={() => setSelectedId(null)}>
             ← К списку поставок
           </button>
@@ -389,7 +464,7 @@ export function IncomingInspectionScreen({
 
         <h2>Коробки</h2>
         <form className="controls" onSubmit={(e) => void onScan(e)} style={{ marginBottom: 12 }}>
-          <input aria-label="Сканирование HU" placeholder="Скан HU или номер коробки" value={scanHu} onChange={(e) => setScanHu(e.target.value)} />
+          <input aria-label="Сканирование HU" placeholder="Скан HU или номер коробки" value={scanHu} onChange={(e) => setScanHu(e.target.value)} autoFocus />
           <button type="submit">Открыть</button>
         </form>
         {scanError && (
