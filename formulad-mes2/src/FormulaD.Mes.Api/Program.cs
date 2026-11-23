@@ -2,165 +2,240 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using FormulaD.Mes.Api;
-using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService();
 
-// T-102: JSON-логи в production, console в Development; секреты не логируем (Sql:* маскируется)
-if (!builder.Environment.IsDevelopment())
+var dataSource = builder.Configuration["DataSource"] ?? "Demo";
+IEventLog eventLog = new InMemoryEventLog();
+bool sqlWriteDisabled = false;
+
+switch (dataSource.ToLowerInvariant())
 {
-    builder.Logging.AddJsonConsole(o =>
-    {
-        o.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
-        o.UseUtcTimestamp = true;
-    });
+    case "demo":
+        var fixturePath = builder.Configuration["Demo:FixturePath"]
+                          ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "production-plan.demo.json");
+        var demoReader = new DemoProductionPlanReader(fixturePath, eventLog);
+        builder.Services.AddSingleton<IProductionPlanReader>(demoReader);
+        builder.Services.AddSingleton<IPlanOrderEditor>(demoReader);
+        builder.Services.AddSingleton<IPlanTransitions>(demoReader);
+        builder.Services.AddSingleton<IJobCardPrinter>(demoReader);
+        builder.Services.AddSingleton<IPlanPublisher>(demoReader);
+        builder.Services.AddSingleton<IPrintTemplateRepo>(new InMemoryPrintTemplateRepo());
+
+        var ncpPath = builder.Configuration["Demo:NcpFixturePath"]
+                     ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "ncp.demo.json");
+        var componentsPath = builder.Configuration["Demo:ComponentsFixturePath"]
+                            ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "components.demo.json");
+        var ncpStore = new DemoNcpStore(ncpPath, componentsPath, demoReader, eventLog);
+        builder.Services.AddSingleton<INcpReader>(ncpStore);
+        builder.Services.AddSingleton<INcpWriter>(ncpStore);
+        builder.Services.AddSingleton<IStationChecks>(new DemoStationChecks(demoReader, ncpStore, eventLog));
+
+        var modelsPath = builder.Configuration["Demo:ModelsFixturePath"]
+                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "models.demo.json");
+        var colorsPath = builder.Configuration["Demo:ColorsFixturePath"]
+                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "colors.demo.json");
+        var specificationsPath = builder.Configuration["Demo:SpecificationsFixturePath"]
+                                ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "specifications.demo.json");
+        builder.Services.AddSingleton<IPlanImport>(
+            new DemoPlanImport(modelsPath, colorsPath, specificationsPath, demoReader, demoReader, eventLog));
+
+        var suppliersPath = builder.Configuration["Demo:SuppliersFixturePath"]
+                           ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "suppliers.demo.json");
+        var quotasPath = builder.Configuration["Demo:InspectionQuotasFixturePath"]
+                        ?? Path.Combine(AppContext.BaseDirectory, "fixtures", "inspection-quotas.demo.json");
+        var incomingInspection = new DemoIncomingInspectionStore(suppliersPath, quotasPath, componentsPath, eventLog);
+        builder.Services.AddSingleton<IIncomingInspectionReader>(incomingInspection);
+        builder.Services.AddSingleton<IIncomingInspectionWriter>(incomingInspection);
+
+        var demoQc = new DemoQcStore();
+        builder.Services.AddSingleton<IQcChecklistReader>(demoQc);
+        builder.Services.AddSingleton<IQcChecklistWriter>(demoQc);
+        break;
+
+    case "sql":
+        var sqlOptions = SqlOptions.Create(builder.Configuration);
+        if (!sqlOptions.HasWriteConnection)
+        {
+            sqlWriteDisabled = true;
+            Console.WriteLine("WARNING: [T-003] Sql:WriteConnectionString не задана — операции записи вернут 503. " +
+                              "Задайте переменную окружения Sql__WriteConnectionString для полного режима.");
+        }
+        IEventLog sqlOrMemoryLog = sqlOptions.HasWriteConnection
+            ? (IEventLog)new SqlEventLog(sqlOptions.WriteConnectionString, sqlOptions.CommandTimeoutSeconds)
+            : new InMemoryEventLog();
+        if (sqlOptions.HasWriteConnection && sqlOrMemoryLog is SqlEventLog sel)
+            sel.PurgeOldEntries(builder.Configuration.GetValue("EventLog:RetentionDays", 365));
+        eventLog = sqlOrMemoryLog;
+        var migrationsPath = builder.Configuration["Sql:MigrationsPath"]
+                             ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "sql", "migrations");
+        var prodWarn = SqlOptions.GetProdHostWarning(sqlOptions.ConnectionString);
+        if (prodWarn != null) Console.WriteLine($"WARNING: {prodWarn}");
+        SqlOptions.ValidateRuntimeDatabaseAsync(sqlOptions.ConnectionString, sqlOptions.CommandTimeoutSeconds).GetAwaiter().GetResult();
+        if (Directory.Exists(migrationsPath))
+            SchemaMigrator.MigrateAsync(sqlOptions, migrationsPath).GetAwaiter().GetResult();
+        builder.Services.AddSingleton(sqlOptions);
+        builder.Services.AddSingleton<IProductionPlanReader>(sp => new SqlProductionPlanReader(sp.GetRequiredService<SqlOptions>()));
+        builder.Services.AddSingleton<IPlanTransitions>(sp => new SqlPlanTransitions(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+        builder.Services.AddSingleton<IPlanOrderEditor>(sp => new SqlPlanOrderEditor(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+        builder.Services.AddSingleton<IJobCardPrinter>(sp => new SqlJobCardPrinter(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+        builder.Services.AddSingleton<IPlanPublisher>(sp => new SqlPlanPublisher(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
+        var sqlNcp = new SqlNcpStore(sqlOptions, eventLog);
+        builder.Services.AddSingleton<INcpReader>(sqlNcp);
+        builder.Services.AddSingleton<INcpWriter>(sqlNcp);
+        builder.Services.AddSingleton<IStationChecks>(new SqlStationChecks(sqlOptions, eventLog));
+        builder.Services.AddSingleton<IPlanImport>(sp => new SqlPlanImport(
+            sp.GetRequiredService<SqlOptions>(),
+            sp.GetRequiredService<IProductionPlanReader>(),
+            sp.GetRequiredService<IPlanPublisher>(),
+            sp.GetRequiredService<IEventLog>()));
+        var sqlIncoming = new SqlIncomingInspection(sqlOptions, eventLog);
+        builder.Services.AddSingleton<IIncomingInspectionReader>(sqlIncoming);
+        builder.Services.AddSingleton<IIncomingInspectionWriter>(sqlIncoming);
+        var sqlQc = new SqlQcStore(sqlOptions);
+        builder.Services.AddSingleton<IQcChecklistReader>(sqlQc);
+        builder.Services.AddSingleton<IQcChecklistWriter>(sqlQc);
+        builder.Services.AddSingleton<IPrintTemplateRepo>(
+            new SqlPrintTemplateRepo(sqlOptions.WriteConnectionString, sqlOptions.CommandTimeoutSeconds));
+        break;
+
+    default:
+        throw new InvalidOperationException(
+            $"DataSource='{dataSource}' не поддерживается. Допустимо 'Demo' или 'Sql' (только TEST-экземпляр).");
 }
 
-// --- Источник данных: SQL Server -------------------------------------------
-var sqlOptions = SqlOptions.Create(builder.Configuration);
-builder.Services.AddSingleton(sqlOptions);
-
-// --- Журнал событий ---------------------------------------------------------
-// ponytail: SqlEventLog persists to SQL; tests override via ConfigureTestServices
-var eventLog = (IEventLog)new SqlEventLog(sqlOptions);
 builder.Services.AddSingleton(eventLog);
-builder.Services.AddSingleton<IProductionPlanReader>(sp => new SqlProductionPlanReader(sp.GetRequiredService<SqlOptions>()));
-builder.Services.AddSingleton<IPlanTransitions>(sp => new SqlPlanTransitions(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-builder.Services.AddSingleton<IPlanOrderEditor>(sp => new SqlPlanOrderEditor(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-builder.Services.AddSingleton<IJobCardPrinter>(sp => new SqlJobCardPrinter(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-builder.Services.AddSingleton<IPlanPublisher>(sp => new SqlPlanPublisher(sp.GetRequiredService<SqlOptions>(), sp.GetRequiredService<IEventLog>()));
-var sqlNcp = new SqlNcpStore(sqlOptions, eventLog);
-builder.Services.AddSingleton<INcpReader>(sqlNcp);
-builder.Services.AddSingleton<INcpWriter>(sqlNcp);
-builder.Services.AddSingleton<IStationChecks>(new SqlStationChecks(sqlOptions, eventLog));
-builder.Services.AddSingleton<IPlanImport>(sp => new SqlPlanImport(
-    sp.GetRequiredService<SqlOptions>(),
-    sp.GetRequiredService<IProductionPlanReader>(),
-    sp.GetRequiredService<IPlanPublisher>(),
-    sp.GetRequiredService<IEventLog>()));
-var sqlIncoming = new SqlIncomingInspection(sqlOptions, eventLog);
-builder.Services.AddSingleton<IIncomingInspectionReader>(sqlIncoming);
-builder.Services.AddSingleton<IIncomingInspectionWriter>(sqlIncoming);
 
-// --- Dev-аутентификация ----------------------------------------------------
-// Включается только явно, только в Development и только при заданном секрете
-// (user-secrets / env). Пароля по умолчанию нет и быть не может.
-// Вход формой (логин без пароля) допустим только вне прода: на проде логин даёт Windows.
-// Прод и тест используют один и тот же справочник dbo.tblUser — отличается лишь источник логина.
-var formLogin = builder.Configuration.GetValue("Auth:FormLogin", false) && builder.Environment.IsDevelopment();
-builder.Services.AddSingleton<IUserDirectory>(sp => new SqlUserDirectory(sp.GetRequiredService<SqlOptions>()));
+builder.Services.AddSingleton<IProductionCalendarStore>(new ProductionCalendarStore(
+    dataSource.Equals("sql", StringComparison.OrdinalIgnoreCase)
+        ? builder.Configuration["Calendar:StorePath"] ?? Path.Combine(AppContext.BaseDirectory, "App_Data", "production-calendar.json")
+        : null,
+    eventLog));
+
+var devAuth = new DevAuthOptions(
+    Enabled: builder.Configuration.GetValue("DevAuth:Enabled", false) && builder.Environment.IsDevelopment(),
+    Username: builder.Configuration["DevAuth:Username"],
+    Password: builder.Configuration["DevAuth:Password"]);
+builder.Services.AddSingleton(devAuth);
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.Cookie.Name = "formulad.mes.session";
         options.Cookie.HttpOnly = true;
-        // ponytail: SameSite=Strict + проверка Origin на login вместо отдельных antiforgery-токенов;
-        // добавить antiforgery, если появятся cross-site сценарии или не-loopback вход.
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
         options.SlidingExpiration = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
-        // API не редиректит на страницу входа — возвращаем коды.
         options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
         options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
     });
 builder.Services.AddAuthorization();
 builder.Services.AddProblemDetails();
-
-// T-014: Rate-limit на login — 5 попыток в минуту с одного IP
-builder.Services.AddRateLimiter(options =>
+builder.Services.AddRateLimiter(o =>
 {
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("login", ctx =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(1),
-            }));
+    o.AddFixedWindowLimiter("login", lo =>
+    {
+        lo.Window = TimeSpan.FromMinutes(1);
+        lo.PermitLimit = 5;
+        lo.QueueLimit = 0;
+        lo.AutoReplenishment = true;
+    });
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
 if (builder.Environment.IsDevelopment())
-{
     builder.Services.AddOpenApi();
-}
 
 var app = builder.Build();
 
-app.Logger.LogInformation("Источник данных: SQL Server");
+app.Logger.LogInformation("Источник данных: {DataSource}", dataSource);
 
-// T-029: Проверка версии схемы и наличия таблиц при старте (T-004: fail-fast вместо runtime DDL).
-await SqlStartupCheck.RunAsync(sqlOptions, app.Logger, app.Lifetime.ApplicationStopping);
-
-app.Logger.LogInformation(
-    formLogin
-        ? "Вход: форма с логином из dbo.tblUser (без пароля, как на проде)."
-        : "Вход формой выключен — логин должен приходить от Windows-аутентификации.");
-
-// T-014: Заголовки безопасности
-app.Use(async (ctx, next) =>
+if (!devAuth.CanLogIn)
 {
-    var h = ctx.Response.Headers;
-    h["X-Content-Type-Options"] = "nosniff";
-    h["X-Frame-Options"] = "DENY";
-    h["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
-    if (!app.Environment.IsDevelopment())
-        h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
-    await next();
-});
+    app.Logger.LogWarning(
+        "Dev-аутентификация выключена (DevAuth:Enabled={Enabled}, секрет задан={HasSecret}). " +
+        "Защищённые эндпоинты будут возвращать 401.", devAuth.Enabled, devAuth.HasCredentials);
+}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    ctx.Response.Headers["X-Frame-Options"] = "DENY";
+    ctx.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    await next();
+});
+app.UseRateLimiter();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
+if (sqlWriteDisabled)
+{
+    app.Use(async (ctx, next) =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api") &&
+            !ctx.Request.Path.StartsWithSegments("/api/v1/auth") &&
+            !ctx.Request.Path.StartsWithSegments("/api/v1/dev-auth") &&
+            !HttpMethods.IsGet(ctx.Request.Method) &&
+            !HttpMethods.IsHead(ctx.Request.Method))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            await ctx.Response.WriteAsJsonAsync(new
+            {
+                title = "Операции записи недоступны",
+                detail = "[T-003] Задайте Sql:WriteConnectionString для включения записи.",
+                status = 503
+            });
+            return;
+        }
+        await next(ctx);
+    });
+}
 
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
 var api = app.MapGroup("/api/v1");
 
-// Liveness: без аутентификации и без любых сведений о конфигурации/БД/хосте.
 api.MapGet("/health/live", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
-// ponytail: версия из AssemblyInformationalVersion (SourceRevisionId подставляет git hash при сборке)
-api.MapGet("/version", () =>
-{
-    var asm = Assembly.GetExecutingAssembly();
-    var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
-    return Results.Ok(new { version = info });
-}).AllowAnonymous();
-
-// Readiness: проверяет доступность БД. Не раскрывает деталей подключения.
-api.MapGet("/health/ready", async (SqlOptions sqlOptions) =>
+api.MapGet("/health/ready", async (IProductionPlanReader reader, CancellationToken ct) =>
 {
     try
     {
-        await using var conn = new SqlConnection(sqlOptions.ConnectionString);
-        await conn.OpenAsync();
-        await using var cmd = new SqlCommand("SELECT 1", conn);
-        await cmd.ExecuteScalarAsync();
-        return Results.Ok(new { status = "ok" });
+        await reader.GetStatusesAsync(ct);
+        return Results.Ok(new { status = "ready" });
     }
     catch
     {
-        return Results.Json(new { status = "degraded" }, statusCode: 503);
+        return Results.StatusCode(503);
     }
 }).AllowAnonymous();
+
+var asmVersion = Assembly.GetExecutingAssembly()
+    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+    ?? "unknown";
+api.MapGet("/info", () => Results.Ok(new { version = asmVersion })).AllowAnonymous();
+
+api.MapGet("/schema-version", async (CancellationToken ct) =>
+{
+    if (!dataSource.Equals("sql", StringComparison.OrdinalIgnoreCase))
+        return Results.Ok(new { dataSource, schemaVersion = (int?)null });
+    var opts = app.Services.GetRequiredService<SqlOptions>();
+    var version = await SchemaMigrator.GetCurrentVersionAsync(opts, ct);
+    return Results.Ok(new { dataSource, schemaVersion = version });
+}).RequireAuthorization();
 
 var plan = api.MapGroup("/production-plan").RequireAuthorization();
 
@@ -177,18 +252,11 @@ plan.MapGet("", async (
     int pageSize = 25) =>
 {
     if (vin is { Length: > 50 })
-    {
         return Problem("Некорректный VIN", "Длина VIN не может превышать 50 символов.");
-    }
     if (page < 1)
-    {
         return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
-    }
     if (pageSize is < 1 or > 100)
-    {
         return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
-    }
-
     var result = await reader.GetPageAsync(new ProductionPlanQuery(vin, status, statusId, page, pageSize), ct);
     return Results.Ok(result);
 });
@@ -196,67 +264,44 @@ plan.MapGet("", async (
 plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, CancellationToken ct) =>
 {
     if (vin.Length is 0 or > 50)
-    {
         return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-    }
     var item = await reader.GetByVinAsync(vin, ct);
     return item is null
         ? Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound)
         : Results.Ok(item);
 });
 
-// Переходы по статусам.
 {
     plan.MapPost("/{vin}/start", async (
         string vin, IPlanTransitions transitions, ClaimsPrincipal user, CancellationToken ct) =>
     {
-        if (vin.Length is 0 or > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-
+        if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
         var (outcome, item) = await transitions.StartAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
         return outcome switch
         {
             TransitionOutcome.Ok => Results.Ok(item),
-            TransitionOutcome.VinNotFound => Results.Problem(
-                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound),
-            _ => Problem(
-                "Нельзя запустить",
-                $"Изделие уже в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(0)}»."),
+            TransitionOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
+            _ => Problem("Нельзя запустить", $"Изделие уже в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(0)}»."),
         };
     });
 
     plan.MapPost("/{vin}/complete", async (
         string vin, IPlanTransitions transitions, ClaimsPrincipal user, CancellationToken ct) =>
     {
-        if (vin.Length is 0 or > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-
+        if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
         var (outcome, item) = await transitions.CompleteAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
         return outcome switch
         {
             TransitionOutcome.Ok => Results.Ok(item),
-            TransitionOutcome.VinNotFound => Results.Problem(
-                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound),
-            _ => Problem(
-                "Нельзя завершить",
-                $"Изделие уже в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(1)}»."),
+            TransitionOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
+            _ => Problem("Нельзя завершить", $"Изделие уже в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(1)}»."),
         };
     });
 
     plan.MapPost("/{vin}/fok", async (
         string vin, IPlanTransitions transitions, ClaimsPrincipal user, HttpContext httpCtx, CancellationToken ct) =>
     {
-        if (vin.Length is 0 or > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-
+        if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
         var ncp = httpCtx.RequestServices.GetService<INcpReader>();
         if (ncp is not null)
         {
@@ -267,49 +312,32 @@ plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, Cancellat
                 return Problem("FOK недоступен", $"Есть незакрытая обязательная деталь: {numbers}.");
             }
         }
-
         var (outcome, item) = await transitions.FokAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
         return outcome switch
         {
             TransitionOutcome.Ok => Results.Ok(item),
-            TransitionOutcome.VinNotFound => Results.Problem(
-                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound),
-            _ => Problem(
-                "Нельзя подтвердить FOK",
-                $"Изделие уже в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(2)}»."),
+            TransitionOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
+            _ => Problem("Нельзя подтвердить FOK", $"Изделие уже в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(2)}»."),
         };
     });
 
     plan.MapPost("/{vin}/rework", async (
         string vin, IPlanTransitions transitions, ClaimsPrincipal user, CancellationToken ct) =>
     {
-        if (vin.Length is 0 or > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-
+        if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
         var (outcome, item) = await transitions.SendToReworkAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
         return outcome switch
         {
             TransitionOutcome.Ok => Results.Ok(item),
-            TransitionOutcome.VinNotFound => Results.Problem(
-                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound),
-            _ => Problem(
-                "Нельзя отправить в Rework",
-                $"Изделие в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(2)}»."),
+            TransitionOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
+            _ => Problem("Нельзя отправить в Rework", $"Изделие в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(2)}»."),
         };
     });
 
     plan.MapPost("/{vin}/rework/finish", async (
         string vin, IPlanTransitions transitions, ClaimsPrincipal user, HttpContext httpCtx, CancellationToken ct) =>
     {
-        if (vin.Length is 0 or > 50)
-        {
-            return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-        }
-
+        if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
         var ncp = httpCtx.RequestServices.GetService<INcpReader>();
         if (ncp is not null)
         {
@@ -320,48 +348,29 @@ plan.MapGet("/{vin}", async (string vin, IProductionPlanReader reader, Cancellat
                 return Problem("Rework не завершён", $"Есть незакрытая обязательная деталь: {numbers}.");
             }
         }
-
         var (outcome, item) = await transitions.FinishReworkAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
         return outcome switch
         {
             TransitionOutcome.Ok => Results.Ok(item),
-            TransitionOutcome.VinNotFound => Results.Problem(
-                title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-                statusCode: StatusCodes.Status404NotFound),
-            _ => Problem(
-                "Нельзя завершить Rework",
-                $"Изделие в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(4)}»."),
+            TransitionOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
+            _ => Problem("Нельзя завершить Rework", $"Изделие в статусе «{StatusLabel(item?.StatusId)}», ожидался «{StatusLabel(4)}»."),
         };
     });
 }
 
-// Перемещение и печать.
 plan.MapPost("/{vin}/move", async (
-    string vin,
-    MoveRequest request,
-    IPlanOrderEditor editor,
-    IProductionPlanReader reader,
-    ClaimsPrincipal user,
-    CancellationToken ct) =>
+    string vin, MoveRequest request, IPlanOrderEditor editor,
+    IProductionPlanReader reader, ClaimsPrincipal user, CancellationToken ct) =>
 {
-    if (vin.Length is 0 or > 50)
-    {
-        return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-    }
-    if (request.ToPosition < 1)
-    {
-        return Problem("Некорректная позиция", "Номер позиции должен быть положительным.");
-    }
-
+    if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
+    if (request.ToPosition < 1) return Problem("Некорректная позиция", "Номер позиции должен быть положительным.");
     var outcome = await editor.MoveAsync(vin, request.ToPosition, user.Identity?.Name ?? "неизвестно", ct);
     return outcome switch
     {
         MoveOutcome.Ok => Results.Ok(await reader.GetByVinAsync(vin, ct)),
-        MoveOutcome.VinNotFound => Results.Problem(
-            title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-            statusCode: StatusCodes.Status404NotFound),
-        MoveOutcome.NoPosition => Problem(
-            "Нет позиции в плане", "У изделия не задан порядок запуска, перемещать нечего."),
+        MoveOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
+        MoveOutcome.NoPosition => Problem("Нет позиции в плане", "У изделия не задан порядок запуска, перемещать нечего."),
+        MoveOutcome.StatusRestricted => Results.Problem(title: "Перестановка запрещена", detail: "Изделие уже запущено в производство.", statusCode: StatusCodes.Status422UnprocessableEntity),
         _ => Problem("Позиция не найдена", "В плане нет позиции с таким номером."),
     };
 });
@@ -369,19 +378,33 @@ plan.MapPost("/{vin}/move", async (
 plan.MapPost("/{vin}/print", async (
     string vin, IJobCardPrinter printer, ClaimsPrincipal user, CancellationToken ct) =>
 {
-    if (vin.Length is 0 or > 50)
-    {
-        return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-    }
-
+    if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
     var item = await printer.MarkPrintedAsync(vin, user.Identity?.Name ?? "неизвестно", ct);
     return item is null
-        ? Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-            statusCode: StatusCodes.Status404NotFound)
+        ? Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound)
         : Results.Ok(item);
 });
 
-// NCP — чтение и запись.
+var calendar = api.MapGroup("/calendar").RequireAuthorization();
+calendar.MapGet("", (IProductionCalendarStore store) => Results.Ok(store.Get()));
+calendar.MapPut("/days", (ApplyCalendarRequest request, IProductionCalendarStore store, ClaimsPrincipal user) =>
+{
+    var error = store.Apply(request.Changes ?? [], user.Identity?.Name ?? "неизвестно", out var state);
+    return error is null ? Results.Ok(state) : Problem("Некорректное изменение календаря", error);
+});
+calendar.MapPut("/settings", (CalendarSettings request, IProductionCalendarStore store, ClaimsPrincipal user) =>
+{
+    var error = store.ApplySettings(request, user.Identity?.Name ?? "неизвестно", out var state);
+    return error is null ? Results.Ok(state) : Problem("Некорректный график работы", error);
+});
+
+api.MapGet("/events", (IEventLog log, string? entityType = null, string? entityKey = null, int limit = 100) =>
+{
+    if (limit is < 1 or > 500) return Problem("Некорректный лимит", "limit должен быть в диапазоне 1..500.");
+    if (entityType is { Length: > 50 } || entityKey is { Length: > 100 }) return Problem("Некорректный фильтр", "Слишком длинное значение фильтра.");
+    return Results.Ok(log.Query(entityType, entityKey, limit));
+}).RequireAuthorization();
+
 var ncp = api.MapGroup("/ncp").RequireAuthorization();
 
 ncp.MapGet("/types", async (INcpReader reader, CancellationToken ct) => Results.Ok(await reader.GetTypesAsync(ct)));
@@ -391,47 +414,36 @@ ncp.MapGet("/components", async (INcpReader reader, CancellationToken ct) => Res
 ncp.MapGet("/missing-parts", async (string vin, INcpReader reader, CancellationToken ct) =>
 {
     if (string.IsNullOrWhiteSpace(vin) || vin.Length > 50)
-    {
         return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-    }
     return Results.Ok(await reader.GetMissingRequiredPartsAsync(vin, ct));
 });
 
 ncp.MapGet("", async (
-    INcpReader reader, CancellationToken ct,
-    string? vin = null, string? status = null, int page = 1, int pageSize = 25) =>
+    INcpReader reader, IProductionPlanReader planReader, CancellationToken ct,
+    string? vin = null, string? status = null, string? type = null, string? station = null, int page = 1, int pageSize = 25) =>
 {
-    if (vin is { Length: > 50 })
-    {
-        return Problem("Некорректный VIN", "Длина VIN не может превышать 50 символов.");
-    }
-    if (page < 1)
-    {
-        return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
-    }
-    if (pageSize is < 1 or > 100)
-    {
-        return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
-    }
-
-    var result = await reader.GetPageAsync(new NcpQuery(vin, status, page, pageSize), ct);
-    return Results.Ok(result);
+    if (vin is { Length: > 50 }) return Problem("Некорректный VIN", "Длина VIN не может превышать 50 символов.");
+    if (page < 1) return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
+    if (pageSize is < 1 or > 100) return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
+    var result = await reader.GetPageAsync(new NcpQuery(vin, status, type, station, page, pageSize), ct);
+    var byVin = new Dictionary<string, ProductionPlanItem?>(StringComparer.OrdinalIgnoreCase);
+    foreach (var v in result.Items.Select(i => i.Vin).Distinct(StringComparer.OrdinalIgnoreCase))
+        byVin[v] = await planReader.GetByVinAsync(v, ct);
+    var items = result.Items
+        .Select(i => byVin.GetValueOrDefault(i.Vin) is { } p ? i with { ModelArticle = p.ModelArticle, ModelName = p.ModelName, Color = p.Color } : i)
+        .ToList();
+    return Results.Ok(result with { Items = items });
 });
 
 ncp.MapPost("", async (CreateNcpRequest request, INcpWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
 {
     if (string.IsNullOrWhiteSpace(request.Vin) || request.Vin.Length > 50)
-    {
         return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-    }
-
     var (outcome, created) = await writer.CreateAsync(request, user.Identity?.Name ?? "неизвестно", ct);
     return outcome switch
     {
         CreateNcpOutcome.Ok => Results.Ok(created),
-        CreateNcpOutcome.VinNotFound => Results.Problem(
-            title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-            statusCode: StatusCodes.Status404NotFound),
+        CreateNcpOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
         CreateNcpOutcome.ComponentNotFound => Problem("Компонент не найден", "Такого артикула нет в справочнике компонентов."),
         CreateNcpOutcome.InvalidStation => Problem("Некорректная станция", "Такой станции нет в списке."),
         CreateNcpOutcome.InvalidQuantity => Problem("Некорректное количество", "Количество должно быть от 1 до 9999."),
@@ -460,20 +472,13 @@ ncp.MapPost("/{id:int}/close", async (
     };
 });
 
-// Станции (Этап 5).
 var stations = api.MapGroup("/stations").RequireAuthorization();
 
 stations.MapGet("/{vin}/checks", async (string vin, IStationChecks checks, IProductionPlanReader reader, CancellationToken ct) =>
 {
-    if (vin.Length is 0 or > 50)
-    {
-        return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
-    }
+    if (vin.Length is 0 or > 50) return Problem("Некорректный VIN", "VIN должен содержать от 1 до 50 символов.");
     if (await reader.GetByVinAsync(vin, ct) is null)
-    {
-        return Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-            statusCode: StatusCodes.Status404NotFound);
-    }
+        return Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound);
     return Results.Ok(await checks.GetForVinAsync(vin, ct));
 });
 
@@ -484,14 +489,11 @@ stations.MapPost("/{vin}/components/{code}/check", async (
     return outcome switch
     {
         SetCheckOutcome.Ok => Results.Ok(updated),
-        SetCheckOutcome.VinNotFound => Results.Problem(
-            title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.",
-            statusCode: StatusCodes.Status404NotFound),
+        SetCheckOutcome.VinNotFound => Results.Problem(title: "Изделие не найдено", detail: "VIN отсутствует в производственном плане.", statusCode: StatusCodes.Status404NotFound),
         _ => Problem("Компонент не найден", "Такого артикула нет в справочнике компонентов."),
     };
 });
 
-// Импорт плана (раздел 6, Этап 8).
 var planImport = api.MapGroup("/plan-import").RequireAuthorization();
 
 planImport.MapGet("/reference", async (IPlanImport import, CancellationToken ct) =>
@@ -499,14 +501,8 @@ planImport.MapGet("/reference", async (IPlanImport import, CancellationToken ct)
 
 planImport.MapPost("/sessions", async (StageImportRequest request, IPlanImport import, ClaimsPrincipal user, CancellationToken ct) =>
 {
-    if (request.Rows.Count == 0)
-    {
-        return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
-    }
-    if (request.Rows.Count > 500)
-    {
-        return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
-    }
+    if (request.Rows.Count == 0) return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
+    if (request.Rows.Count > 500) return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
     var session = await import.StageAsync(request.Rows, request.Source, user.Identity?.Name ?? "неизвестно", ct);
     return Results.Ok(session);
 });
@@ -539,7 +535,6 @@ planImport.MapPost("/sessions/{id}/publish", async (string id, IPlanImport impor
     };
 });
 
-// Входной контроль (разделы 19-24, Этап 9): поставка → упаковки/коробки → строки (IncomingInspection.cs).
 var incoming = api.MapGroup("/incoming-inspection").RequireAuthorization();
 
 incoming.MapGet("/suppliers", async (IIncomingInspectionReader reader, CancellationToken ct) =>
@@ -558,14 +553,8 @@ incoming.MapPost("/components", async (AddComponentRequest request, IIncomingIns
 
 incoming.MapGet("/deliveries", async (IIncomingInspectionReader reader, CancellationToken ct, int page = 1, int pageSize = 25) =>
 {
-    if (page < 1)
-    {
-        return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
-    }
-    if (pageSize is < 1 or > 100)
-    {
-        return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
-    }
+    if (page < 1) return Problem("Некорректная страница", "Номер страницы должен быть не меньше 1.");
+    if (pageSize is < 1 or > 100) return Problem("Некорректный размер страницы", "pageSize должен быть в диапазоне 1..100.");
     return Results.Ok(await reader.GetDeliveriesAsync(page, pageSize, ct));
 });
 
@@ -576,7 +565,20 @@ incoming.MapPost("/deliveries", async (CreateDeliveryRequest request, IIncomingI
     {
         CreateDeliveryOutcome.Ok => Results.Ok(created),
         CreateDeliveryOutcome.SupplierNotFound => Problem("Поставщик не найден", "Такого поставщика нет в справочнике."),
+        CreateDeliveryOutcome.DuplicateInvoice => Results.Problem(title: "Дубликат инвойса", detail: "Поставка с таким номером инвойса у этого поставщика уже существует.", statusCode: StatusCodes.Status409Conflict),
         _ => Problem("Некорректная дата инвойса", "Ожидается формат ГГГГ-ММ-ДД или ДД.ММ.ГГГГ."),
+    };
+});
+
+incoming.MapDelete("/deliveries/{id}", async (string id, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var outcome = await writer.DeleteDeliveryAsync(id, user.Identity?.Name ?? "неизвестно", ct);
+    return outcome switch
+    {
+        DeleteDeliveryOutcome.Ok => Results.NoContent(),
+        DeleteDeliveryOutcome.NotFound => Results.Problem(title: "Поставка не найдена", statusCode: StatusCodes.Status404NotFound),
+        DeleteDeliveryOutcome.NotOpen => Results.Problem(title: "Нельзя удалить", detail: "Удалить можно только поставку со статусом «В работе».", statusCode: StatusCodes.Status409Conflict),
+        _ => Results.Problem(title: "Нельзя удалить", detail: "У поставки есть коробки — сначала удалите их.", statusCode: StatusCodes.Status409Conflict),
     };
 });
 
@@ -599,14 +601,8 @@ incoming.MapGet("/deliveries/{id}/packages/by-hu/{hu}", async (string id, string
 incoming.MapPost("/deliveries/{id}/packing-list/sessions", async (
     string id, StagePackingListRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
 {
-    if (request.Rows.Count == 0)
-    {
-        return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
-    }
-    if (request.Rows.Count > 500)
-    {
-        return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
-    }
+    if (request.Rows.Count == 0) return Problem("Нет строк", "В загрузке нет ни одной строки для проверки.");
+    if (request.Rows.Count > 500) return Problem("Слишком много строк", "За одну загрузку можно передать не более 500 строк.");
     var session = await writer.StagePackingListAsync(id, request.Rows, user.Identity?.Name ?? "неизвестно", ct);
     return session is null
         ? Results.Problem(title: "Поставка не найдена", statusCode: StatusCodes.Status404NotFound)
@@ -653,7 +649,7 @@ incoming.MapPost("/packages/{packageId:int}/rows/{rowId:int}/result", async (
         RowResultOutcome.PackageClosed => Problem("Коробка закрыта", "Сначала переоткройте коробку, чтобы изменить результат проверки."),
         RowResultOutcome.InvalidOutcome => Problem("Некорректный результат", "Допустимо: OK, Брак, Пересорт, Недостача."),
         RowResultOutcome.InvalidQuantity => Problem("Некорректное количество", "Количество должно быть положительным."),
-        _ => Problem("Превышен объём контроля", "Сумма проверенного и недостачи не может превышать требуемый объём — увеличьте норматив, если нужно."),
+        _ => Problem("Превышен объём контроля", "Сумма проверенного и недостачи не может превышать требуемый объём."),
     };
 });
 
@@ -661,9 +657,7 @@ incoming.MapPost("/packages/{packageId:int}/rows/{rowId:int}/quota", async (
     int packageId, int rowId, IncreaseQuotaRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
 {
     if (string.IsNullOrWhiteSpace(request.Comment))
-    {
         return Problem("Нужен комментарий", "Увеличение норматива требует комментария (раздел 22, В-30).");
-    }
     var (outcome, package) = await writer.IncreaseQuotaAsync(packageId, rowId, request, user.Identity?.Name ?? "неизвестно", ct);
     return outcome switch
     {
@@ -690,9 +684,7 @@ incoming.MapPost("/packages/{packageId:int}/reopen", async (
     int packageId, ReopenRequest request, IIncomingInspectionWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
 {
     if (string.IsNullOrWhiteSpace(request.Comment))
-    {
         return Problem("Нужен комментарий", "Переоткрытие закрытой коробки требует комментария (раздел 23, В-32).");
-    }
     var (outcome, package) = await writer.ReopenPackageAsync(packageId, request, user.Identity?.Name ?? "неизвестно", ct);
     return outcome switch
     {
@@ -702,11 +694,56 @@ incoming.MapPost("/packages/{packageId:int}/reopen", async (
     };
 });
 
-api.MapGet("/auth/me", (ClaimsPrincipal user) => Results.Ok(new
+var qc = api.MapGroup("/qc").RequireAuthorization();
+
+qc.MapGet("/posts", async (IQcChecklistReader reader, CancellationToken ct, string? vin = null) =>
+    Results.Ok(await reader.GetPostsAsync(ct, vin)));
+
+qc.MapGet("/posts/{postId:int}/items", async (int postId, IQcChecklistReader reader, CancellationToken ct) =>
+    Results.Ok(await reader.GetItemsAsync(postId, ct)));
+
+qc.MapPost("/sessions", async (StartSessionRequest request, IQcChecklistWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (request.PostId <= 0)
+        return Problem("Не указан пост", "Укажите id контрольного поста.");
+    if (string.IsNullOrWhiteSpace(request.Vin))
+        return Problem("Не указан VIN", "Укажите VIN изделия.");
+    var session = await writer.StartSessionAsync(request, user.Identity?.Name ?? "неизвестно", ct);
+    return Results.Created($"/api/v1/qc/sessions/{session.Id}", session);
+});
+
+qc.MapGet("/sessions/{id:int}", async (int id, IQcChecklistReader reader, CancellationToken ct) =>
+{
+    var session = await reader.GetSessionAsync(id, ct);
+    return session is null
+        ? Results.Problem(title: "Сессия не найдена", statusCode: StatusCodes.Status404NotFound)
+        : Results.Ok(session);
+});
+
+qc.MapGet("/posts/{postId:int}/sessions", async (int postId, IQcChecklistReader reader, int limit = 20, CancellationToken ct = default) =>
+    Results.Ok(await reader.GetSessionsByPostAsync(postId, limit, ct)));
+
+qc.MapPost("/sessions/{id:int}/results", async (
+    int id, RecordResultRequest request, IQcChecklistWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    if (!new[] { "pass", "fail", "skip" }.Contains(request.Status))
+        return Problem("Недопустимый статус", "Допустимо: pass, fail, skip.");
+    var result = await writer.RecordResultAsync(id, request, user.Identity?.Name ?? "неизвестно", ct);
+    return Results.Ok(result);
+});
+
+qc.MapPost("/sessions/{id:int}/finish", async (
+    int id, FinishSessionRequest request, IQcChecklistWriter writer, ClaimsPrincipal user, CancellationToken ct) =>
+{
+    var session = await writer.FinishSessionAsync(id, request, user.Identity?.Name ?? "неизвестно", ct);
+    return Results.Ok(session);
+});
+
+api.MapGet("/auth/me", (ClaimsPrincipal user, DevAuthOptions opts) => Results.Ok(new
 {
     userName = user.Identity?.Name,
-    fullName = user.FindFirstValue("full_name"),
-    role = user.FindFirstValue(ClaimTypes.Role),
+    mode = opts.CanLogIn ? "dev" : "closed",
+    demo = true
 })).RequireAuthorization();
 
 api.MapPost("/auth/logout", async (HttpContext ctx) =>
@@ -715,36 +752,27 @@ api.MapPost("/auth/logout", async (HttpContext ctx) =>
     return Results.NoContent();
 }).RequireAuthorization();
 
-// Вход формой существует только вне прода — на проде путь не маппится, логин даёт Windows.
-if (formLogin)
+if (devAuth.CanLogIn)
 {
-    api.MapPost("/auth/login", async (LoginRequest request, HttpContext ctx, IUserDirectory directory, CancellationToken ct) =>
+    api.MapPost("/dev-auth/login", async (DevAuthLoginRequest request, HttpContext ctx, DevAuthOptions opts) =>
     {
-        if (!IsSameOrigin(ctx))
-        {
-            return Results.Problem(title: "Доступ запрещён", detail: "Вход разрешён только локально.", statusCode: StatusCodes.Status403Forbidden);
-        }
-
-        var user = await directory.FindAsync(request.Login ?? string.Empty, ct);
-        if (user is null)
-        {
-            return Results.Problem(title: "Пользователь не найден или отключён", statusCode: StatusCodes.Status401Unauthorized);
-        }
-
-        await ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(ClaimsFor(user)));
-        return Results.Ok(new { userName = user.Login, fullName = user.FullName, role = user.Role });
+        if (!IsLoopback(ctx) || !IsSameOrigin(ctx))
+            return Results.Problem(title: "Доступ запрещён", detail: "Dev-вход разрешён только локально.", statusCode: StatusCodes.Status403Forbidden);
+        if (!opts.Matches(request.Username, request.Password))
+            return Results.Problem(title: "Неверные учётные данные", statusCode: StatusCodes.Status401Unauthorized);
+        var identity = new ClaimsIdentity(
+            [new Claim(ClaimTypes.Name, request.Username), new Claim("auth_mode", "dev")],
+            CookieAuthenticationDefaults.AuthenticationScheme);
+        await ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+        return Results.Ok(new { userName = request.Username, mode = "dev" });
     }).AllowAnonymous().RequireRateLimiting("login");
 }
 
-// SPA fallback: GET вне /api/ → index.html
 app.MapFallback(context =>
 {
     if (context.Request.Method == "GET" && !context.Request.Path.StartsWithSegments("/api"))
     {
         context.Request.Path = "/index.html";
-        // SendFileAsync не ставит Content-Type, а nosniff запрещает браузеру угадывать,
-        // поэтому без этой строки страница показывается как текст.
-        context.Response.ContentType = "text/html; charset=utf-8";
         return context.Response.SendFileAsync(
             context.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>()
                 .WebRootFileProvider.GetFileInfo("index.html"));
@@ -753,10 +781,90 @@ app.MapFallback(context =>
     return Task.CompletedTask;
 });
 
+var adminGroup = api.MapGroup("/admin").RequireAuthorization();
+
+adminGroup.MapPost("/suppliers", async (SupplierRef supplier, IIncomingInspectionWriter writer, CancellationToken ct) =>
+{
+    var ok = await writer.AddSupplierAsync(supplier, ct);
+    return ok ? Results.Created($"/api/v1/admin/suppliers/{supplier.Code}", supplier) : Results.Conflict();
+});
+
+adminGroup.MapDelete("/suppliers/{code}", async (string code, IIncomingInspectionWriter writer, CancellationToken ct) =>
+{
+    var ok = await writer.DeleteSupplierAsync(code, ct);
+    return ok ? Results.NoContent() : Results.NotFound();
+});
+
+adminGroup.MapPut("/components/{code}", async (
+    string code, UpdateComponentRequest request, INcpWriter writer, CancellationToken ct) =>
+{
+    await writer.UpdateComponentAsync(code, request, ct);
+    return Results.NoContent();
+});
+
+adminGroup.MapGet("/print-templates", async (IPrintTemplateRepo repo, CancellationToken ct) =>
+    Results.Ok(await repo.GetAllAsync(ct)));
+
+adminGroup.MapGet("/print-templates/{id:int}", async (int id, IPrintTemplateRepo repo, CancellationToken ct) =>
+{
+    var t = await repo.GetAsync(id, ct);
+    return t is null ? Results.NotFound() : Results.Ok(t);
+});
+
+adminGroup.MapPut("/print-templates/{id:int}", async (
+    int id, UpdatePrintTemplateRequest req, IPrintTemplateRepo repo, CancellationToken ct) =>
+    Results.Ok(await repo.UpsertAsync(id, req.Name, req.BodyHtml, ct)));
+
+api.MapPost("/print/{id:int}", async (
+    int id, IPrintTemplateRepo repo,
+    string? vin = null, string? model = null, string? color = null,
+    string? ncp = null, string? inspector = null,
+    CancellationToken ct = default) =>
+{
+    var template = await repo.GetAsync(id, ct);
+    if (template is null) return Results.NotFound();
+    var html = template.BodyHtml
+        .Replace("{{VIN}}", System.Net.WebUtility.HtmlEncode(vin ?? ""))
+        .Replace("{{MODEL}}", System.Net.WebUtility.HtmlEncode(model ?? ""))
+        .Replace("{{COLOR}}", System.Net.WebUtility.HtmlEncode(color ?? ""))
+        .Replace("{{NCP_NUMBER}}", System.Net.WebUtility.HtmlEncode(ncp ?? ""))
+        .Replace("{{INSPECTOR}}", System.Net.WebUtility.HtmlEncode(inspector ?? ""))
+        .Replace("{{DATE}}", System.Net.WebUtility.HtmlEncode(DateTime.Now.ToString("dd.MM.yyyy")));
+    var fullHtml = "<!DOCTYPE html>" +
+        "<html lang=\"ru\"><head><meta charset=\"utf-8\">" +
+        "<style>" +
+        "body { font-family: Arial, sans-serif; font-size: 12pt; margin: 20mm; }" +
+        "table { border-collapse: collapse; width: 100%; }" +
+        "td, th { border: 1px solid #000; padding: 4px 6px; }" +
+        "</style>" +
+        $"</head><body>{html}</body></html>";
+    var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
+    await using var browser = await playwright.Chromium.LaunchAsync(
+        new() { Headless = true, ExecutablePath = "/opt/pw-browsers/chromium" });
+    var page = await browser.NewPageAsync();
+    await page.SetContentAsync(fullHtml, new() { WaitUntil = Microsoft.Playwright.WaitUntilState.NetworkIdle });
+    var pdf = await page.PdfAsync(new() { Format = "A4", PrintBackground = true });
+    return Results.File(pdf, "application/pdf", $"template-{id}.pdf");
+}).RequireAuthorization();
+
+var reports = api.MapGroup("/reports").RequireAuthorization();
+
+reports.MapGet("/stations", async (INcpReader ncp, DateTime? from, DateTime? to, CancellationToken ct) =>
+{
+    var f = from ?? DateTime.UtcNow.Date.AddMonths(-1);
+    var t = (to ?? DateTime.UtcNow.Date).AddDays(1);
+    return Results.Ok(await ncp.GetStationCountsAsync(f, t, ct));
+});
+
+reports.MapGet("/ncp-causes", async (INcpReader ncp, DateTime? from, DateTime? to, CancellationToken ct) =>
+{
+    var f = from ?? DateTime.UtcNow.Date.AddMonths(-1);
+    var t = (to ?? DateTime.UtcNow.Date).AddDays(1);
+    return Results.Ok(await ncp.GetTypeCountsAsync(f, t, ct));
+});
+
 app.Run();
 
-// Раздел 5 спецификации — коды 0..4. Неизвестный код не ломает сообщение, показываем как есть
-// (то же правило, что и для строкового Status: неизвестное значение не прячем и не придумываем).
 static string StatusLabel(int? id) => id switch
 {
     0 => "Запланировано",
@@ -771,27 +879,16 @@ static string StatusLabel(int? id) => id switch
 static ProblemHttpResult Problem(string title, string detail)
     => TypedResults.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);
 
-static ClaimsIdentity ClaimsFor(MesUser user)
+static bool IsLoopback(HttpContext ctx)
 {
-    List<Claim> claims = [new(ClaimTypes.Name, user.Login)];
-    if (!string.IsNullOrEmpty(user.FullName))
-    {
-        claims.Add(new Claim("full_name", user.FullName));
-    }
-    if (!string.IsNullOrEmpty(user.Role))
-    {
-        claims.Add(new Claim(ClaimTypes.Role, user.Role));
-    }
-    return new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+    var ip = ctx.Connection.RemoteIpAddress;
+    return ip is null || System.Net.IPAddress.IsLoopback(ip);
 }
 
 static bool IsSameOrigin(HttpContext ctx)
 {
     var origin = ctx.Request.Headers.Origin.ToString();
-    if (string.IsNullOrEmpty(origin))
-    {
-        return true; // не-браузерный клиент (curl, тесты)
-    }
+    if (string.IsNullOrEmpty(origin)) return true;
     return Uri.TryCreate(origin, UriKind.Absolute, out var uri)
            && (uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase));
 }
