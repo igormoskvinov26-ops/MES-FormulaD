@@ -48,7 +48,7 @@ beforeEach(() => vi.restoreAllMocks());
 afterEach(() => vi.unstubAllGlobals());
 
 function pasteBlock() {
-  return ['VIN\tАртикул\tДвигатель\tЦвет\tКомплектация\tСтарт\tЗавершение\tОтгрузка', 'строка'].join('\n');
+  return ['VIN	Артикул	Двигатель	Цвет	Комплектация	Старт	Завершение	Отгрузка', 'строка'].join('\n');
 }
 
 describe('ImportScreen', () => {
