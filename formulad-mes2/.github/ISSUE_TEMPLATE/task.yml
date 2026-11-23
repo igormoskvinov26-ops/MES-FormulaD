@@ -1,0 +1,18 @@
+name: Задача
+description: Доработка из бэклога (docs/handbook/16-BACKLOG.md)
+labels: [task]
+body:
+  - type: input
+    id: backlog
+    attributes: { label: ID в бэклоге, placeholder: "T-123" }
+  - type: textarea
+    id: what
+    attributes: { label: Что нужно сделать и зачем }
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes: { label: Критерии приёмки, description: Проверяемые условия, что задача закрыта }
+    validations: { required: true }
+  - type: dropdown
+    id: priority
+    attributes: { label: Приоритет, options: ["P0 — блокирует пилот", "P1 — нужно до пилота", "P2 — после пилота"] }

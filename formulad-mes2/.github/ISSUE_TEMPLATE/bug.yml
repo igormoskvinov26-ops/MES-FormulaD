@@ -1,0 +1,17 @@
+name: Ошибка
+description: Что-то работает не так
+labels: [bug]
+body:
+  - type: textarea
+    id: steps
+    attributes: { label: Шаги воспроизведения }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Что ожидалось и что произошло }
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes: { label: Среда, placeholder: "Demo / TEST; версия (тег или коммит); браузер/устройство" }
+  - type: markdown
+    attributes: { value: "Не прикладывайте пароли, строки подключения и реальные данные предприятия." }

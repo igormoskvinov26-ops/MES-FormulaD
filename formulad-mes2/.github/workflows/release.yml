@@ -1,0 +1,47 @@
+name: Release
+
+# Релиз выпускается тегом вида v0.2.0 (SemVer), поставленным на коммит в main.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Тесты
+        run: |
+          dotnet test FormulaD.Mes.slnx -c Release --nologo
+          (cd apps/web && npm ci --no-audit --no-fund && npx vitest run)
+
+      - name: Сборка
+        run: |
+          (cd apps/web && npx vite build --outDir "$GITHUB_WORKSPACE/publish/wwwroot" --emptyOutDir)
+          dotnet publish src/FormulaD.Mes.Api -c Release -o publish --nologo
+          (cd publish && zip -qr "../formulad-mes-${GITHUB_REF_NAME}.zip" .)
+
+      - name: Заметки к релизу из CHANGELOG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          scripts/release-notes.sh "$VERSION" > notes.md
+          [ -s notes.md ] || { echo "В CHANGELOG.md нет раздела [$VERSION]" >&2; exit 1; }
+
+      - name: Публикация релиза
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PRE=""; case "$GITHUB_REF_NAME" in v0.*|*-*) PRE="--prerelease";; esac
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $PRE "formulad-mes-${GITHUB_REF_NAME}.zip"
