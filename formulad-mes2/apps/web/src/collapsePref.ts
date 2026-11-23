@@ -1,8 +1,3 @@
-/**
- * Фабрика состояния «свёрнуто / развёрнуто» для боковых блоков (меню, очередь).
- * Состояние живёт атрибутом на корне документа (от него зависят CSS-переменные ширины) и в localStorage.
- * Явный выбор оператора всегда главнее; пока выбора нет, на узком экране блок сворачивается сам.
- */
 export function createCollapsePref({ key, attr, event, narrowPx }: { key: string; attr: string; event: string; narrowPx: number }) {
   function stored(): 'collapsed' | 'expanded' | null {
     try {
@@ -23,7 +18,6 @@ export function createCollapsePref({ key, attr, event, narrowPx }: { key: string
   return {
     isCollapsed: () => document.documentElement.getAttribute(attr) === 'collapsed',
 
-    /** Один раз до первой отрисовки; следит за шириной окна, пока оператор сам не выбрал. */
     init() {
       const sync = () => {
         const pref = stored();
@@ -35,7 +29,6 @@ export function createCollapsePref({ key, attr, event, narrowPx }: { key: string
       });
     },
 
-    /** Явный выбор оператора: запоминается и перестаёт зависеть от ширины окна. */
     set(collapsed: boolean) {
       try {
         localStorage.setItem(key, collapsed ? 'collapsed' : 'expanded');

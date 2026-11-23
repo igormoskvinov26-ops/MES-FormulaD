@@ -1,4 +1,3 @@
-/** Статусы базы отображаем как есть; классифицируем только известные значения. */
 const KNOWN: Record<string, { label: string; tone: 'info' | 'progress' | 'done' | 'ok' }> = {
   planned: { label: 'В плане', tone: 'info' },
   'in progress': { label: 'В сборке', tone: 'progress' },
@@ -11,18 +10,15 @@ export type StatusBadge = { label: string; tone: string; title: string };
 export function statusBadge(status: string | null): StatusBadge {
   if (status === null) return { label: 'Без статуса', tone: 'none', title: 'Status IS NULL' };
   const known = KNOWN[status];
-  // Неизвестное значение не ломает UI: «Другое» + оригинальный текст.
   return known
     ? { label: known.label, tone: known.tone, title: status }
     : { label: `Другое: ${status}`, tone: 'unknown', title: status };
 }
 
-/** SQL datetime без зоны: показываем как есть, без конвертации в UTC. Пусто → «—». */
 export function formatDate(value: string | null): string {
   if (!value) return '—';
   const [date, time] = value.split('T');
   const [year, month, day] = date.split('-');
-  // Полночь в SQL-плане означает «дата без времени» — время не показываем.
   const clock = time?.slice(0, 5);
   return clock && clock !== '00:00' ? `${day}.${month}.${year} ${clock}` : `${day}.${month}.${year}`;
 }
@@ -36,11 +32,6 @@ export type RowState = {
   label: string;
 };
 
-/**
- * Состояние изделия для подсветки строки. В Access это кодировалось только цветом
- * (зелёный фон — запущено, фиолетовый VIN — в ожидании), поэтому здесь состояние
- * всегда дублируется словом в отдельной колонке и подписано в легенде.
- */
 export function rowState(item: {
   startDate: string | null;
   completeDate: string | null;
@@ -52,7 +43,6 @@ export function rowState(item: {
   return { key: 'waiting', label: 'В ожидании' };
 }
 
-/** Раздел 5 спецификации: статусные коды 0..4. Неизвестный код не ломает UI — показываем как есть. */
 const STATUS_CODE_LABELS: Record<number, string> = {
   0: 'Запланировано',
   1: 'В работе',
@@ -66,7 +56,6 @@ export function statusCodeLabel(id: number | null): string {
   return STATUS_CODE_LABELS[id] ?? `код ${id}`;
 }
 
-/** 1 … 4 5 6 … 50: первая, последняя и соседи текущей; null — многоточие. */
 export function pageList(page: number, total: number): (number | null)[] {
   const keep = new Set([1, total, page - 1, page, page + 1].filter((n) => n >= 1 && n <= total));
   const out: (number | null)[] = [];
