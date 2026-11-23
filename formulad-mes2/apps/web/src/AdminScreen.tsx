@@ -8,7 +8,6 @@ import { SoundFileSettings, SoundToggle } from './resultSignal';
 import { api, type ComponentItem, type ModelRef, type SupplierRef } from './api';
 import './f7-components.css';
 
-// T-063
 type AdminTab = 'models' | 'colors' | 'specs' | 'components' | 'stations' | 'suppliers' | 'calendar' | 'events' | 'print-templates' | 'sound';
 
 const ADMIN_TABS: { key: AdminTab; label: string }[] = [
@@ -43,7 +42,6 @@ export function AdminScreen({
   const [supplierForm, setSupplierForm] = useState({ code: '', name: '', isParentPlant: false });
   const [supplierError, setSupplierError] = useState('');
   const [supplierBusy, setSupplierBusy] = useState(false);
-  // Per-row edits for components tab: keyed by component code
   const [edits, setEdits] = useState<Record<string, { station: string; modelIds: string[] }>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saveError, setSaveError] = useState<Record<string, string>>({});

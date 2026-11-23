@@ -45,7 +45,6 @@ export function QcStepScreen({
   const [done, setDone] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
 
-  // Load items and start session
   useEffect(() => {
     let cancelled = false;
     async function init() {
@@ -69,7 +68,6 @@ export function QcStepScreen({
     return () => { cancelled = true; };
   }, [post.id, vin]);
 
-  // Focus scan input on step change
   useEffect(() => {
     scanRef.current?.focus();
   }, [cursor]);
@@ -86,7 +84,6 @@ export function QcStepScreen({
       if (cursor < items.length - 1) {
         setCursor((c) => c + 1);
       } else {
-        // Last item — finish session
         const outcome = [...results.values(), result].some((r) => r.status === 'fail') ? 'fail' : 'pass';
         await api.qcFinishSession(qcSession.id, outcome);
         setDone(true);
@@ -98,7 +95,6 @@ export function QcStepScreen({
     }
   }
 
-  // Barcode scan: treat Enter in scan input as "pass"
   function handleScan(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') void record('pass');
   }
@@ -172,7 +168,6 @@ export function QcStepScreen({
 
         {item && (
           <div className="qc-step">
-            {/* Progress */}
             <div className="qc-progress">
               <span className="qc-progress-label">{cursor + 1} / {totalItems}</span>
               <div className="qc-progress-bar">
@@ -180,12 +175,10 @@ export function QcStepScreen({
               </div>
             </div>
 
-            {/* Current item */}
             <div className="qc-item-card">
               <div className="qc-item-seq">Пункт {item.seq}</div>
               <div className="qc-item-desc">{item.description}</div>
 
-              {/* Scan input (barcode or manual Enter = pass) */}
               <input
                 ref={scanRef}
                 className="qc-scan-input"
@@ -221,7 +214,6 @@ export function QcStepScreen({
               {error && <p role="alert" className="error">{error}</p>}
             </div>
 
-            {/* Previous items summary */}
             {results.size > 0 && (
               <div className="qc-history">
                 <h3 className="qc-history-title">Пройдено</h3>
