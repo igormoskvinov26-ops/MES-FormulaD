@@ -4,12 +4,10 @@ import { dash, formatDate } from './format';
 export type Column = {
   key: string;
   label: string;
-  /** Колонку нельзя скрыть: без VIN строка перестаёт быть опознаваемой. */
   locked?: boolean;
   value: (item: ProductionPlanItem) => string;
 };
 
-/** Колонки в том же порядке, что на экране плана в Access. */
 export const COLUMNS: Column[] = [
   { key: 'seqn', label: 'Порядок', value: (i) => dash(i.seqn) },
   { key: 'vin', label: 'VIN', locked: true, value: (i) => i.vin },
@@ -28,10 +26,8 @@ export const COLUMNS: Column[] = [
   { key: 'status', label: 'Статус (строка БД)', value: (i) => dash(i.status) },
 ];
 
-/** По умолчанию показываем набор экрана Access, фактические даты — по желанию. */
 export const DEFAULT_VISIBLE = COLUMNS.filter(
   (c) => !['startDate', 'completeDate', 'fokDate', 'plannedShipmentDate', 'status', 'modelName'].includes(c.key),
 ).map((c) => c.key);
 
-/** Компактный вид: только ключевые колонки (Состояние всегда видно отдельно). */
 export const COMPACT_VISIBLE = ['seqn', 'vin', 'modelArticle', 'color'];
