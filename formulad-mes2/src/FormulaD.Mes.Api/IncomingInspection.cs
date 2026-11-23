@@ -3,21 +3,10 @@ using System.Text.Json;
 
 namespace FormulaD.Mes.Api;
 
-// Входной контроль (раздел 19-24 спецификации, Этап 9 плана разработки). Иерархия обработки,
-// как прямо сказано в разделе 19: поставка → упаковки/коробки → строки комплектующих.
-// Реализовано ТОЛЬКО для демо-источника — точная схема SQL для этой области ещё не обсуждалась.
-
 public sealed record SupplierRef(string Code, string Name, bool IsParentPlant);
 
-/// <summary>Норматив контроля конкретного артикула (раздел 22). Ровно один из двух задан —
-/// если ни один, норматив по умолчанию 100% (раздел 22, [С]).</summary>
 public sealed record InspectionQuotaRef(string ComponentCode, int? Percent, int? FixedCount);
 
-/// <summary>
-/// Сырая строка Packing List — всё строками, как пришло из вставки/файла (раздел 19, [С]:
-/// «кладовщик копирует столбцы из Excel поставщика и вставляет данные в табличную форму»).
-/// Номер упаковки — первая колонка: по нему строки группируются в коробки (раздел 19, [С]).
-/// </summary>
 public sealed record PackingListRawRow(
     string? PackageNumber,
     string? Article,
@@ -32,8 +21,6 @@ public sealed record PackingListRowResult(int RowNumber, PackingListRawRow Row, 
     public bool IsValid => Errors.Count == 0;
 }
 
-/// <summary>Сессия загрузки Packing List — тот же паттерн временной области, что в импорте
-/// плана (Этап 8, PlanImport.cs): вставка → проверка → исправление → подтверждение.</summary>
 public sealed record PackingListSession(
     string Id,
     string DeliveryId,
@@ -45,9 +32,6 @@ public sealed record PackingListSession(
     public int ErrorCount => Rows.Count(r => !r.IsValid);
 }
 
-/// <summary>Статусы — обычные строки на проводе, как и остальные статусы в API
-/// (<see cref="ProductionPlanItem.Status"/>, <see cref="NcpItem.Status"/>), не enum: без строкового
-/// enum-конвертера сервер и клиент(ы) должны были бы держать одинаковую настройку JSON, а так — нет.</summary>
 public static class PackageStatuses
 {
     public const string Open = "Open";
@@ -61,14 +45,6 @@ public static class DeliveryStatuses
     public const string VerifiedWithIssues = "VerifiedWithIssues";
 }
 
-/// <summary>
-/// Строка комплектующих внутри коробки (раздел 21). Учёт — агрегированно по строке, не по
-/// экземпляру: <see cref="OkQuantity"/>/<see cref="DefectQuantity"/>/<see cref="MismatchQuantity"/>/
-/// <see cref="ShortageQuantity"/> — независимые счётчики, не переносятся автоматически друг на
-/// друга (раздел 21, [С]: «не переносит один найденный дефект автоматически на оставшиеся 15
-/// непроверенных штук»). <see cref="RequiredQuantity"/> — снимок норматива на момент
-/// подтверждения строки (раздел 22, [П]), не пересчитывается позже при смене значения в справочнике.
-/// </summary>
 public sealed record PackingListRow(
     int Id,
     string ComponentCode,
@@ -84,18 +60,11 @@ public sealed record PackingListRow(
     int ShortageQuantity,
     string? DiscrepancyReason)
 {
-    /// <summary>Сумма отработанного: осмотрено (OK/брак/пересорт) плюс признанная недостача —
-    /// физически непоступившее проверить нельзя (раздел 23, В-31, рабочая рекомендация).</summary>
     public int CheckedQuantity => OkQuantity + DefectQuantity + MismatchQuantity + ShortageQuantity;
     public bool IsComplete => CheckedQuantity >= RequiredQuantity;
     public bool HasIssues => DefectQuantity > 0 || MismatchQuantity > 0 || ShortageQuantity > 0;
 }
 
-/// <summary>
-/// Упаковка/коробка (раздел 20). <see cref="PackageStatuses.Closed"/> — отдельное явное действие
-/// (раздел 23, [С]: «закрытие — самостоятельное явное действие, не равное последнему скану
-/// артикула»), не выводится автоматически из завершённости строк.
-/// </summary>
 public sealed record Package(
     int Id,
     string DeliveryId,
@@ -106,17 +75,9 @@ public sealed record Package(
     IReadOnlyList<PackingListRow> Rows)
 {
     public bool IsComplete => Rows.Count > 0 && Rows.All(r => r.IsComplete);
-
-    /// <summary>Зелёный vs предупреждающий цвет закрытой коробки (раздел 23, [С]): «проверено»
-    /// не равно «без проблем».</summary>
     public bool HasIssues => Rows.Any(r => r.HasIssues);
 }
 
-/// <summary>
-/// Поставка (раздел 19). <see cref="Status"/> вычисляется, а не хранится отдельным полем:
-/// «проверена» ровно тогда, когда закрыты все коробки (раздел 23, [С]) — отдельного действия
-/// «закрыть поставку» не требуется, это следствие закрытия последней коробки.
-/// </summary>
 public sealed record Delivery(
     string Id,
     string SupplierCode,
@@ -140,7 +101,8 @@ public sealed record RecordRowResultRequest(string Outcome, int Quantity, string
 public sealed record IncreaseQuotaRequest(int NewRequiredQuantity, string Comment);
 public sealed record ReopenRequest(string Comment);
 
-public enum CreateDeliveryOutcome { Ok, SupplierNotFound, InvalidInvoiceDate }
+public enum CreateDeliveryOutcome { Ok, SupplierNotFound, InvalidInvoiceDate, DuplicateInvoice }
+public enum DeleteDeliveryOutcome { Ok, NotFound, NotOpen, HasPackages }
 public enum ConfirmPackingListOutcome { Ok, SessionNotFound, HasErrors }
 public enum RowResultOutcome { Ok, NotFound, PackageClosed, InvalidOutcome, InvalidQuantity, ExceedsRequired }
 public enum QuotaOutcome { Ok, NotFound, PackageClosed, InvalidQuantity }
@@ -158,31 +120,22 @@ public interface IIncomingInspectionReader
 public interface IIncomingInspectionWriter
 {
     Task<(CreateDeliveryOutcome Outcome, Delivery? Created)> CreateDeliveryAsync(CreateDeliveryRequest request, string author, CancellationToken ct);
-
-    /// <summary>Добавление неизвестного артикула в справочник (раздел 19, [С]) — своя копия
-    /// каталога компонентов, не трогает справочник NCP/станций (Ncp.cs): это разные владельцы
-    /// одного и того же демо-перечня, как уже сделано для моделей/цветов импорта плана.</summary>
     Task<bool> AddComponentAsync(AddComponentRequest request, CancellationToken ct);
-
     Task<PackingListSession?> StagePackingListAsync(string deliveryId, IReadOnlyList<PackingListRawRow> rows, string userName, CancellationToken ct);
     Task<PackingListSession?> GetSessionAsync(string sessionId, CancellationToken ct);
     Task<PackingListSession?> ReplaceRowAsync(string sessionId, int rowNumber, PackingListRawRow updated, string userName, CancellationToken ct);
     Task<(ConfirmPackingListOutcome Outcome, Delivery? Updated)> ConfirmSessionAsync(string sessionId, string userName, CancellationToken ct);
-
-    Task<(RowResultOutcome Outcome, Package? Updated)> RecordRowResultAsync(
-        int packageId, int rowId, RecordRowResultRequest request, string userName, CancellationToken ct);
-
-    Task<(QuotaOutcome Outcome, Package? Updated)> IncreaseQuotaAsync(
-        int packageId, int rowId, IncreaseQuotaRequest request, string userName, CancellationToken ct);
-
+    Task<(RowResultOutcome Outcome, Package? Updated)> RecordRowResultAsync(int packageId, int rowId, RecordRowResultRequest request, string userName, CancellationToken ct);
+    Task<(QuotaOutcome Outcome, Package? Updated)> IncreaseQuotaAsync(int packageId, int rowId, IncreaseQuotaRequest request, string userName, CancellationToken ct);
     Task<(PackageActionOutcome Outcome, Package? Updated)> ClosePackageAsync(int packageId, string userName, CancellationToken ct);
-
     Task<(PackageActionOutcome Outcome, Package? Updated)> ReopenPackageAsync(int packageId, ReopenRequest request, string userName, CancellationToken ct);
+    Task<DeleteDeliveryOutcome> DeleteDeliveryAsync(string deliveryId, string author, CancellationToken ct);
+    Task<bool> AddSupplierAsync(SupplierRef supplier, CancellationToken ct);
+    Task<bool> DeleteSupplierAsync(string code, CancellationToken ct);
 }
 
 public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIncomingInspectionWriter
 {
-    /// <summary>Типы расхождений — те же слова, что в NCP (раздел 14), для единой терминологии.</summary>
     public static readonly string[] DiscrepancyOutcomes = ["OK", "Брак", "Пересорт", "Недостача"];
 
     private static readonly JsonSerializerOptions JsonOptions =
@@ -192,7 +145,6 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
     private readonly Lazy<List<InspectionQuotaRef>> _quotas;
     private readonly Lazy<List<ComponentItem>> _components;
     private readonly IEventLog _eventLog;
-
     private readonly Lock _gate = new();
     private readonly List<Delivery> _deliveries = [];
     private readonly Dictionary<string, PackingListSession> _sessions = new();
@@ -203,7 +155,6 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
     {
         _suppliers = new(() => Load<SupplierRef>(suppliersPath));
         _quotas = new(() => Load<InspectionQuotaRef>(quotasPath));
-        // Своя (мутируемая) копия каталога компонентов — см. IIncomingInspectionWriter.AddComponentAsync.
         _components = new(() => Load<ComponentItem>(componentsPath));
         _eventLog = eventLog;
     }
@@ -220,26 +171,16 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
 
     public Task<IReadOnlyList<ComponentItem>> GetComponentsAsync(CancellationToken ct)
     {
-        lock (_gate)
-        {
-            return Task.FromResult<IReadOnlyList<ComponentItem>>(_components.Value.ToList());
-        }
+        lock (_gate) { return Task.FromResult<IReadOnlyList<ComponentItem>>(_components.Value.ToList()); }
     }
 
     public Task<bool> AddComponentAsync(AddComponentRequest request, CancellationToken ct)
     {
-        var code = request.Code?.Trim();
-        var name = request.Name?.Trim();
-        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(name))
-        {
-            return Task.FromResult(false);
-        }
+        var code = request.Code?.Trim(); var name = request.Name?.Trim();
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(name)) return Task.FromResult(false);
         lock (_gate)
         {
-            if (_components.Value.Any(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase)))
-            {
-                return Task.FromResult(false);
-            }
+            if (_components.Value.Any(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))) return Task.FromResult(false);
             _components.Value.Add(new ComponentItem(code, name, null));
             _eventLog.Record("Component", code, "Add", null, name, "система");
             return Task.FromResult(true);
@@ -258,10 +199,7 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
 
     public Task<Delivery?> GetDeliveryAsync(string id, CancellationToken ct)
     {
-        lock (_gate)
-        {
-            return Task.FromResult(_deliveries.FirstOrDefault(d => d.Id == id));
-        }
+        lock (_gate) { return Task.FromResult(_deliveries.FirstOrDefault(d => d.Id == id)); }
     }
 
     public Task<Package?> GetPackageByHuAsync(string deliveryId, string hu, CancellationToken ct)
@@ -277,72 +215,80 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
     public Task<(CreateDeliveryOutcome, Delivery?)> CreateDeliveryAsync(CreateDeliveryRequest request, string author, CancellationToken ct)
     {
         var supplier = _suppliers.Value.FirstOrDefault(s => string.Equals(s.Code, request.SupplierCode, StringComparison.OrdinalIgnoreCase));
-        if (supplier is null)
-        {
-            return Task.FromResult<(CreateDeliveryOutcome, Delivery?)>((CreateDeliveryOutcome.SupplierNotFound, null));
-        }
-        if (!TryParseDate(request.InvoiceDate, out var invoiceDate))
-        {
-            return Task.FromResult<(CreateDeliveryOutcome, Delivery?)>((CreateDeliveryOutcome.InvalidInvoiceDate, null));
-        }
-
+        if (supplier is null) return Task.FromResult<(CreateDeliveryOutcome, Delivery?)>((CreateDeliveryOutcome.SupplierNotFound, null));
+        if (!TryParseDate(request.InvoiceDate, out var invoiceDate)) return Task.FromResult<(CreateDeliveryOutcome, Delivery?)>((CreateDeliveryOutcome.InvalidInvoiceDate, null));
         lock (_gate)
         {
-            // ponytail: ID поставки — просто Guid, составной ключ поставщик+инвойс не форсируем
-            // (В-25 не согласован; спецификация не запрещает повторяющиеся инвойсы).
-            var delivery = new Delivery(
-                Guid.NewGuid().ToString("N"), supplier.Code, supplier.Name,
-                request.InvoiceNumber.Trim(), invoiceDate, Trim(request.AccompanyingDocument),
-                DateTime.Now, author, []);
+            if (_deliveries.Any(d => string.Equals(d.SupplierCode, request.SupplierCode, StringComparison.OrdinalIgnoreCase)
+                                  && string.Equals(d.InvoiceNumber, request.InvoiceNumber.Trim(), StringComparison.OrdinalIgnoreCase)))
+                return Task.FromResult<(CreateDeliveryOutcome, Delivery?)>((CreateDeliveryOutcome.DuplicateInvoice, null));
+            var delivery = new Delivery(Guid.NewGuid().ToString("N"), supplier.Code, supplier.Name,
+                request.InvoiceNumber.Trim(), invoiceDate, Trim(request.AccompanyingDocument), DateTime.Now, author, []);
             _deliveries.Add(delivery);
             _eventLog.Record("Delivery", delivery.Id, "Create", null, $"{supplier.Name} / {delivery.InvoiceNumber}", author);
             return Task.FromResult<(CreateDeliveryOutcome, Delivery?)>((CreateDeliveryOutcome.Ok, delivery));
         }
     }
 
-    public async Task<PackingListSession?> StagePackingListAsync(string deliveryId, IReadOnlyList<PackingListRawRow> rows, string userName, CancellationToken ct)
+    public Task<DeleteDeliveryOutcome> DeleteDeliveryAsync(string deliveryId, string author, CancellationToken ct)
     {
-        if (await GetDeliveryAsync(deliveryId, ct) is null)
-        {
-            return null;
-        }
-        var validated = ValidateAll(rows, SnapshotComponents());
-        var session = new PackingListSession(Guid.NewGuid().ToString("N"), deliveryId, DateTime.Now, userName, validated);
         lock (_gate)
         {
-            _sessions[session.Id] = session;
+            var delivery = _deliveries.FirstOrDefault(d => d.Id == deliveryId);
+            if (delivery is null) return Task.FromResult(DeleteDeliveryOutcome.NotFound);
+            if (delivery.Status != "Open") return Task.FromResult(DeleteDeliveryOutcome.NotOpen);
+            if (delivery.Packages.Count > 0) return Task.FromResult(DeleteDeliveryOutcome.HasPackages);
+            _deliveries.Remove(delivery);
+            _eventLog.Record("Delivery", deliveryId, "Delete", null, delivery.InvoiceNumber, author);
+            return Task.FromResult(DeleteDeliveryOutcome.Ok);
         }
+    }
+
+    public Task<bool> AddSupplierAsync(SupplierRef supplier, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            if (_suppliers.Value.Any(s => string.Equals(s.Code, supplier.Code, StringComparison.OrdinalIgnoreCase))) return Task.FromResult(false);
+            _suppliers.Value.Add(supplier);
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<bool> DeleteSupplierAsync(string code, CancellationToken ct)
+    {
+        lock (_gate)
+        {
+            var idx = _suppliers.Value.FindIndex(s => string.Equals(s.Code, code, StringComparison.OrdinalIgnoreCase));
+            if (idx < 0) return Task.FromResult(false);
+            _suppliers.Value.RemoveAt(idx);
+            return Task.FromResult(true);
+        }
+    }
+
+    public async Task<PackingListSession?> StagePackingListAsync(string deliveryId, IReadOnlyList<PackingListRawRow> rows, string userName, CancellationToken ct)
+    {
+        if (await GetDeliveryAsync(deliveryId, ct) is null) return null;
+        var validated = ValidateAll(rows, SnapshotComponents());
+        var session = new PackingListSession(Guid.NewGuid().ToString("N"), deliveryId, DateTime.Now, userName, validated);
+        lock (_gate) { _sessions[session.Id] = session; }
         _eventLog.Record("PackingList", session.Id, "Stage", null, $"{session.TotalCount} строк, {session.ErrorCount} с ошибками", userName);
         return session;
     }
 
     public Task<PackingListSession?> GetSessionAsync(string sessionId, CancellationToken ct)
     {
-        lock (_gate)
-        {
-            return Task.FromResult(_sessions.GetValueOrDefault(sessionId));
-        }
+        lock (_gate) { return Task.FromResult(_sessions.GetValueOrDefault(sessionId)); }
     }
 
     public Task<PackingListSession?> ReplaceRowAsync(string sessionId, int rowNumber, PackingListRawRow updated, string userName, CancellationToken ct)
     {
         PackingListSession? existing;
-        lock (_gate)
-        {
-            _sessions.TryGetValue(sessionId, out existing);
-        }
-        if (existing is null || existing.Rows.All(r => r.RowNumber != rowNumber))
-        {
-            return Task.FromResult<PackingListSession?>(null);
-        }
-
+        lock (_gate) { _sessions.TryGetValue(sessionId, out existing); }
+        if (existing is null || existing.Rows.All(r => r.RowNumber != rowNumber)) return Task.FromResult<PackingListSession?>(null);
         var rawRows = existing.Rows.Select(r => r.RowNumber == rowNumber ? updated : r.Row).ToList();
         var validated = ValidateAll(rawRows, SnapshotComponents());
         var session = existing with { Rows = validated };
-        lock (_gate)
-        {
-            _sessions[sessionId] = session;
-        }
+        lock (_gate) { _sessions[sessionId] = session; }
         _eventLog.Record("PackingList", sessionId, "EditRow", null, $"строка {rowNumber}", userName);
         return Task.FromResult<PackingListSession?>(session);
     }
@@ -352,38 +298,26 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
         lock (_gate)
         {
             if (!_sessions.TryGetValue(sessionId, out var session))
-            {
                 return Task.FromResult<(ConfirmPackingListOutcome, Delivery?)>((ConfirmPackingListOutcome.SessionNotFound, null));
-            }
             if (session.ErrorCount > 0)
-            {
                 return Task.FromResult<(ConfirmPackingListOutcome, Delivery?)>((ConfirmPackingListOutcome.HasErrors, null));
-            }
-
             var deliveryIndex = _deliveries.FindIndex(d => d.Id == session.DeliveryId);
             if (deliveryIndex < 0)
-            {
                 return Task.FromResult<(ConfirmPackingListOutcome, Delivery?)>((ConfirmPackingListOutcome.SessionNotFound, null));
-            }
             var delivery = _deliveries[deliveryIndex];
             var packages = delivery.Packages.ToList();
-
             foreach (var group in session.Rows.GroupBy(r => r.Row.PackageNumber!.Trim(), StringComparer.OrdinalIgnoreCase))
             {
                 var packageIndex = packages.FindIndex(p => string.Equals(p.HuNumber, group.Key, StringComparison.OrdinalIgnoreCase));
                 var newRows = group.Select(r => BuildRow(r.Row)).ToList();
-
                 if (packageIndex < 0)
-                {
                     packages.Add(new Package(_nextPackageId++, delivery.Id, group.Key, PackageStatuses.Open, null, null, newRows));
-                }
                 else
                 {
-                    var existingPackage = packages[packageIndex];
-                    packages[packageIndex] = existingPackage with { Rows = existingPackage.Rows.Concat(newRows).ToList() };
+                    var ep = packages[packageIndex];
+                    packages[packageIndex] = ep with { Rows = ep.Rows.Concat(newRows).ToList() };
                 }
             }
-
             var updated = delivery with { Packages = packages };
             _deliveries[deliveryIndex] = updated;
             _sessions.Remove(sessionId);
@@ -395,25 +329,13 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
     public Task<(RowResultOutcome, Package?)> RecordRowResultAsync(int packageId, int rowId, RecordRowResultRequest request, string userName, CancellationToken ct)
     {
         if (!DiscrepancyOutcomes.Contains(request.Outcome, StringComparer.Ordinal))
-        {
             return Task.FromResult<(RowResultOutcome, Package?)>((RowResultOutcome.InvalidOutcome, null));
-        }
         if (request.Quantity < 1)
-        {
             return Task.FromResult<(RowResultOutcome, Package?)>((RowResultOutcome.InvalidQuantity, null));
-        }
-
         return Task.FromResult(MutatePackage(packageId, rowId, (package, row) =>
         {
-            if (package.Status == PackageStatuses.Closed)
-            {
-                return (RowResultOutcome.PackageClosed, null);
-            }
-            if (row.CheckedQuantity + request.Quantity > row.RequiredQuantity)
-            {
-                return (RowResultOutcome.ExceedsRequired, null);
-            }
-
+            if (package.Status == PackageStatuses.Closed) return (RowResultOutcome.PackageClosed, null);
+            if (row.CheckedQuantity + request.Quantity > row.RequiredQuantity) return (RowResultOutcome.ExceedsRequired, null);
             var updated = request.Outcome switch
             {
                 "OK" => row with { OkQuantity = row.OkQuantity + request.Quantity },
@@ -430,15 +352,8 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
     {
         return Task.FromResult(MutatePackage(packageId, rowId, (package, row) =>
         {
-            if (package.Status == PackageStatuses.Closed)
-            {
-                return (QuotaOutcome.PackageClosed, null);
-            }
-            if (request.NewRequiredQuantity <= row.RequiredQuantity || request.NewRequiredQuantity > row.PlannedQuantity)
-            {
-                return (QuotaOutcome.InvalidQuantity, null);
-            }
-
+            if (package.Status == PackageStatuses.Closed) return (QuotaOutcome.PackageClosed, null);
+            if (request.NewRequiredQuantity <= row.RequiredQuantity || request.NewRequiredQuantity > row.PlannedQuantity) return (QuotaOutcome.InvalidQuantity, null);
             var updated = row with { RequiredQuantity = request.NewRequiredQuantity };
             _eventLog.Record("PackingListRow", $"{packageId}/{rowId}", "IncreaseQuota",
                 row.RequiredQuantity.ToString(), $"{request.NewRequiredQuantity} ({request.Comment.Trim()})", userName);
@@ -451,25 +366,13 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
         lock (_gate)
         {
             var located = LocatePackage(packageId);
-            if (located is not var (deliveryIndex, packageIndex))
-            {
-                return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotFound, null));
-            }
-            var delivery = _deliveries[deliveryIndex];
-            var package = delivery.Packages[packageIndex];
-            if (package.Status == PackageStatuses.Closed)
-            {
-                return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.AlreadyClosed, package));
-            }
-            if (!package.IsComplete)
-            {
-                return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotComplete, package));
-            }
-
+            if (located is not var (di, pi)) return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotFound, null));
+            var delivery = _deliveries[di]; var package = delivery.Packages[pi];
+            if (package.Status == PackageStatuses.Closed) return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.AlreadyClosed, package));
+            if (!package.IsComplete) return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotComplete, package));
             var updated = package with { Status = PackageStatuses.Closed, ClosedAt = DateTime.Now, ClosedBy = userName };
-            ReplacePackage(deliveryIndex, packageIndex, updated);
-            _eventLog.Record("Package", $"{delivery.Id}/{package.HuNumber}", "Close", null,
-                updated.HasIssues ? "проверено, с замечаниями" : "проверено, без замечаний", userName);
+            ReplacePackage(di, pi, updated);
+            _eventLog.Record("Package", $"{delivery.Id}/{package.HuNumber}", "Close", null, updated.HasIssues ? "проверено, с замечаниями" : "проверено, без замечаний", userName);
             return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.Ok, updated));
         }
     }
@@ -479,59 +382,36 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
         lock (_gate)
         {
             var located = LocatePackage(packageId);
-            if (located is not var (deliveryIndex, packageIndex))
-            {
-                return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotFound, null));
-            }
-            var delivery = _deliveries[deliveryIndex];
-            var package = delivery.Packages[packageIndex];
-            if (package.Status == PackageStatuses.Open)
-            {
-                return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotClosed, package));
-            }
-
+            if (located is not var (di, pi)) return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotFound, null));
+            var delivery = _deliveries[di]; var package = delivery.Packages[pi];
+            if (package.Status == PackageStatuses.Open) return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.NotClosed, package));
             var updated = package with { Status = PackageStatuses.Open, ClosedAt = null, ClosedBy = null };
-            ReplacePackage(deliveryIndex, packageIndex, updated);
+            ReplacePackage(di, pi, updated);
             _eventLog.Record("Package", $"{delivery.Id}/{package.HuNumber}", "Reopen", "Closed", request.Comment.Trim(), userName);
             return Task.FromResult<(PackageActionOutcome, Package?)>((PackageActionOutcome.Ok, updated));
         }
     }
 
-    /// <summary>Общий поиск+замена строки внутри коробки под единой блокировкой — закрытие,
-    /// учёт результата и увеличение норматива все адресуются парой (packageId, rowId).</summary>
     private (TOutcome, Package?) MutatePackage<TOutcome>(
         int packageId, int rowId, Func<Package, PackingListRow, (TOutcome, PackingListRow?)> mutate, TOutcome notFound)
     {
         lock (_gate)
         {
             var located = LocatePackage(packageId);
-            if (located is not var (deliveryIndex, packageIndex))
-            {
-                return (notFound, null);
-            }
-            var delivery = _deliveries[deliveryIndex];
-            var package = delivery.Packages[packageIndex];
+            if (located is not var (di, pi)) return (notFound, null);
+            var delivery = _deliveries[di]; var package = delivery.Packages[pi];
             var rowIndex = package.Rows.ToList().FindIndex(r => r.Id == rowId);
-            if (rowIndex < 0)
-            {
-                return (notFound, null);
-            }
-
+            if (rowIndex < 0) return (notFound, null);
             var (outcome, updatedRow) = mutate(package, package.Rows[rowIndex]);
-            if (updatedRow is null)
-            {
-                return (outcome, null);
-            }
-
-            var rows = package.Rows.ToList();
-            rows[rowIndex] = updatedRow;
+            if (updatedRow is null) return (outcome, null);
+            var rows = package.Rows.ToList(); rows[rowIndex] = updatedRow;
             var updatedPackage = package with { Rows = rows };
-            ReplacePackage(deliveryIndex, packageIndex, updatedPackage);
+            ReplacePackage(di, pi, updatedPackage);
             return (outcome, updatedPackage);
         }
     }
 
-    private (int DeliveryIndex, int PackageIndex)? LocatePackage(int packageId)
+    private (int, int)? LocatePackage(int packageId)
     {
         for (var di = 0; di < _deliveries.Count; di++)
         {
@@ -541,53 +421,34 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
         return null;
     }
 
-    private void ReplacePackage(int deliveryIndex, int packageIndex, Package updated)
+    private void ReplacePackage(int di, int pi, Package updated)
     {
-        var delivery = _deliveries[deliveryIndex];
-        var packages = delivery.Packages.ToList();
-        packages[packageIndex] = updated;
-        _deliveries[deliveryIndex] = delivery with { Packages = packages };
+        var delivery = _deliveries[di]; var packages = delivery.Packages.ToList();
+        packages[pi] = updated; _deliveries[di] = delivery with { Packages = packages };
     }
 
-    /// <summary>Снимок изменяемого каталога компонентов (см. <see cref="AddComponentAsync"/>) —
-    /// валидация читает его без удержания <see cref="_gate"/> на всё время проверки строк.</summary>
     private List<ComponentItem> SnapshotComponents()
     {
-        lock (_gate)
-        {
-            return _components.Value.ToList();
-        }
+        lock (_gate) { return _components.Value.ToList(); }
     }
 
     private PackingListRow BuildRow(PackingListRawRow raw)
     {
-        // Вызывается только из ConfirmSessionAsync, уже под _gate — читать _components.Value
-        // напрямую здесь безопасно.
         var article = raw.Article!.Trim();
         var component = _components.Value.First(c => string.Equals(c.Code, article, StringComparison.OrdinalIgnoreCase));
         var plannedQuantity = int.Parse(raw.Quantity!.Trim(), CultureInfo.InvariantCulture);
         var required = ComputeRequiredQuantity(component.Code, plannedQuantity);
-        TryParseDecimal(raw.NetWeight, out var netWeight);
-        TryParseDecimal(raw.GrossWeight, out var grossWeight);
-
-        return new PackingListRow(
-            _nextRowId++, component.Code, component.Name, plannedQuantity,
-            netWeight, grossWeight, Trim(raw.Batch),
-            required, OkQuantity: 0, DefectQuantity: 0, MismatchQuantity: 0, ShortageQuantity: 0, DiscrepancyReason: null);
+        TryParseDecimal(raw.NetWeight, out var netWeight); TryParseDecimal(raw.GrossWeight, out var grossWeight);
+        return new PackingListRow(_nextRowId++, component.Code, component.Name, plannedQuantity,
+            netWeight, grossWeight, Trim(raw.Batch), required, 0, 0, 0, 0, null);
     }
 
-    /// <summary>Раздел 22, [С]: при проценте — округление вверх; результат не может требовать
-    /// больше, чем реально поступило. Снимок фиксируется один раз, при подтверждении строки.</summary>
     private int ComputeRequiredQuantity(string componentCode, int plannedQuantity)
     {
         var quota = _quotas.Value.FirstOrDefault(q => string.Equals(q.ComponentCode, componentCode, StringComparison.OrdinalIgnoreCase));
-        if (quota?.FixedCount is int fixedCount)
-        {
-            return Math.Clamp(fixedCount, 0, plannedQuantity);
-        }
+        if (quota?.FixedCount is int fixedCount) return Math.Clamp(fixedCount, 0, plannedQuantity);
         var percent = quota?.Percent ?? 100;
-        var required = (int)Math.Ceiling(plannedQuantity * percent / 100.0);
-        return Math.Clamp(required, 0, plannedQuantity);
+        return Math.Clamp((int)Math.Ceiling(plannedQuantity * percent / 100.0), 0, plannedQuantity);
     }
 
     private List<PackingListRowResult> ValidateAll(IReadOnlyList<PackingListRawRow> rows, List<ComponentItem> components)
@@ -603,62 +464,32 @@ public sealed class DemoIncomingInspectionStore : IIncomingInspectionReader, IIn
 
     private List<string> ValidateRow(PackingListRawRow row, List<ComponentItem> components, out int? previewRequired)
     {
-        var errors = new List<string>();
-        previewRequired = null;
-
-        if (string.IsNullOrWhiteSpace(row.PackageNumber))
-        {
-            errors.Add("Номер упаковки (HU) не указан");
-        }
-
-        var article = row.Article?.Trim();
-        ComponentItem? component = null;
+        var errors = new List<string>(); previewRequired = null;
+        if (string.IsNullOrWhiteSpace(row.PackageNumber)) errors.Add("Номер упаковки (HU) не указан");
+        var article = row.Article?.Trim(); ComponentItem? component = null;
         if (string.IsNullOrEmpty(article))
-        {
             errors.Add("Артикул не указан");
-        }
         else
         {
             component = components.FirstOrDefault(c => string.Equals(c.Code, article, StringComparison.OrdinalIgnoreCase));
-            if (component is null)
-            {
-                errors.Add($"Артикул «{article}» не найден в справочнике — добавьте его в справочник");
-            }
+            if (component is null) errors.Add($"Артикул «{article}» не найден в справочнике — добавьте его в справочник");
         }
-
-        var quantityText = row.Quantity?.Trim();
-        int? quantity = null;
+        var quantityText = row.Quantity?.Trim(); int? quantity = null;
         if (string.IsNullOrEmpty(quantityText))
-        {
             errors.Add("Количество не указано");
-        }
         else if (!int.TryParse(quantityText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedQuantity) || parsedQuantity < 1)
-        {
             errors.Add("Количество должно быть положительным целым числом");
-        }
-        else
-        {
-            quantity = parsedQuantity;
-        }
-
+        else quantity = parsedQuantity;
         ValidateOptionalDecimal(row.NetWeight, "Вес нетто", errors);
         ValidateOptionalDecimal(row.GrossWeight, "Вес брутто", errors);
-
-        if (component is not null && quantity is not null)
-        {
-            previewRequired = ComputeRequiredQuantity(component.Code, quantity.Value);
-        }
-
+        if (component is not null && quantity is not null) previewRequired = ComputeRequiredQuantity(component.Code, quantity.Value);
         return errors;
     }
 
     private static void ValidateOptionalDecimal(string? value, string label, List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(value)) return;
-        if (!TryParseDecimal(value, out _))
-        {
-            errors.Add($"{label}: не распознано число «{value}»");
-        }
+        if (!TryParseDecimal(value, out _)) errors.Add($"{label}: не распознано число «{value}»");
     }
 
     private static bool TryParseDecimal(string? value, out decimal result)
