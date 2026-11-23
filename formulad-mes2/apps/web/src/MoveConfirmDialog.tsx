@@ -4,6 +4,7 @@ import { dayLabel } from './CalendarViews';
 
 const when = (s: { date: string; time: string }) => `${dayLabel(s.date)}, ${s.time}`;
 
+/** Подтверждение переноса: что изменится в прогнозе. Порядок плана меняется только после «Перенести». */
 export function MoveConfirmDialog({
   vin,
   preview,
