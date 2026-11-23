@@ -56,14 +56,14 @@ describe('Календарь — перенос карточек', () => {
 
     fireEvent.keyDown(screen.getByLabelText(/Изделие P1,/), { key: 'ArrowDown', altKey: true });
     const dialog = await screen.findByRole('dialog', { name: 'Перенос изделия P1' });
-    expect(dialog).toHaveTextContent('9 ноября, 09:00'); // было
-    expect(dialog).toHaveTextContent('9 ноября, 10:00'); // станет (после P2)
+    expect(dialog).toHaveTextContent('9 ноября, 09:00');
+    expect(dialog).toHaveTextContent('9 ноября, 10:00');
     expect(within(dialog).getByText(/Сдвинется по времени ещё/)).toBeInTheDocument();
-    expect(moves).toHaveLength(0); // пока только предпросмотр
+    expect(moves).toHaveLength(0);
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Перенести' }));
     expect(await screen.findByText(/Изделие P1 перенесено/)).toBeInTheDocument();
-    expect(moves).toEqual([{ vin: 'P1', toPosition: 30 }]); // после P2
+    expect(moves).toEqual([{ vin: 'P1', toPosition: 30 }]);
     expect(order(await monday())).toEqual(['W', 'P2', 'P1', 'P3']);
 
     await userEvent.click(screen.getByRole('button', { name: 'Отменить перенос' }));
@@ -90,7 +90,6 @@ describe('Календарь — перенос карточек', () => {
     expect(screen.queryByRole('dialog', { name: /Перенос изделия/ })).not.toBeInTheDocument();
     expect(moves).toHaveLength(0);
 
-    // повторяем и подтверждаем: P3 встаёт на место P1 (вверх — перед ним)
     fireEvent.dragStart(p3, { dataTransfer });
     fireEvent.drop(p1, { dataTransfer });
     await userEvent.click(within(await screen.findByRole('dialog', { name: 'Перенос изделия P3' })).getByRole('button', { name: 'Перенести' }));

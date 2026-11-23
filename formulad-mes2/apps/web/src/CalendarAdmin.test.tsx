@@ -47,7 +47,9 @@ describe('CalendarAdmin', () => {
     render(<CalendarAdmin />);
     await screen.findByText(/отметок нет/);
 
-    paste('Дата\tТип\tС\tПо\tПримечание\n04.11.2026\tПраздник\t\t\tДень народного единства\n14.11.2026\tРабочий\t09:00\t15:00\tПеренос');
+    paste('Дата	Тип	С	По	Примечание
+04.11.2026	Праздник			День народного единства
+14.11.2026	Рабочий	09:00	15:00	Перенос');
     await userEvent.click(screen.getByRole('button', { name: 'Проверить' }));
     const result = await screen.findByLabelText('Результат проверки');
     expect(within(result).getByText('Строк: 2 · Ошибок: 0')).toBeInTheDocument();
@@ -65,7 +67,9 @@ describe('CalendarAdmin', () => {
   it('ошибки в строках блокируют загрузку и называют номера строк', async () => {
     render(<CalendarAdmin />);
     await screen.findByText(/отметок нет/);
-    paste('04.11.2026\tВыходной\n99.99.2026\tВыходной\n05.11.2026\tОтпуск');
+    paste('04.11.2026	Выходной
+99.99.2026	Выходной
+05.11.2026	Отпуск');
     await userEvent.click(screen.getByRole('button', { name: 'Проверить' }));
     expect(await screen.findByText(/Строка 2: Не дата/)).toBeInTheDocument();
     expect(screen.getByText(/Строка 3: Неизвестный тип/)).toBeInTheDocument();
@@ -91,7 +95,7 @@ describe('CalendarAdmin', () => {
     render(<CalendarAdmin />);
     await screen.findByText(/отметок нет/);
     failNext = '2026-11-04: Начало рабочего дня должно быть раньше конца.';
-    paste('04.11.2026\tВыходной');
+    paste('04.11.2026	Выходной');
     await userEvent.click(screen.getByRole('button', { name: 'Проверить' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Загрузить в календарь' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Начало рабочего дня должно быть раньше конца');
@@ -100,7 +104,7 @@ describe('CalendarAdmin', () => {
   it('график работы: правка производительности, часов и дней → «Сохранить график» отправляет настройки', async () => {
     render(<CalendarAdmin />);
     const form = await screen.findByLabelText('График работы');
-    expect(within(form).getByRole('button', { name: 'Сохранить график' })).toBeDisabled(); // изменений нет
+    expect(within(form).getByRole('button', { name: 'Сохранить график' })).toBeDisabled();
 
     fireEvent.change(within(form).getByLabelText('Изделий в смену'), { target: { value: '12' } });
     fireEvent.change(within(form).getAllByLabelText('до')[0], { target: { value: '18:00' } });
@@ -126,7 +130,7 @@ describe('CalendarAdmin', () => {
     fireEvent.change(within(form).getByLabelText('Перерыв с'), { target: { value: '12:00' } });
     expect(within(form).queryByRole('alert')).not.toBeInTheDocument();
     await userEvent.click(within(form).getByRole('button', { name: 'Отменить правки' }));
-    expect(within(form).getByLabelText('Перерыв с')).toHaveValue('12:00'); // вернулись к сохранённому
+    expect(within(form).getByLabelText('Перерыв с')).toHaveValue('12:00');
   });
 
   it('отказ сервера при сохранении графика показывается с причиной', async () => {
@@ -142,7 +146,7 @@ describe('CalendarAdmin', () => {
     render(<CalendarAdmin />);
     const form = await screen.findByLabelText('График работы');
     await userEvent.click(within(form).getByRole('button', { name: 'Добавить пост контроля' }));
-    expect(within(form).getByRole('alert')).toHaveTextContent('выберите станцию'); // пока станция не выбрана — сохранить нельзя
+    expect(within(form).getByRole('alert')).toHaveTextContent('выберите станцию');
     expect(within(form).getByRole('button', { name: 'Сохранить график' })).toBeDisabled();
 
     fireEvent.change(within(form).getByLabelText('Название'), { target: { value: 'Пост входной' } });
