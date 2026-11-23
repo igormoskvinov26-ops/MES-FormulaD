@@ -56,7 +56,6 @@ describe('JobCardDialog', () => {
     expect(await screen.findByRole('dialog', { name: 'JobCard DEMO-VIN-00001' })).toBeInTheDocument();
     expect(screen.getByText('DEMO-ENGINE-01')).toBeInTheDocument();
     expect(screen.getByText('1001')).toBeInTheDocument();
-    // jsdom не умеет canvas — QR рисуется в запасной вариант с тем же VIN в подписи.
     expect(screen.getByLabelText(/QR-код[^]*DEMO-VIN-00001/)).toBeInTheDocument();
   });
 
