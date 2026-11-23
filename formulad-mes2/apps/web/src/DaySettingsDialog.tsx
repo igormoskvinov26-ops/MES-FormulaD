@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { CalendarConfig, DayInfo } from './calendar';
 
+/** Черновик отметки дня: kind = null — вернуть день к стандартному графику. */
 export type DayDraft = { kind: 'off' | 'work' | null; from: string | null; to: string | null; note: string | null };
 
 const minutes = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 
+/**
+ * Окно «Настройка дня»: галочка «выходной / праздник», часы работы «с … до …», примечание. «ОК» только запоминает
+ * изменение (черновик); применяется оно кнопкой «Пересчитать план» на экране календаря.
+ */
 export function DaySettingsDialog({
   date,
   label,
@@ -64,22 +69,29 @@ export function DaySettingsDialog({
       >
         <h2>Настройка дня · {label}</h2>
         <p className="muted" style={{ margin: 0 }}>{date}</p>
+
         <label className="cal__check">
           <input type="checkbox" checked={off} onChange={(e) => setOff(e.target.checked)} />
           Праздник / выходной
         </label>
+
         <div className="cal__hours" aria-disabled={off}>
-          <label>Рабочий день с
+          <label>
+            Рабочий день с
             <input type="time" value={from} disabled={off} onChange={(e) => setFrom(e.target.value)} />
           </label>
-          <label>до
+          <label>
+            до
             <input type="time" value={to} disabled={off} onChange={(e) => setTo(e.target.value)} />
           </label>
         </div>
         {!off && !hoursValid && <p role="alert" className="error" style={{ margin: 0 }}>Начало должно быть раньше конца</p>}
-        <label>Примечание
+
+        <label>
+          Примечание
           <input value={note} maxLength={100} placeholder="например, День народного единства" onChange={(e) => setNote(e.target.value)} />
         </label>
+
         <div className="modal-actions">
           <button type="button" onClick={onCancel}>Отмена (Esc)</button>
           <button type="submit" className="primary" disabled={!valid}>ОК</button>

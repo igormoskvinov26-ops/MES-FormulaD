@@ -1,3 +1,7 @@
+/**
+ * Пустое состояние: линейный контур квадроцикла + заголовок + подсказка, что делать дальше.
+ * Заголовок — тот же текст, что был до оформления (на него опираются тесты и скринридеры).
+ */
 export function EmptyState({ title, hint, compact = false }: { title: string; hint?: string; compact?: boolean }) {
   return (
     <div className={compact ? 'empty empty--compact' : 'empty'}>
