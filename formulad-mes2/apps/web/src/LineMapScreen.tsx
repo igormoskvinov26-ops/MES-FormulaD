@@ -7,7 +7,6 @@ import './f7-components.css';
 
 type NodeKind = { kind: 'station'; name: string } | { kind: 'qc'; post: QcPost };
 
-/** Build the interleaved route: stations + QC posts at their afterStation positions. */
 function buildRoute(stations: string[], posts: QcPost[]): NodeKind[] {
   const nodes: NodeKind[] = [];
   for (const name of stations) {
@@ -15,7 +14,6 @@ function buildRoute(stations: string[], posts: QcPost[]): NodeKind[] {
     const after = posts.filter((p) => p.afterStation === name);
     for (const post of after) nodes.push({ kind: 'qc', post });
   }
-  // QC posts with no afterStation go at the end
   for (const post of posts.filter((p) => p.afterStation === null)) {
     nodes.push({ kind: 'qc', post });
   }
@@ -73,10 +71,8 @@ export function LineMapScreen({
 
   const route = buildRoute(stations, posts);
 
-  // Last outcome per post (from todayComplete + history not yet loaded — use post.todayComplete as hint)
   function lastOutcome(post: QcPost): string | null {
     if (selectedPost?.id === post.id && history.length > 0) return history[0].outcome;
-    // todayComplete is a server hint for today's status
     if (post.todayComplete) return 'pass';
     return null;
   }
