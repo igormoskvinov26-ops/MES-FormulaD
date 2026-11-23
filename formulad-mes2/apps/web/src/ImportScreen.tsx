@@ -34,6 +34,7 @@ export function ImportScreen({
   const [busy, setBusy] = useState(false);
   const [publishedCount, setPublishedCount] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [reordered, setReordered] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function ImportScreen({
   async function stage(rows: ImportRawRow[], source: string) {
     setStageError('');
     setPublishedCount(null);
+    setReordered(false);
     if (rows.length === 0) {
       setStageError('Не удалось распознать ни одной строки');
       return;
@@ -55,6 +57,18 @@ export function ImportScreen({
     } finally {
       setBusy(false);
     }
+  }
+
+  function moveRow(idx: number, dir: 1 | -1) {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const rows = [...prev.rows];
+      const target = idx + dir;
+      if (target < 0 || target >= rows.length) return prev;
+      [rows[idx], rows[target]] = [rows[target], rows[idx]];
+      return { ...prev, rows };
+    });
+    setReordered(true);
   }
 
   async function readFile(file: File) {
@@ -109,7 +123,17 @@ export function ImportScreen({
     setBusy(true);
     setStageError('');
     try {
-      const result = await api.publishImport(session.id);
+      let sessionId = session.id;
+      if (reordered) {
+        const restaged = await api.stageImport(session.rows.map((r) => r.row), session.source);
+        setSession(restaged);
+        if (restaged.errorCount > 0) {
+          setStageError('После перестановки появились ошибки — исправьте их и повторите публикацию');
+          return;
+        }
+        sessionId = restaged.id;
+      }
+      const result = await api.publishImport(sessionId);
       setPublishedCount(result.published);
       setSession(null);
       setPasteText('');
@@ -207,7 +231,7 @@ export function ImportScreen({
         <main className="f7imp__result">
           <div className="f7imp__summary">
             <strong data-errors={String(session.errorCount > 0)}>
-              Строк: {session.totalCount} · Ошибок: {session.errorCount}
+              Строк: {session.totalCount} · Принято: {session.acceptedCount} · Ошибок: {session.errorCount}
             </strong>
             <span className="f7imp__verdict" data-ok={String(session.errorCount === 0)}>
               {session.errorCount === 0 ? 'Можно публиковать' : 'Исправьте ошибки — публикация недоступна'}
@@ -227,6 +251,7 @@ export function ImportScreen({
               <caption className="sr-only">Временная область импорта — строки с ошибками выделены</caption>
               <thead>
                 <tr>
+                  <th scope="col" aria-label="Порядок строк" />
                   <th scope="col">№</th>
                   <th scope="col">Проверка</th>
                   {IMPORT_COLUMNS.map((label) => (
@@ -237,10 +262,14 @@ export function ImportScreen({
                 </tr>
               </thead>
               <tbody>
-                {session.rows.map((result) => {
+                {session.rows.map((result, idx) => {
                   const row = result.row;
                   return (
                     <tr key={result.rowNumber} className={result.errors.length > 0 ? 'import-row-error' : undefined}>
+                      <td className="reorder-cell">
+                        <button type="button" className="reorder-btn" aria-label="Переместить вверх" disabled={idx === 0 || busy} onClick={() => moveRow(idx, -1)}>↑</button>
+                        <button type="button" className="reorder-btn" aria-label="Переместить вниз" disabled={idx === session.rows.length - 1 || busy} onClick={() => moveRow(idx, 1)}>↓</button>
+                      </td>
                       <td>{result.rowNumber}</td>
                       <td>
                         {result.errors.length > 0 ? (
