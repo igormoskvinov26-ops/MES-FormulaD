@@ -4,7 +4,9 @@ export function TableSkeleton({ rows = 7 }: { rows?: number }) {
       <span className="sr-only">Загрузка…</span>
       <div className="skel__head" aria-hidden="true" />
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="skel__row" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
+        <div key={i} className="skel__row" aria-hidden="true">
+          <i /><i /><i /><i /><i /><i />
+        </div>
       ))}
     </div>
   );

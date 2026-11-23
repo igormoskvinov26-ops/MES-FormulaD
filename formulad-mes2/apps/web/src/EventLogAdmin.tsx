@@ -26,7 +26,6 @@ export const formatStamp = (iso: string) => {
   return `${d}.${m}.${y} ${(time ?? '').slice(0, 8)}`;
 };
 
-/** Раздел «Журнал событий»: кто, когда и что изменил. Только чтение; новые записи первыми. */
 export function EventLogAdmin() {
   const [entries, setEntries] = useState<EventLogEntry[] | null>(null);
   const [entityType, setEntityType] = useState('');
@@ -40,7 +39,6 @@ export function EventLogAdmin() {
     api.events({ entityType: entityType || undefined, entityKey: entityKey.trim() || undefined, limit })
       .then((rows) => {
         setEntries(rows);
-        // список типов для фильтра копим из увиденного: выбранный тип не должен «пропадать» из списка
         setKnownTypes((prev) => [...new Set([...prev, ...rows.map((r) => r.entityType)])].sort());
       })
       .catch(() => setError('Не удалось загрузить журнал'));
@@ -58,7 +56,7 @@ export function EventLogAdmin() {
           <button type="button" onClick={load}>Обновить</button>
         </div>
         <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-          Кто, когда и что изменил: перестановки плана, несоответствия, входной контроль, импорт, календарь. Записи только добавляются. В режиме Demo журнал живёт в памяти и очищается при перезапуске; в режиме Sql он сохраняется в файл (`EventLog:StorePath`).
+          Кто, когда и что изменил: перестановки плана, несоответствия, входной контроль, импорт, календарь. Записи только добавляются.
         </p>
         <div className="cal__add">
           <label>Объект
