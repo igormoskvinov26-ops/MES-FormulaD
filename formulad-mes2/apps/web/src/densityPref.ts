@@ -1,3 +1,4 @@
+/** Плотность таблиц: комфортная (по умолчанию) или компактная. Хранится как `data-density` на корне и в localStorage. */
 const KEY = 'f7-density';
 const EVENT = 'f7-density-change';
 

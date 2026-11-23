@@ -183,7 +183,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(0, 'Нет связи с сервером');
   }
   if (!response.ok) {
-    // сервер объясняет отказ в поле detail (RFC 7807) — оставляем его для показа пользователю
     const detail = await response.json().then((p: { detail?: unknown }) => (typeof p?.detail === 'string' ? p.detail : undefined)).catch(() => undefined);
     throw new ApiError(response.status, `Ошибка запроса (${response.status})`, detail);
   }
@@ -232,7 +231,6 @@ export const api = {
     return request<Paged<ProductionPlanItem>>(`/api/v1/production-plan?${query}`);
   },
 
-  /** Перестановка порядка. Существует только в демо-режиме сервера. */
   move: (vin: string, toPosition: number) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/move`, {
       method: 'POST',
@@ -242,33 +240,26 @@ export const api = {
 
   byVin: (vin: string) => request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}`),
 
-  /** Печать JobCard — отмечает PrintDate, статус не меняет. Существует только в демо-режиме сервера. */
   print: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/print`, { method: 'POST' }),
 
-  /** Запуск в производство (0 → 1). Существует только в демо-режиме сервера. */
   start: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/start`, { method: 'POST' }),
 
-  /** Завершение сборки (1 → 2). Существует только в демо-режиме сервера. */
   complete: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/complete`, { method: 'POST' }),
 
-  /** Final OK (2 → 3). Блокируется незакрытой обязательной деталью — см. ncpMissingParts. */
   fok: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/fok`, { method: 'POST' }),
 
-  /** Отправка в Rework (2 → 4). Существует только в демо-режиме сервера. */
   sendToRework: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/rework`, { method: 'POST' }),
 
-  /** Завершение Rework (4 → 2). Блокируется незакрытой обязательной деталью — как FOK. */
   finishRework: (vin: string) =>
     request<ProductionPlanItem>(`/api/v1/production-plan/${encodeURIComponent(vin)}/rework/finish`, { method: 'POST' }),
 
   planImportReference: () => request<PlanReference>('/api/v1/plan-import/reference'),
 
-  /** Загружает сырые строки на проверку — временная область (раздел 6.1). Существует только в демо-режиме. */
   stageImport: (rows: ImportRawRow[], source: string) =>
     request<ImportSession>('/api/v1/plan-import/sessions', {
       method: 'POST',
@@ -276,7 +267,6 @@ export const api = {
       body: JSON.stringify({ rows, source }),
     }),
 
-  /** Исправление строки «прямо в строке» — заново проверяет всю загрузку. */
   replaceImportRow: (sessionId: string, rowNumber: number, row: ImportRawRow) =>
     request<ImportSession>(`/api/v1/plan-import/sessions/${encodeURIComponent(sessionId)}/rows/${rowNumber}`, {
       method: 'PUT',
@@ -284,7 +274,6 @@ export const api = {
       body: JSON.stringify(row),
     }),
 
-  /** Публикация в конец очереди. Доступна только при нуле ошибок — проверяется и на сервере. */
   publishImport: (sessionId: string) =>
     request<{ published: number }>(`/api/v1/plan-import/sessions/${encodeURIComponent(sessionId)}/publish`, {
       method: 'POST',
@@ -309,7 +298,6 @@ export const api = {
   adminDeleteSupplier: (code: string) =>
     request<void>(`/api/v1/admin/suppliers/${encodeURIComponent(code)}`, { method: 'DELETE' }),
 
-  /** NCP с неустановленной обязательной деталью по изделию — то, что блокирует допуск к FOK. */
   ncpMissingParts: (vin: string) => request<NcpItem[]>(`/api/v1/ncp/missing-parts?vin=${encodeURIComponent(vin)}`),
 
   ncpList: (params: { vin?: string; status?: string | null; type?: string | null; station?: string | null; page: number; pageSize: number }) => {
@@ -321,7 +309,6 @@ export const api = {
     return request<Paged<NcpItem>>(`/api/v1/ncp?${query}`);
   },
 
-  /** Регистрация несоответствия. Существует только в демо-режиме сервера. */
   ncpCreate: (data: {
     vin: string;
     station: string;
@@ -336,10 +323,8 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  /** Отметки проверки компонентов по изделию (Этап 5), ключ — код компонента. */
   stationChecks: (vin: string) => request<Record<string, ComponentCheck>>(`/api/v1/stations/${encodeURIComponent(vin)}/checks`),
 
-  /** Отметить/снять проверку компонента. Существует только в демо-режиме сервера. */
   setStationCheck: (vin: string, componentCode: string, checked: boolean) =>
     request<ComponentCheck>(`/api/v1/stations/${encodeURIComponent(vin)}/components/${encodeURIComponent(componentCode)}/check`, {
       method: 'POST',
@@ -361,13 +346,10 @@ export const api = {
       body: JSON.stringify({ engineerComment }),
     }),
 
-  // --- Входной контроль (Этап 9, разделы 19-24) -----------------------------
-
   suppliers: () => request<SupplierRef[]>('/api/v1/incoming-inspection/suppliers'),
 
   incomingComponents: () => request<ComponentItem[]>('/api/v1/incoming-inspection/components'),
 
-  /** Добавление неизвестного артикула в справочник (раздел 19, [С]) — прямо из строки с ошибкой. */
   addComponent: (code: string, name: string) =>
     request<void>('/api/v1/incoming-inspection/components', {
       method: 'POST',
@@ -393,7 +375,6 @@ export const api = {
   packageByHu: (deliveryId: string, hu: string) =>
     request<DeliveryPackage>(`/api/v1/incoming-inspection/deliveries/${encodeURIComponent(deliveryId)}/packages/by-hu/${encodeURIComponent(hu)}`),
 
-  /** Вставка Packing List во временную область — тот же паттерн, что импорт плана (Этап 8). */
   stagePackingList: (deliveryId: string, rows: PackingListRawRow[]) =>
     request<PackingListSession>(`/api/v1/incoming-inspection/deliveries/${encodeURIComponent(deliveryId)}/packing-list/sessions`, {
       method: 'POST',
@@ -411,7 +392,6 @@ export const api = {
   confirmPackingList: (sessionId: string) =>
     request<Delivery>(`/api/v1/incoming-inspection/packing-list/sessions/${encodeURIComponent(sessionId)}/confirm`, { method: 'POST' }),
 
-  /** Результат проверки строки: OK (скан/подтверждение) либо Брак/Пересорт/Недостача с причиной. */
   recordRowResult: (packageId: number, rowId: number, outcome: string, quantity: number, reason: string | null) =>
     request<DeliveryPackage>(`/api/v1/incoming-inspection/packages/${packageId}/rows/${rowId}/result`, {
       method: 'POST',
@@ -435,8 +415,6 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ comment }),
     }),
-
-  // --- QC Checklist (Этап 10, EPIC-13, T-153) --------------------------------
 
   qcPosts: (vin?: string) => request<QcPost[]>(vin ? `/api/v1/qc/posts?vin=${encodeURIComponent(vin)}` : '/api/v1/qc/posts'),
   qcPostSessions: (postId: number, limit = 20) =>
@@ -467,7 +445,6 @@ export const api = {
       body: JSON.stringify({ outcome }),
     }),
 
-  // --- Print templates (T-152) ---
   printTemplates: () => request<PrintTemplateItem[]>('/api/v1/admin/print-templates'),
   printTemplate: (id: number) => request<PrintTemplateItem>(`/api/v1/admin/print-templates/${id}`),
   savePrintTemplate: (id: number, name: string, bodyHtml: string) =>
@@ -484,6 +461,5 @@ export const api = {
     request<StationCount[]>(`/api/v1/reports/stations?from=${from}&to=${to}`),
   ncpCausesReport: (from: string, to: string) =>
     request<TypeCount[]>(`/api/v1/reports/ncp-causes?from=${from}&to=${to}`),
-  // T-106: build version
   info: () => request<{ version: string }>('/api/v1/info'),
 };
