@@ -2,11 +2,6 @@ import { useState } from 'react';
 import { api, type ProductionPlanItem } from './api';
 import { JobCard } from './JobCard';
 
-/**
- * Печать одной или нескольких JobCard (раздел 8: карточка по VIN и пакетная печать выбранных).
- * «Печать» отмечает PrintDate на сервере для каждого изделия, затем открывает системный
- * диалог печати — раздел 149, [П]: повторная печать не создаёт новое изделие, только отметку.
- */
 export function JobCardDialog({ items, onClose }: { items: ProductionPlanItem[]; onClose: () => void }) {
   const [formedAt] = useState(() => new Date().toLocaleString('ru-RU', { dateStyle: 'long', timeStyle: 'short' }));
   const [error, setError] = useState('');
@@ -25,8 +20,6 @@ export function JobCardDialog({ items, onClose }: { items: ProductionPlanItem[];
     }
   }
 
-  // no-print НЕ ставим на сам backdrop: это предок .print-area, а display:none
-  // убирает весь поддерево безусловно — никакой visibility:visible внутри его не спасёт.
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div
