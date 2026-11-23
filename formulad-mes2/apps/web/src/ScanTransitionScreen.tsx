@@ -223,7 +223,7 @@ export function ScanTransitionScreen({
 
         <div className="scanx__main">
           <form className="scanx__scan" onSubmit={onSubmit}>
-            <span className="scanx__scan-symbol" aria-hidden="true">▥</span>
+            <span className="scanx__scan-symbol" aria-hidden="true">▅</span>
             <div className="scanx__scan-field">
               <span className="scanx__scan-label" aria-hidden="true">ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</span>
               <input
