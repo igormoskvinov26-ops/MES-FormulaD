@@ -1,30 +1,51 @@
 # SQL Migrations
 
-Numbered SQL scripts applied in order to the database. Each migration is idempotent
-(safe to re-run) and includes a rollback section commented out at the bottom.
+Нумерованные миграции схемы для FormulaD_TEST.
 
-## Convention
+## Структура файлов
 
 ```
-NNN_short_description.sql
+sql/migrations/
+  0001_create_app_tables.sql            — прямая миграция
+  0001_create_app_tables.rollback.sql   — откат (DROP TABLE)
+  README.md                             — этот файл
 ```
 
-- `NNN` — zero-padded sequential number (000, 001, 002, …)
-- Each script checks `__SchemaVersion` and skips if already applied
-- Rollback block at the end, commented out with `-- ROLLBACK:`
+## Как работает
 
-## How to apply
+1. Приложение при старте в режиме `DataSource=Sql` ищет каталог `sql/migrations/`.
+2. Читает таблицу `__schema_version` (создаётся миграцией 0001).
+3. Выполняет `.sql`-файлы, чей номер ещё не записан в `__schema_version`.
+4. Файлы `*.rollback.sql` автоматически пропускаются.
 
-```bash
-# Apply all pending migrations (DBA runs manually):
-for f in sql/migrations/[0-9]*.sql; do
-  sqlcmd -S <server> -d <database> -i "$f"
-done
+## Порядок развёртывания
+
+```
+# 1. Применить миграции (DBA или автоматически при старте приложения)
+sqlcmd -S <сервер> -d FormulaD_TEST -U <админ> -i sql/migrations/0001_create_app_tables.sql
+
+# 2. Дать права mes_writer (таблицы уже существуют — Msg 15151 больше не возникает)
+sqlcmd -S <сервер> -v MesWriterPassword="<пароль>" -i sql/create-writer-login.sql
+
+# 3. Запустить приложение — оно проверяет __schema_version и пропускает уже применённые
 ```
 
-The application checks the schema version on startup and logs a warning if it's behind.
+## Правила добавления миграций
 
-## First-time setup
+- Файл: `NNNN_описание.sql` (4 цифры, snake_case). Откат: `NNNN_описание.rollback.sql`.
+- Все DDL-операции идемпотентны (`IF OBJECT_ID(...) IS NULL`).
+- В конце миграции — `INSERT INTO __schema_version`.
+- Откат удаляет таблицы/колонки **и** строку из `__schema_version`.
+- Миграция не содержит секретов и не подключается к PROD.
 
-Run `000_create_version_table.sql` to create the `__SchemaVersion` table.
-The Docker seed (`docker/init/01-seed.sql`) already includes this table.
+## Текущая версия
+
+| # | Файл | Описание |
+|---|------|----------|
+| 1 | `0001_create_app_tables.sql` | `__schema_version`, `tblComponentCheck`, 5 таблиц входного контроля |
+| 2 | `0002_qc_checklist.sql` | Чеклист ОТК |
+| 3 | `0003_component_model_ids.sql` | Идентификаторы моделей в компонентах |
+| 4 | `0004_event_log.sql` | Журнал событий |
+| 5 | `0005_print_template.sql` | Шаблоны печатных форм |
+| 6 | `0006_ncp_part_installed.sql` | `PartInstalled bit` в `tblNCP` (T-164) |
+| 7 | `0007_plan_chassis_number.sql` | `ChassisNumber` в `tblProductionPlan` (T-162) |
