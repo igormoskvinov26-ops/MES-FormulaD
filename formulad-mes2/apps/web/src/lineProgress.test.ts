@@ -15,8 +15,8 @@ describe('linePosition', () => {
   it('в работе: следующая станция после последней полностью проверенной', () => {
     expect(linePosition(1, [x, x, x, x])).toEqual({ kind: 'on', index: 0 });
     expect(linePosition(1, [g, g, x, x])).toEqual({ kind: 'on', index: 2 });
-    expect(linePosition(1, [g, x, g, x])).toEqual({ kind: 'on', index: 3 }); // последняя выполненная — третья
-    expect(linePosition(4, [g, g, g])).toEqual({ kind: 'on', index: 2 }); // всё проверено — остаётся на последней
+    expect(linePosition(1, [g, x, g, x])).toEqual({ kind: 'on', index: 3 });
+    expect(linePosition(4, [g, g, g])).toEqual({ kind: 'on', index: 2 });
     expect(linePosition(1, [])).toEqual({ kind: 'on', index: 0 });
   });
 });
