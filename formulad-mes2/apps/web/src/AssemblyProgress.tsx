@@ -12,11 +12,6 @@ const forecastText = (slot: Slot) => {
   return `${d} ${MONTHS[m - 1]} ${y}${slot.time === '—' ? '' : `, ${slot.time}`}`;
 };
 
-/**
- * Окно «Прогресс сборки»: шапка с данными изделия и линия станций, на которой стоит квадроцикл (текущий пост).
- * Посты контроля качества (настраиваются в «Администрирование → Производственный календарь») показываются между станциями;
- * лист контроля с галочками — этап 4 концепции.
- */
 export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; posts?: ControlPost[]; onClose: () => void }) {
   const { item } = slot;
   const [stations, setStations] = useState<string[] | null>(null);
@@ -58,7 +53,6 @@ export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; po
   );
   const position = linePosition(item.statusId, states);
   const image = atvImageFor(item) ?? '/atv-hero.png';
-  // колонки линии: станции и посты контроля качества после своих станций
   const columns = (stations ?? []).flatMap((s, i) => [
     { kind: 'station' as const, station: s, index: i },
     ...posts.filter((p) => p.afterStation === s).map((post) => ({ kind: 'post' as const, post })),

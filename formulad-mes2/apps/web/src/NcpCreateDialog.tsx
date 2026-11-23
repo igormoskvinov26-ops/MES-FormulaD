@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentItem } from './api';
 
-/** Регистрация несоответствия. Поля — раздел 14 спецификации: VIN, станция, компонент,
-    количество, тип (брак/пересорт/недостача/прочее), комментарий оператора. */
 export function NcpCreateDialog({
   types,
   stations,
@@ -19,8 +17,6 @@ export function NcpCreateDialog({
   components: ComponentItem[];
   defaultVin: string;
   inWorkVins?: string[];
-  /** Контекст станции — экран «Станции» открывает форму уже с нужной станцией/компонентом
-      («Зафиксировать расхождение», раздел 11.2: VIN и привязка к станции не теряются). */
   defaultStation?: string;
   defaultComponentCode?: string;
   onCreate: (data: {
