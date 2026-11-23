@@ -3,71 +3,42 @@ using System.Text.Json;
 
 namespace FormulaD.Mes.Api;
 
-/// <summary>
-/// Производственный календарь: график линии и отметки по датам. Календарь — настройка расчёта прогноза выпуска, а не
-/// производственные данные: в Demo хранится в памяти (как остальное), в режиме Sql — в JSON-файле рядом со службой
-/// (`Calendar:StorePath`), чтобы не менять схему базы до появления миграций (T-029).
-/// </summary>
 public sealed record CalendarBreak(string From, string To);
-
-/// <summary>Пост контроля качества: стоит на линии после станции <c>AfterStation</c> (по карте контроля).</summary>
 public sealed record ControlPost(string Name, string AfterStation);
-
 public sealed record CalendarSettings(int[] Workdays, string ShiftStart, string ShiftEnd, CalendarBreak[] Breaks, int PerShift, ControlPost[]? ControlPosts = null);
-
-/// <summary>Отметка по дате. Kind: «офф» — выходной или праздник; «ворк» — рабочий день (в т. ч. перенесённый), с особыми часами или без.</summary>
 public sealed record CalendarDay(string Date, string Kind, string? From, string? To, string? Note);
-
 public sealed record CalendarState(CalendarSettings Settings, IReadOnlyList<CalendarDay> Days);
-
-/// <summary>Изменение: Kind = null — вернуть дату к стандартному графику (удалить отметку).</summary>
 public sealed record CalendarDayChange(string Date, string? Kind, string? From, string? To, string? Note);
-
 public sealed record ApplyCalendarRequest(IReadOnlyList<CalendarDayChange> Changes);
 
 public interface IProductionCalendarStore
 {
     CalendarState Get();
-
-    /// <summary>Применяет изменения одним действием (всё или ничего). Возвращает текст ошибки или null.</summary>
     string? Apply(IReadOnlyList<CalendarDayChange> changes, string author, out CalendarState state);
-
-    /// <summary>Заменяет график работы (смена, перерывы, рабочие дни, производительность). Возвращает текст ошибки или null.</summary>
     string? ApplySettings(CalendarSettings settings, string author, out CalendarState state);
 }
 
 public sealed class ProductionCalendarStore : IProductionCalendarStore
 {
     public const int MaxChangesPerRequest = 400;
-
-    public static readonly CalendarSettings DefaultSettings = new(
-        Workdays: [1, 2, 3, 4, 5], ShiftStart: "08:00", ShiftEnd: "17:00",
-        Breaks: [new CalendarBreak("12:00", "13:00")], PerShift: 8, ControlPosts: []);
-
+    public static readonly CalendarSettings DefaultSettings = new([1, 2, 3, 4, 5], "08:00", "17:00", [new("12:00", "13:00")], 8, []);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
-
     private readonly Lock _gate = new();
     private readonly string? _path;
     private readonly IEventLog _eventLog;
     private readonly SortedDictionary<string, CalendarDay> _days = new(StringComparer.Ordinal);
     private CalendarSettings _settings = DefaultSettings;
-
     private sealed record StoredCalendar(CalendarSettings? Settings, List<CalendarDay>? Days);
 
-    /// <param name="path">Файл для хранения; null — только в памяти.</param>
     public ProductionCalendarStore(string? path, IEventLog eventLog)
     {
-        _path = path;
-        _eventLog = eventLog;
+        _path = path; _eventLog = eventLog;
         if (path is not null && File.Exists(path))
         {
-            // прежний формат файла — просто список дней; новый — { settings, days }
             var text = File.ReadAllText(path);
             using var doc = JsonDocument.Parse(text);
             if (doc.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var d in JsonSerializer.Deserialize<List<CalendarDay>>(text, JsonOptions) ?? []) _days[d.Date] = d;
-            }
+            { foreach (var d in JsonSerializer.Deserialize<List<CalendarDay>>(text, JsonOptions) ?? []) _days[d.Date] = d; }
             else
             {
                 var stored = JsonSerializer.Deserialize<StoredCalendar>(text, JsonOptions);
@@ -85,21 +56,13 @@ public sealed class ProductionCalendarStore : IProductionCalendarStore
             var error = ValidateSettings(settings);
             if (error is not null) return error;
             var before = _settings;
-            _settings = settings with
-            {
-                Workdays = settings.Workdays.Distinct().Order().ToArray(),
-                Breaks = settings.Breaks.OrderBy(b => b.From, StringComparer.Ordinal).ToArray(),
-                ControlPosts = (settings.ControlPosts ?? []).Select(p => new ControlPost(p.Name.Trim(), p.AfterStation.Trim())).ToArray(),
-            };
+            _settings = settings with { Workdays = settings.Workdays.Distinct().Order().ToArray(), Breaks = settings.Breaks.OrderBy(b => b.From, StringComparer.Ordinal).ToArray(), ControlPosts = (settings.ControlPosts ?? []).Select(p => new ControlPost(p.Name.Trim(), p.AfterStation.Trim())).ToArray() };
             _eventLog.Record("Calendar", "settings", "Settings", Describe(before), Describe(_settings), author);
-            Save();
-            state = Snapshot();
-            return null;
+            Save(); state = Snapshot(); return null;
         }
     }
 
-    private static string Describe(CalendarSettings s)
-        => $"{s.ShiftStart}–{s.ShiftEnd}, перерывы {string.Join(", ", s.Breaks.Select(b => $"{b.From}–{b.To}"))}, дни {string.Join("", s.Workdays)}, {s.PerShift} в смену, посты контроля {string.Join(", ", (s.ControlPosts ?? []).Select(p => $"{p.Name} после {p.AfterStation}"))}";
+    private static string Describe(CalendarSettings s) => $"{s.ShiftStart}–{s.ShiftEnd}, перерывы {string.Join(", ", s.Breaks.Select(b => $"{b.From}–{b.To}"))}, дни {string.Join("", s.Workdays)}, {s.PerShift} в смену";
 
     internal static string? ValidateSettings(CalendarSettings s)
     {
@@ -121,8 +84,7 @@ public sealed class ProductionCalendarStore : IProductionCalendarStore
             parsed.Add((bf, bt));
         }
         parsed.Sort();
-        for (var i = 1; i < parsed.Count; i++)
-            if (parsed[i].From < parsed[i - 1].To) return "Перерывы не должны пересекаться.";
+        for (var i = 1; i < parsed.Count; i++) if (parsed[i].From < parsed[i - 1].To) return "Перерывы не должны пересекаться.";
         var workMinutes = (end - start).TotalMinutes - parsed.Sum(p => (p.To - p.From).TotalMinutes);
         if (workMinutes <= 0) return "В смене не остаётся рабочего времени.";
         if (s.PerShift is < 1 or > 500) return "Изделий в смену: от 1 до 500.";
@@ -132,15 +94,12 @@ public sealed class ProductionCalendarStore : IProductionCalendarStore
         foreach (var post in posts)
         {
             if (string.IsNullOrWhiteSpace(post.Name) || post.Name.Trim().Length > 40) return "Пост контроля: название от 1 до 40 символов.";
-            if (string.IsNullOrWhiteSpace(post.AfterStation) || post.AfterStation.Trim().Length > 10) return "Пост контроля: укажите станцию, после которой он стоит.";
+            if (string.IsNullOrWhiteSpace(post.AfterStation) || post.AfterStation.Trim().Length > 10) return "Пост контроля: укажите станцию.";
         }
         return null;
     }
 
-    public CalendarState Get()
-    {
-        lock (_gate) return Snapshot();
-    }
+    public CalendarState Get() { lock (_gate) return Snapshot(); }
 
     public string? Apply(IReadOnlyList<CalendarDayChange> changes, string author, out CalendarState state)
     {
@@ -149,44 +108,29 @@ public sealed class ProductionCalendarStore : IProductionCalendarStore
             state = Snapshot();
             if (changes.Count == 0) return "Нет изменений.";
             if (changes.Count > MaxChangesPerRequest) return $"Не более {MaxChangesPerRequest} изменений за раз.";
-            foreach (var change in changes)
-            {
-                var error = Validate(change);
-                if (error is not null) return $"{change.Date}: {error}";
-            }
-
+            foreach (var change in changes) { var error = Validate(change); if (error is not null) return $"{change.Date}: {error}"; }
             foreach (var change in changes)
             {
                 _days.TryGetValue(change.Date, out var before);
-                if (change.Kind is null)
-                {
-                    _days.Remove(change.Date);
-                    if (before is not null) _eventLog.Record("Calendar", change.Date, "Reset", Describe(before), null, author);
-                }
+                if (change.Kind is null) { _days.Remove(change.Date); if (before is not null) _eventLog.Record("Calendar", change.Date, "Reset", Describe(before), null, author); }
                 else
                 {
-                    var after = new CalendarDay(change.Date, change.Kind, change.Kind == "work" ? change.From : null,
-                        change.Kind == "work" ? change.To : null, string.IsNullOrWhiteSpace(change.Note) ? null : change.Note.Trim());
+                    var after = new CalendarDay(change.Date, change.Kind, change.Kind == "work" ? change.From : null, change.Kind == "work" ? change.To : null, string.IsNullOrWhiteSpace(change.Note) ? null : change.Note.Trim());
                     _days[change.Date] = after;
                     _eventLog.Record("Calendar", change.Date, "Set", before is null ? null : Describe(before), Describe(after), author);
                 }
             }
-            Save();
-            state = Snapshot();
-            return null;
+            Save(); state = Snapshot(); return null;
         }
     }
 
-    private static string Describe(CalendarDay d)
-        => d.Kind == "off" ? "выходной" : d.From is null ? "рабочий" : $"рабочий {d.From}–{d.To}";
+    private static string Describe(CalendarDay d) => d.Kind == "off" ? "выходной" : d.From is null ? "рабочий" : $"рабочий {d.From}–{d.To}";
 
     internal static string? Validate(CalendarDayChange c)
     {
-        if (!DateOnly.TryParseExact(c.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
-            || date.Year is < 2000 or > 2100)
-            return "Дата должна быть в формате ГГГГ-ММ-ДД (2000–2100).";
+        if (!DateOnly.TryParseExact(c.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) || date.Year is < 2000 or > 2100) return "Дата должна быть в формате ГГГГ-ММ-ДД (2000–2100).";
         if (c.Kind is null) return null;
-        if (c.Kind is not ("off" or "work")) return "Тип дня: «офф» или «ворк».";
+        if (c.Kind is not ("off" or "work")) return "Тип дня: «офф» или «work».";
         if (c.Note is { Length: > 100 }) return "Примечание не длиннее 100 символов.";
         if (c.Kind == "off") return c.From is null && c.To is null ? null : "У выходного дня часы не задаются.";
         if (c.From is null && c.To is null) return null;
@@ -201,8 +145,7 @@ public sealed class ProductionCalendarStore : IProductionCalendarStore
     private void Save()
     {
         if (_path is null) return;
-        var dir = Path.GetDirectoryName(Path.GetFullPath(_path));
-        if (dir is not null) Directory.CreateDirectory(dir);
+        var dir = Path.GetDirectoryName(Path.GetFullPath(_path)); if (dir is not null) Directory.CreateDirectory(dir);
         var temp = _path + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(new StoredCalendar(_settings, _days.Values.ToList()), JsonOptions));
         File.Move(temp, _path, overwrite: true);
