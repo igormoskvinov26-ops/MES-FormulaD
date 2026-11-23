@@ -2,7 +2,6 @@ import type { ComponentCheck, ComponentItem, NcpItem } from './api';
 
 export type StationState = 'grey' | 'blue' | 'green' | 'yellow' | 'red';
 
-/** Раздел 11.1 спецификации: своя цветовая схема станции, отдельная от бейджей состояния изделия на плане. */
 export const STATION_STATE_LABEL: Record<StationState, string> = {
   grey: 'не начата',
   blue: 'выбрана',
@@ -17,11 +16,6 @@ export type ReadinessInput = {
   ncpItems: NcpItem[];
 };
 
-/**
- * Состояние станции по данным конкретного VIN: незакрытая NCP важнее хода проверки (красная в любом случае),
- * затем «выбрана» (только на экране «Станции»), затем доля отмеченных компонентов.
- * Станция без привязанных компонентов считается «не начата» — завершить её нечем.
- */
 export function stationState(station: string, input: ReadinessInput, selected: string | null = null): StationState {
   if (input.ncpItems.some((n) => n.station === station && n.status !== 'Закрыто')) return 'red';
   if (selected === station) return 'blue';
@@ -34,7 +28,6 @@ export function stationState(station: string, input: ReadinessInput, selected: s
 
 export type ReadinessSummary = {
   states: StationState[];
-  /** Станции, у которых есть что проверять (знаменатель готовности). */
   total: number;
   green: number;
   percent: number;

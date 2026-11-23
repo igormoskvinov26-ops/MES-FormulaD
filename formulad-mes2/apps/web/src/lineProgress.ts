@@ -1,9 +1,5 @@
 import type { StationState } from './stationReadiness';
 
-/**
- * Где изделие на линии станций (решение 5 концепции календаря): текущая — первая станция после последней полностью
- * проверенной; ещё не запущенное изделие стоит «до линии», собранное и прошедшее ФОК — «после линии».
- */
 export type LinePosition = { kind: 'before' | 'on' | 'after'; index: number };
 
 export function linePosition(statusId: number | null, states: StationState[]): LinePosition {
