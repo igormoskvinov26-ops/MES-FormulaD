@@ -9,11 +9,11 @@ import { api, type PrintTemplateItem } from './api';
 
 const FIELD_TOKENS: { label: string; token: string }[] = [
   { label: 'VIN',       token: '{{VIN}}' },
-  { label: 'Модель',    token: '{{MODEL}}' },
-  { label: 'Цвет',      token: '{{COLOR}}' },
-  { label: 'Номер NCP', token: '{{NCP_NUMBER}}' },
-  { label: 'Инспектор', token: '{{INSPECTOR}}' },
-  { label: 'Дата',      token: '{{DATE}}' },
+  { label: 'Модель',    token: '{{MODEL}}' },        // check-secrets:ignore
+  { label: 'Цвет',      token: '{{COLOR}}' },        // check-secrets:ignore
+  { label: 'Номер NCP', token: '{{NCP_NUMBER}}' },   // check-secrets:ignore
+  { label: 'Инспектор', token: '{{INSPECTOR}}' },    // check-secrets:ignore
+  { label: 'Дата',      token: '{{DATE}}' },         // check-secrets:ignore
 ];
 
 function TemplateEditor({
@@ -40,6 +40,7 @@ function TemplateEditor({
     content: template.bodyHtml,
   });
 
+  // reset when switching templates
   useEffect(() => {
     setName(template.name);
     setSaveError('');
@@ -73,6 +74,7 @@ function TemplateEditor({
 
   async function preview() {
     if (!editor) return;
+    // save first, then render
     setSaving(true);
     setSaveError('');
     try {

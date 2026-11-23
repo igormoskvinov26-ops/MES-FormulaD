@@ -43,6 +43,7 @@ export function AdminScreen({
   const [supplierForm, setSupplierForm] = useState({ code: '', name: '', isParentPlant: false });
   const [supplierError, setSupplierError] = useState('');
   const [supplierBusy, setSupplierBusy] = useState(false);
+  // Per-row edits for components tab: keyed by component code
   const [edits, setEdits] = useState<Record<string, { station: string; modelIds: string[] }>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saveError, setSaveError] = useState<Record<string, string>>({});
