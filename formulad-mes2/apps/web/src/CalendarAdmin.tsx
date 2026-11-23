@@ -6,9 +6,8 @@ import { takt, validateSettings, workMinutes } from './calendarSettings';
 
 const ruDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const kindLabel = (kind: 'off' | 'work', from: string | null) => (kind === 'off' ? 'Выходной / праздник' : from ? 'Рабочий, особые часы' : 'Рабочий (перенос)');
-const CHUNK = 400; // предел сервера за один запрос
+const CHUNK = 400;
 
-/** Раздел «Производственный календарь» в администрировании: загрузка из Excel и ручное редактирование выходных и праздников. */
 export function CalendarAdmin() {
   const [state, setState] = useState<CalendarState | null>(null);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -19,11 +18,9 @@ export function CalendarAdmin() {
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // график работы
   const [draft, setDraft] = useState<CalendarSettings | null>(null);
   const [stations, setStations] = useState<string[]>([]);
 
-  // форма ручного добавления
   const [newDate, setNewDate] = useState('');
   const [newKind, setNewKind] = useState<'off' | 'work'>('off');
   const [newFrom, setNewFrom] = useState('');

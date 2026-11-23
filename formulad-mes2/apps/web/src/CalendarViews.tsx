@@ -14,7 +14,6 @@ export type Dnd = {
   onDropBefore: (slot: Slot) => void;
   onDropAt: (date: string, minute: number) => void;
   onKeyMove: (slot: Slot, dir: -1 | 1) => void;
-  /** Перенос кнопкой (для сенсорных экранов): в начало или в конец очереди запланированных. */
   onMoveTo: (slot: Slot, where: 'first' | 'last') => void;
 };
 
