@@ -7,7 +7,6 @@ import { SettingsDialog } from './SettingsDialog';
 
 export type Screen = 'plan' | 'calendar' | 'ncp' | 'start' | 'stations' | 'complete' | 'fok' | 'rework' | 'import' | 'incoming' | 'qc' | 'reports' | 'admin' | 'lineMap';
 
-
 function MobileToggle() {
   const [mobile, setMobile] = useState(() => document.documentElement.getAttribute('data-layout') === 'mobile');
   function toggle() {
@@ -28,22 +27,15 @@ function MobileToggle() {
   );
 }
 
-/** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
 function Clock() {
   const [now, setNow] = useState(() => new Date());
-
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(timer);
   }, []);
-
   const date = now.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
   const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  return (
-    <span className="topbar-clock">
-      {date} · {time}
-    </span>
-  );
+  return <span className="topbar-clock">{date} · {time}</span>;
 }
 
 type Tab = { key: Screen; label: string; Icon: ComponentType<{ className?: string }>; group?: string };
@@ -66,10 +58,7 @@ const TABS: Tab[] = [
 ];
 
 export function AppHeader({
-  screen,
-  onNavigate,
-  session,
-  onLogout,
+  screen, onNavigate, session, onLogout,
 }: {
   screen: Screen;
   onNavigate: (screen: Screen) => void;
@@ -131,16 +120,7 @@ export function AppHeader({
         </button>
         <Clock />
         <span className="topbar-user">{session.userName ?? 'неизвестно'}</span>
-        <button
-          type="button"
-          className="ghost"
-          onClick={async () => {
-            await api.logout().catch(() => undefined);
-            onLogout();
-          }}
-        >
-          Выход
-        </button>
+        <button type="button" className="ghost" onClick={async () => { await api.logout().catch(() => undefined); onLogout(); }}>Выход</button>
       </header>
       {showSettings && <SettingsDialog onClose={() => setShowSettings(false)} />}
     </>

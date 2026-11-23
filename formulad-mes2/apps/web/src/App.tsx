@@ -40,7 +40,6 @@ export function App() {
       .finally(() => setChecking(false));
   }, []);
 
-  // T-016: 30-minute inactivity auto-logout
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetIdle = useCallback(() => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
@@ -59,13 +58,8 @@ export function App() {
     };
   }, [session, resetIdle]);
 
-  if (checking) {
-    return <BootScreen />;
-  }
-
-  if (!session) {
-    return <LoginScreen onLoggedIn={(userName) => setSession({ userName, mode: 'dev' })} />;
-  }
+  if (checking) return <BootScreen />;
+  if (!session) return <LoginScreen onLoggedIn={(userName) => setSession({ userName, mode: 'dev' })} />;
 
   const onLogout = () => setSession(null);
   const s = session;
@@ -78,38 +72,23 @@ export function App() {
   );
 
   function renderScreen() { switch (screen) {
-    case 'plan':
-      return <PlanScreen key={pendingVin ?? ''} initialVin={pendingVin} session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'calendar':
-      return <CalendarScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'import':
-      return <ImportScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'start':
-      return <StartScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'stations':
-      return <StationScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'complete':
-      return <CompleteScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'fok':
-      return <FokScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'rework':
-      return <ReworkScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'ncp':
-      return <NcpScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'incoming':
-      return <IncomingInspectionScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'qc':
-      return <QcScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'lineMap':
-      return <LineMapScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'reports':
-      return <ReportsScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
-    case 'admin':
-      return <AdminScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'plan': return <PlanScreen key={pendingVin ?? ''} initialVin={pendingVin} session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'calendar': return <CalendarScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'import': return <ImportScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'start': return <StartScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'stations': return <StationScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'complete': return <CompleteScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'fok': return <FokScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'rework': return <ReworkScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'ncp': return <NcpScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'incoming': return <IncomingInspectionScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'qc': return <QcScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'lineMap': return <LineMapScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'reports': return <ReportsScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
+    case 'admin': return <AdminScreen session={s} onNavigate={setScreen} onLogout={onLogout} />;
   } }
 }
 
-/** Загрузка страницы плана. Вынесено, чтобы PlanScreen оставался про разметку. */
 export function usePlan(vin: string, status: string | null, page: number, pageSize: number, statusId?: number) {
   const [data, setData] = useState<Paged<ProductionPlanItem> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -134,17 +113,13 @@ export function usePlan(vin: string, status: string | null, page: number, pageSi
   }, [vin, status, page, pageSize, statusId]);
 
   useEffect(reload, [reload]);
-
   return { data, state, error, reload };
 }
 
 export type PlanCounts = { all: number; 0: number; 1: number; 2: number; 3: number } | null;
 
-/** Счётчики для плашек на экране плана — отдельные лёгкие запросы (pageSize=1, нужен только `total`),
-    без изменений на сервере: statusId уже поддержан фильтром `/production-plan`. */
 export function usePlanCounts(): PlanCounts {
   const [counts, setCounts] = useState<PlanCounts>(null);
-
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -158,13 +133,8 @@ export function usePlanCounts(): PlanCounts {
         if (!active) return;
         setCounts({ all: all.total, 0: planned.total, 1: inWork.total, 2: done.total, 3: fok.total });
       })
-      .catch(() => {
-        if (active) setCounts(null);
-      });
-    return () => {
-      active = false;
-    };
+      .catch(() => { if (active) setCounts(null); });
+    return () => { active = false; };
   }, []);
-
   return counts;
 }
