@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { Screen } from './AppHeader';
 import { AppHeader } from './AppHeader';
-import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem } from './api';
+import { ApiError, api, type ComponentCheck, type ComponentItem, type NcpItem, type ProductionPlanItem, type QcPost } from './api';
 import { dash, statusCodeLabel } from './format';
 import { ReadinessTwin, type TwinMode } from './ReadinessTwin';
+import { atvImageFor } from './atvVariant';
 import { ResultFlash, useResultSignal } from './resultSignal';
 import { StationDetailCard } from './StationDetailCard';
 import { readinessSummary, stationState } from './stationReadiness';
@@ -30,6 +31,7 @@ export function FokScreen({
   const [checks, setChecks] = useState<Record<string, ComponentCheck>>({});
   const [ncpItems, setNcpItems] = useState<NcpItem[]>([]);
   const [doneKind, setDoneKind] = useState<'fok' | 'rework' | null>(null);
+  const [qcPosts, setQcPosts] = useState<QcPost[]>([]);
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultSignal = useResultSignal(message);
@@ -60,16 +62,19 @@ export function FokScreen({
 
   // Отметки станций и NCP нужны только для схемы готовности: их сбой не мешает самой операции FOK.
   async function loadReadiness(vin: string, id: number) {
-    const [c, n] = await Promise.all([
+    const [c, n, qc] = await Promise.all([
       api.stationChecks(vin).catch(() => ({}) as Record<string, ComponentCheck>),
       api.ncpList({ vin, status: null, page: 1, pageSize: 100 }).then((r) => r.items).catch(() => [] as NcpItem[]),
+      // T-167: QC posts with TodayComplete computed for this VIN
+      api.qcPosts(vin).catch(() => [] as QcPost[]),
     ]);
     if (id !== requestId.current) return;
     setChecks(c);
     setNcpItems(n);
+    setQcPosts(qc);
   }
 
-  function clearUnit() { setFound(null); setMissing([]); setChecks({}); setNcpItems([]); setSelectedStation(null); }
+  function clearUnit() { setFound(null); setMissing([]); setChecks({}); setNcpItems([]); setSelectedStation(null); setQcPosts([]); }
 
   async function lookup(vin: string) {
     const id = ++requestId.current;
@@ -167,6 +172,16 @@ export function FokScreen({
     { key: 'stations', label: 'Станции проверены',
       detail: !found ? '—' : summary.total ? `${summary.green} из ${summary.total} · FOK не блокируют` : 'нет данных',
       state: !found ? 'idle' : summary.total > 0 && summary.green === summary.total ? 'ok' : 'warn' },
+    // T-167: QC checkpoints from tblQCPost with per-VIN completion status
+    { key: 'qc', label: 'ОТК-посты пройдены',
+      detail: !found ? '—'
+        : qcPosts.length === 0 ? 'нет постов'
+        : `${qcPosts.filter(p => p.todayComplete).length} из ${qcPosts.length} · FOK не блокируют`,
+      state: !found ? 'idle'
+        : qcPosts.length > 0 && qcPosts.every(p => p.todayComplete) ? 'ok'
+        : qcPosts.some(p => p.todayComplete) ? 'warn' : 'idle',
+      action: found && qcPosts.length > 0 && !qcPosts.every(p => p.todayComplete)
+        ? { label: 'К контролю качества', run: () => onNavigate('qc') } : undefined },
   ];
   const CONDITION_ICON = { ok: '✓', fail: '✕', warn: '!', idle: '–' } as const;
 
@@ -179,9 +194,9 @@ export function FokScreen({
     : 'Проверьте доступность операции и статус изделия';
 
   return (
-    <div className="app">
+    <div className="app app--fok">
       <AppHeader screen="fok" onNavigate={onNavigate} session={session} onLogout={onLogout} />
-      <div className="f7mes">
+      <div className="f7mes f7mes--fok">
         <div className="f7mes__intro">
           <div className="f7mes__heading">
             <h1 className="f7mes__sr">FINAL OK — финальный контроль и подтверждение готовности изделия</h1>
@@ -189,7 +204,7 @@ export function FokScreen({
             <img className="f7mes__title-img f7mes__title-img--dark" src="/f7-final-ok-dark.png" alt="" />
           </div>
           <form className="f7mes__scan" onSubmit={onSubmit}>
-            <span className="f7mes__scan-symbol" aria-hidden="true">▥</span>
+            <span className="f7mes__scan-symbol" aria-hidden="true">▅</span>
             <div className="f7mes__scan-field">
               <label htmlFor={scanId}>ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</label>
               <input id={scanId} ref={inputRef} aria-label="Сканирование VIN" autoComplete="off" spellCheck={false}
@@ -203,7 +218,7 @@ export function FokScreen({
 
         {/* Quality signal */}
         <div className="f7mes__signal" data-type={message?.kind === 'ok' ? 'ready' : signalType} role="status">
-          <span className="f7mes__signal-icon" aria-hidden="true">{blocked || message?.kind === 'error' ? '⚠' : eligible || message?.kind === 'ok' ? '✓' : '▥'}</span>
+          <span className="f7mes__signal-icon" aria-hidden="true">{blocked || message?.kind === 'error' ? '⚠' : eligible || message?.kind === 'ok' ? '✓' : '▅'}</span>
           <span>{signalText}</span>
           {blocked && <button type="button" onClick={() => onNavigate('ncp')}>Открыть NCP →</button>}
         </div>
@@ -279,7 +294,8 @@ export function FokScreen({
               percent={doneKind === 'fok' ? 100 : found ? summary.percent : 0}
               green={doneKind === 'fok' ? summary.total : found ? summary.green : 0}
               total={summary.total} mode={twinMode}
-              selected={selectedStation} onSelect={found ? setSelectedStation : undefined} />
+              selected={selectedStation} onSelect={found ? setSelectedStation : undefined}
+              image={atvImageFor(found)} />
             {found && selectedStation && (
               <StationDetailCard station={selectedStation}
                 state={stationState(selectedStation, { components, checks, ncpItems })}
