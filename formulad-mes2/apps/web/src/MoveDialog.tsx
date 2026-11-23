@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ProductionPlanItem } from './api';
 
-/**
- * Перенос изделия на произвольную позицию. Перед подтверждением показывает,
- * между какими изделиями оно встанет: ввод голого номера без обратной связи —
- * главный источник ошибок при правке плана.
- */
 export function MoveDialog({
   item,
   items,
@@ -38,12 +33,8 @@ export function MoveDialog({
   function preview() {
     if (!Number.isInteger(target) || targetIndex < 0) return 'Позиции с таким номером нет в плане';
     if (target === item.seqn) return 'Изделие уже стоит на этой позиции';
-
-    // Повторяем ровно тот же порядок действий, что и сервер: убрать строку и вставить её
-    // на место целевой позиции. Иначе предпросмотр однажды разойдётся с результатом.
     const result = positions.filter((i) => i.vin !== item.vin);
     result.splice(targetIndex, 0, item);
-
     const index = result.findIndex((i) => i.vin === item.vin);
     const before = result[index - 1]?.vin ?? 'началом плана';
     const after = result[index + 1]?.vin ?? 'концом плана';
@@ -65,37 +56,18 @@ export function MoveDialog({
       >
         <h2>Переместить изделие</h2>
         <dl>
-          <div>
-            <dt>VIN</dt>
-            <dd className="mono">{item.vin}</dd>
-          </div>
-          <div>
-            <dt>Модель</dt>
-            <dd>{item.modelArticle ?? '—'}</dd>
-          </div>
-          <div>
-            <dt>Текущая позиция</dt>
-            <dd>{item.seqn ?? '—'}</dd>
-          </div>
+          <div><dt>VIN</dt><dd className="mono">{item.vin}</dd></div>
+          <div><dt>Модель</dt><dd>{item.modelArticle ?? '—'}</dd></div>
+          <div><dt>Текущая позиция</dt><dd>{item.seqn ?? '—'}</dd></div>
         </dl>
         <label>
           Новая позиция
-          <input
-            ref={inputRef}
-            type="number"
-            min={1}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-          />
+          <input ref={inputRef} type="number" min={1} value={value} onChange={(event) => setValue(event.target.value)} />
         </label>
         <p className={valid ? 'preview' : 'preview preview-bad'}>{preview()}</p>
         <div className="modal-actions">
-          <button type="button" onClick={onClose}>
-            Отмена (Esc)
-          </button>
-          <button type="submit" disabled={!valid}>
-            Переместить (Enter)
-          </button>
+          <button type="button" onClick={onClose}>Отмена (Esc)</button>
+          <button type="submit" disabled={!valid}>Переместить (Enter)</button>
         </div>
       </form>
     </div>
