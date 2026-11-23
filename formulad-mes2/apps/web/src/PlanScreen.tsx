@@ -334,7 +334,6 @@ export function PlanScreen({
         </p>
       )}
 
-      {/* Боковая панель появляется только когда есть что показать: иначе таблица занимает всю ширину. */}
       {editOrder && (
         <p className="edit-banner" role="status">
           Режим изменения порядка: стрелки ↑ ↓ в строке или <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>,
@@ -423,7 +422,7 @@ export function PlanScreen({
                       </td>
                       {editOrder && (
                         <td className="order-cell">
-                          <span className="drag-handle" aria-hidden="true" title="Перетащить">⠿</span>
+                          <span className="drag-handle" aria-hidden="true" title="Перетащить">⢿</span>
                           <button
                             type="button"
                             aria-label={`Переместить ${item.vin} вверх`}
