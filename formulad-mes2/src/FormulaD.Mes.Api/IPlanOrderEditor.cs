@@ -8,14 +8,10 @@ public enum MoveOutcome
     NoPosition,
     /// <summary>Запрошенной позиции в плане нет.</summary>
     PositionNotFound,
+    /// <summary>Изделие уже запущено (statusId > 0) — перестановка запрещена (T-052).</summary>
+    StatusRestricted,
 }
 
-/// <summary>
-/// Изменение порядка запуска. Реализовано ТОЛЬКО для демо-источника.
-/// Для SQL такой реализации нет и в MVP быть не должно: запись в производственную
-/// базу требует отдельного разрешения, ролей, транзакций и журнала
-/// (проект операции — docs/REORDER_DESIGN.md).
-/// </summary>
 public interface IPlanOrderEditor
 {
     Task<MoveOutcome> MoveAsync(string vin, int toPosition, string userName, CancellationToken ct);

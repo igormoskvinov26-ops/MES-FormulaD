@@ -2,12 +2,6 @@ using Microsoft.Data.SqlClient;
 
 namespace FormulaD.Mes.Api;
 
-/// <summary>
-/// Applies numbered SQL migrations from <c>sql/migrations/</c> on startup.
-/// Reads <c>__schema_version</c> to skip already-applied versions.
-/// Runs on the write connection — needs CREATE TABLE on first run (migration 0001
-/// creates the tracking table itself), then only DML for recording versions.
-/// </summary>
 public static class SchemaMigrator
 {
     public static async Task MigrateAsync(SqlOptions options, string migrationsPath, CancellationToken ct = default)
@@ -39,7 +33,6 @@ public static class SchemaMigrator
         }
     }
 
-    // ponytail: version = leading digits in filename, e.g. "0001_foo.sql" → 1
     internal static int ParseVersion(string fileName)
     {
         var span = fileName.AsSpan();
@@ -90,7 +83,6 @@ public static class SchemaMigrator
         return await cmd.ExecuteScalarAsync(ct) is not null and not DBNull;
     }
 
-    // ponytail: split on GO (batch separator), skip empty batches
     private static async Task ExecuteBatchesAsync(
         SqlConnection conn, string sql, int timeout, CancellationToken ct)
     {
