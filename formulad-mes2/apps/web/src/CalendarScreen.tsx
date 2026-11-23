@@ -97,7 +97,6 @@ export function CalendarScreen({
 
   const reloadPlan = async () => setItems(await loadPlan());
 
-  /** Показать подтверждение переноса `vin` перед `beforeVin` (null — в конец очереди запланированных). */
   const requestMove = (vin: string, beforeVin: string | null) => {
     setDragVin(null);
     setOver(null);
@@ -129,7 +128,6 @@ export function CalendarScreen({
     }
   };
 
-  /** Откат последнего переноса: изделие возвращается на прежнюю позицию в плане. */
   const undoMove = async () => {
     if (!lastMove) return;
     setMoving(true);
@@ -156,7 +154,6 @@ export function CalendarScreen({
       setOver(null);
     },
     onOver: setOver,
-    // бросили на карточку: перед ней; на закреплённую — в начало очереди запланированных
     onDropBefore: (slot) => dragVin && requestMove(dragVin, slot.pinned ? (planned.find((s) => s.item.vin !== dragVin)?.item.vin ?? null) : slot.item.vin),
     onDropAt: (date, minute) => dragVin && requestMove(dragVin, beforeVinForPoint(slots, dragVin, date, minute)),
     onMoveTo: (slot, where) => {
@@ -175,7 +172,6 @@ export function CalendarScreen({
     },
   };
 
-  /** Применить накопленные изменения календаря на сервере; прогноз пересчитывается по новому графику. */
   const recalc = async () => {
     setApplying(true);
     setError('');
@@ -191,7 +187,6 @@ export function CalendarScreen({
     }
   };
 
-  /** Запомнить черновик дня; совпадающий с текущим состоянием не считается изменением. */
   const saveDraft = (date: string, draft: DayDraft) => {
     const current = cfg?.overrides[date] ?? null;
     const same = draft.kind === null ? current === null : current !== null && current.kind === draft.kind && current.from === draft.from && current.to === draft.to && current.note === draft.note;
@@ -231,9 +226,9 @@ export function CalendarScreen({
           ))}
         </div>
         <div className="cal__nav">
-          <button type="button" aria-label={view === 'day' ? 'Предыдущий день' : view === 'week' ? 'Предыдущая неделя' : 'Предыдущий месяц'} onClick={() => setAnchor(step(view, anchor, -1))}>‹</button>
+          <button type="button" aria-label={view === 'day' ? 'Предыдущий день' : view === 'week' ? 'Предыдущая неделя' : 'Предыдущий месяц'} onClick={() => setAnchor(step(view, anchor, -1))}>&#x2039;</button>
           <strong className="cal__range">{titleOf(view, anchor)}</strong>
-          <button type="button" aria-label={view === 'day' ? 'Следующий день' : view === 'week' ? 'Следующая неделя' : 'Следующий месяц'} onClick={() => setAnchor(step(view, anchor, 1))}>›</button>
+          <button type="button" aria-label={view === 'day' ? 'Следующий день' : view === 'week' ? 'Следующая неделя' : 'Следующий месяц'} onClick={() => setAnchor(step(view, anchor, 1))}>&#x203a;</button>
           <button type="button" onClick={() => setAnchor(today)}>Сегодня</button>
         </div>
       </section>
