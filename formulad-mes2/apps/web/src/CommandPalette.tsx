@@ -12,7 +12,6 @@ export function CommandPalette({ onSelectVin }: Props) {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // T-085: Ctrl/Cmd+K — открыть палитру
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -27,7 +26,6 @@ export function CommandPalette({ onSelectVin }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Фокус при открытии
   useEffect(() => {
     if (open) {
       setQuery('');
@@ -36,7 +34,6 @@ export function CommandPalette({ onSelectVin }: Props) {
     }
   }, [open]);
 
-  // Поиск VIN с дебаунсом
   useEffect(() => {
     if (!open) return;
     const q = query.trim();
