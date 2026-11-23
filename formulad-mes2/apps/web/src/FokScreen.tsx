@@ -60,12 +60,10 @@ export function FokScreen({
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  // Отметки станций и NCP нужны только для схемы готовности: их сбой не мешает самой операции FOK.
   async function loadReadiness(vin: string, id: number) {
     const [c, n, qc] = await Promise.all([
       api.stationChecks(vin).catch(() => ({}) as Record<string, ComponentCheck>),
       api.ncpList({ vin, status: null, page: 1, pageSize: 100 }).then((r) => r.items).catch(() => [] as NcpItem[]),
-      // T-167: QC posts with TodayComplete computed for this VIN
       api.qcPosts(vin).catch(() => [] as QcPost[]),
     ]);
     if (id !== requestId.current) return;
@@ -156,7 +154,6 @@ export function FokScreen({
   const twinStates = doneKind === 'fok' ? stations.map(() => 'green' as const)
     : found ? summary.states : stations.map(() => 'grey' as const);
 
-  // Только первые два условия блокируют FOK (так считает сервер); остальные — справочные.
   type Condition = { key: string; label: string; detail: string; state: 'ok' | 'fail' | 'warn' | 'idle'; action?: { label: string; run: () => void } };
   const conditions: Condition[] = [
     { key: 'status', label: 'Статус «Производство завершено»',
@@ -172,7 +169,6 @@ export function FokScreen({
     { key: 'stations', label: 'Станции проверены',
       detail: !found ? '—' : summary.total ? `${summary.green} из ${summary.total} · FOK не блокируют` : 'нет данных',
       state: !found ? 'idle' : summary.total > 0 && summary.green === summary.total ? 'ok' : 'warn' },
-    // T-167: QC checkpoints from tblQCPost with per-VIN completion status
     { key: 'qc', label: 'ОТК-посты пройдены',
       detail: !found ? '—'
         : qcPosts.length === 0 ? 'нет постов'
@@ -204,7 +200,7 @@ export function FokScreen({
             <img className="f7mes__title-img f7mes__title-img--dark" src="/f7-final-ok-dark.png" alt="" />
           </div>
           <form className="f7mes__scan" onSubmit={onSubmit}>
-            <span className="f7mes__scan-symbol" aria-hidden="true">▅</span>
+            <span className="f7mes__scan-symbol" aria-hidden="true">▥</span>
             <div className="f7mes__scan-field">
               <label htmlFor={scanId}>ОТСКАНИРУЙТЕ ИЛИ ВВЕДИТЕ VIN</label>
               <input id={scanId} ref={inputRef} aria-label="Сканирование VIN" autoComplete="off" spellCheck={false}
@@ -216,9 +212,8 @@ export function FokScreen({
 
         <ResultFlash signal={resultSignal} />
 
-        {/* Quality signal */}
         <div className="f7mes__signal" data-type={message?.kind === 'ok' ? 'ready' : signalType} role="status">
-          <span className="f7mes__signal-icon" aria-hidden="true">{blocked || message?.kind === 'error' ? '⚠' : eligible || message?.kind === 'ok' ? '✓' : '▅'}</span>
+          <span className="f7mes__signal-icon" aria-hidden="true">{blocked || message?.kind === 'error' ? '⚠' : eligible || message?.kind === 'ok' ? '✓' : '▥'}</span>
           <span>{signalText}</span>
           {blocked && <button type="button" onClick={() => onNavigate('ncp')}>Открыть NCP →</button>}
         </div>
@@ -305,7 +300,6 @@ export function FokScreen({
           </aside>
         </div>
 
-        {/* FOK confirmation modal */}
         {showModal && found && (
           <div className="f7mes__overlay" onClick={() => setShowModal(false)}>
             <div className="f7mes__modal" onClick={e => e.stopPropagation()}>
