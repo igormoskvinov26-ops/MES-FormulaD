@@ -3,7 +3,6 @@ import type { CalendarSettings } from './api';
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const minutes = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 
-/** Проверка графика до отправки; правила те же, что на сервере (`ProductionCalendarStore.ValidateSettings`). Возвращает текст ошибки или null. */
 export function validateSettings(s: CalendarSettings): string | null {
   if (s.workdays.length === 0) return 'Отметьте хотя бы один рабочий день.';
   if (!TIME.test(s.shiftStart) || !TIME.test(s.shiftEnd)) return 'Смена: укажите начало и конец.';
@@ -29,9 +28,7 @@ export function validateSettings(s: CalendarSettings): string | null {
   return null;
 }
 
-/** Рабочих минут в смене без перерывов (при корректных данных). */
 export const workMinutes = (s: CalendarSettings) =>
   minutes(s.shiftEnd) - minutes(s.shiftStart) - s.breaks.reduce((sum, b) => sum + Math.max(0, minutes(b.to) - minutes(b.from)), 0);
 
-/** Одно изделие каждые N минут рабочего времени — подсказка рядом с производительностью. */
 export const takt = (s: CalendarSettings) => (s.perShift > 0 ? workMinutes(s) / s.perShift : 0);
