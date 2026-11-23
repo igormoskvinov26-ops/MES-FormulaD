@@ -34,7 +34,7 @@ describe('EventLogAdmin', () => {
     expect(within(table).getByText('Перестановка')).toBeInTheDocument();
     expect(within(table).getByText('Mystery')).toBeInTheDocument();
     expect(within(table).getByText('Strange')).toBeInTheDocument();
-    expect(within(table).getAllByRole('row')[1]).toHaveTextContent('2026-11-09'); // самое новое первым — как отдал сервер
+    expect(within(table).getAllByRole('row')[1]).toHaveTextContent('2026-11-09');
   });
 
   it('фильтры по объекту и ключу и лимит уходят в запрос; «Обновить» перезагружает', async () => {
