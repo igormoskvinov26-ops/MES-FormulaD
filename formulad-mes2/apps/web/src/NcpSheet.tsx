@@ -1,6 +1,10 @@
 import type { NcpItem, ProductionPlanItem } from './api';
 import { dash, formatDate } from './format';
 
+/**
+ * Индивидуальный NCP-лист (раздел 15 спецификации): прикрепляется к физической детали,
+ * деталь направляется на Red Table — отдельной «бирки» не делаем, это один и тот же документ.
+ */
 export function NcpSheet({ item, plan, formedAt }: { item: NcpItem; plan: ProductionPlanItem | null; formedAt: string }) {
   const rows: [string, string][] = [
     ['VIN', item.vin],

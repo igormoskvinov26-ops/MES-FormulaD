@@ -1,6 +1,9 @@
 import type { NcpItem, ProductionPlanItem } from './api';
 import { dash } from './format';
 
+/**
+ * Сводный NCP-лист по VIN (раздел 15, [С]): объединяет расхождения со всех станций изделия.
+ */
 export function NcpSummarySheet({ vin, plan, items, formedAt }: { vin: string; plan: ProductionPlanItem | null; items: NcpItem[]; formedAt: string }) {
   const byStation = [...items].sort((a, b) => a.station.localeCompare(b.station, 'ru'));
 
