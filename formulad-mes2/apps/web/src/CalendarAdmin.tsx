@@ -6,8 +6,9 @@ import { takt, validateSettings, workMinutes } from './calendarSettings';
 
 const ruDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const kindLabel = (kind: 'off' | 'work', from: string | null) => (kind === 'off' ? 'Выходной / праздник' : from ? 'Рабочий, особые часы' : 'Рабочий (перенос)');
-const CHUNK = 400;
+const CHUNK = 400; // предел сервера за один запрос
 
+/** Раздел «Производственный календарь» в администрировании: загрузка из Excel и ручное редактирование выходных и праздников. */
 export function CalendarAdmin() {
   const [state, setState] = useState<CalendarState | null>(null);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -18,9 +19,11 @@ export function CalendarAdmin() {
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // график работы
   const [draft, setDraft] = useState<CalendarSettings | null>(null);
   const [stations, setStations] = useState<string[]>([]);
 
+  // форма ручного добавления
   const [newDate, setNewDate] = useState('');
   const [newKind, setNewKind] = useState<'off' | 'work'>('off');
   const [newFrom, setNewFrom] = useState('');
@@ -179,7 +182,8 @@ export function CalendarAdmin() {
       <section className="rep-card" aria-label="Загрузка календаря">
         <h2>Загрузка из Excel</h2>
         <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-          Скопируйте из Excel столбцы или загрузите файл CSV/TSV. Таблица, столбцы по порядку: <b>дата</b> (ДД.ММ.ГГГГ), <b>тип</b> (выходной, праздник, рабочий, сокращённый), начало и конец рабочего дня, примечание.
+          Скопируйте из Excel столбцы или загрузите файл CSV/TSV (сохраните таблицу как CSV). Понимает два формата. Таблица, столбцы по порядку: <b>дата</b> (ДД.ММ.ГГГГ), <b>тип</b> (выходной, праздник, рабочий, сокращённый),
+          начало и конец рабочего дня (необязательно), примечание (необязательно). Первая строка-заголовок пропускается. Или матрица «год × месяцы» с номерами дней в ячейках (как в файлах производственного календаря). Дни, которых нет в файле, не меняются.
         </p>
         <textarea aria-label="Вставка календаря из Excel" rows={6} className="mono" value={text} placeholder={'04.11.2026\tПраздник\t\t\tДень народного единства\n14.11.2026\tРабочий\t09:00\t15:00\tПеренос'} onChange={(e) => { setText(e.target.value); setPreview(null); }} />
         <div className="modal-actions">
@@ -190,23 +194,34 @@ export function CalendarAdmin() {
 
         {preview && (
           <div aria-label="Результат проверки">
-            <p><strong>Строк: {preview.rows.length + preview.errors.length} · Ошибок: {preview.errors.length}</strong></p>
+            {preview.format === 'months' && (
+              <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+                Распознан формат «год × месяцы» (дни без пометки — нерабочие, «*» — сокращённые, «+» — рабочие по переносу). Формат разобран по описанию и не проверялся на файле с официального сайта: сверьте предпросмотр ниже с вашим календарём.
+              </p>
+            )}
+            <p>
+              <strong>Строк: {preview.rows.length + preview.errors.length} · Ошибок: {preview.errors.length}</strong>
+              {preview.duplicates > 0 && <span className="muted"> · повторов даты: {preview.duplicates} (останется последняя)</span>}
+            </p>
             {preview.errors.length > 0 && (
               <ul className="error" role="alert">
                 {preview.errors.slice(0, 20).map((e) => <li key={e.line}>Строка {e.line}: {e.message}</li>)}
               </ul>
             )}
             {preview.rows.length > 0 && (
-              <div className="table-wrap" style={{ maxHeight: 220, overflow: 'auto' }}>
-                <table>
-                  <thead><tr><th>Дата</th><th>Тип</th><th>Часы</th><th>Примечание</th></tr></thead>
-                  <tbody>
-                    {preview.rows.slice(0, 50).map((r) => (
-                      <tr key={r.date}><td>{ruDate(r.date)}</td><td>{kindLabel(r.kind!, r.from ?? null)}</td><td>{r.from ? `${r.from}–${r.to}` : '—'}</td><td>{r.note ?? '—'}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="table-wrap" style={{ maxHeight: 220, overflow: 'auto' }}>
+                  <table>
+                    <thead><tr><th>Дата</th><th>Тип</th><th>Часы</th><th>Примечание</th></tr></thead>
+                    <tbody>
+                      {preview.rows.slice(0, 50).map((r) => (
+                        <tr key={r.date}><td>{ruDate(r.date)}</td><td>{kindLabel(r.kind!, r.from ?? null)}</td><td>{r.from ? `${r.from}–${r.to}` : '—'}</td><td>{r.note ?? '—'}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {preview.rows.length > 50 && <p className="muted">Показаны первые 50 из {preview.rows.length}.</p>}
+              </>
             )}
             <div className="modal-actions">
               <button type="button" className="primary" disabled={busy || preview.errors.length > 0 || preview.rows.length === 0} onClick={() => void load()}>
@@ -260,10 +275,11 @@ export function CalendarAdmin() {
                   <td><button type="button" disabled={busy} aria-label={`Удалить отметку ${ruDate(d.date)}`} onClick={() => void apply([{ date: d.date, kind: null }])}>Удалить</button></td>
                 </tr>
               ))}
-              {days.length === 0 && <tr><td colSpan={6} className="center muted">На {year} год отметок нет: действует стандартный график</td></tr>}
+              {days.length === 0 && <tr><td colSpan={6} className="center muted">На {year} год отметок нет: действует стандартный график (выходные по дням недели, без праздников)</td></tr>}
             </tbody>
           </table>
         </div>
+        <p className="muted" style={{ margin: 0, fontSize: 14 }}>После изменений откройте «Календарь»: прогноз выпуска пересчитывается по обновлённому графику.</p>
       </section>
     </div>
   );
