@@ -31,7 +31,7 @@ export function setSoundOn(on: boolean): void {
   try {
     localStorage.setItem(SOUND_KEY, on ? 'on' : 'off');
   } catch {
-    /* без localStorage выбор действует до перезагрузки */
+    /* choice lasts until reload */
   }
   window.dispatchEvent(new Event(SOUND_EVENT));
 }
@@ -68,7 +68,7 @@ function beep(kind: 'ok' | 'error') {
     }
     setTimeout(() => void ctx.close().catch(() => undefined), 900);
   } catch {
-    /* звук — дополнение: любой сбой аудио не должен мешать работе */
+    /* audio is optional */
   }
 }
 
@@ -126,7 +126,7 @@ export function SoundFileSettings() {
         <span style={{ fontSize: 12 }}>Звук «Успех» (MP3/WAV/OGG, ≤ 500 КБ)</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" onChange={e => handleFile('ok', e.target.files?.[0] ?? null)} />
-          {okName && <button type="button" onClick={() => handleFile('ok', null)} title="Удалить файл">×</button>}
+          {okName && <button type="button" onClick={() => handleFile('ok', null)} title="Удалить файл">&times;</button>}
         </div>
         {okName && <small className="muted">{okName}</small>}
       </label>
@@ -134,7 +134,7 @@ export function SoundFileSettings() {
         <span style={{ fontSize: 12 }}>Звук «Ошибка» (MP3/WAV/OGG, ≤ 500 КБ)</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/*" onChange={e => handleFile('error', e.target.files?.[0] ?? null)} />
-          {errName && <button type="button" onClick={() => handleFile('error', null)} title="Удалить файл">×</button>}
+          {errName && <button type="button" onClick={() => handleFile('error', null)} title="Удалить файл">&times;</button>}
         </div>
         {errName && <small className="muted">{errName}</small>}
       </label>

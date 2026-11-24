@@ -19,7 +19,9 @@ export function useColumnPrefs() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(visible));
-    } catch { /* */ }
+    } catch {
+      // private mode or blocked storage: layout won't be remembered
+    }
   }, [visible]);
 
   const toggle = (key: string) =>
