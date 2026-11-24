@@ -43,10 +43,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
     api.info().then((r) => setVersion(r.version)).catch(() => {});
   }, []);
 
-  function pick(t: Theme) {
-    setTheme(t);
-    applyTheme(t);
-  }
+  function pick(t: Theme) { setTheme(t); applyTheme(t); }
 
   function pickCompact(v: boolean) {
     setCompact(v);
@@ -72,13 +69,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           <h3>Цветовая схема</h3>
           <div className="settings-theme-grid">
             {THEMES.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                className={`settings-theme-btn${theme === opt.value ? ' active' : ''}`}
-                aria-pressed={theme === opt.value}
-                onClick={() => pick(opt.value)}
-              >
+              <button key={opt.value} type="button" className={`settings-theme-btn${theme === opt.value ? ' active' : ''}`} aria-pressed={theme === opt.value} onClick={() => pick(opt.value)}>
                 <span className="settings-theme-swatch" data-theme-preview={opt.value} />
                 <span className="settings-theme-label">{opt.label}</span>
                 <span className="settings-theme-desc">{opt.desc}</span>
@@ -89,30 +80,19 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         <section className="settings-section">
           <h3>Плотность таблиц</h3>
           <div className="settings-row">
-            <label>
-              <input type="radio" name="density" checked={!compact} onChange={() => pickCompact(false)} />
-              Стандартная
-            </label>
-            <label>
-              <input type="radio" name="density" checked={compact} onChange={() => pickCompact(true)} />
-              Компактная
-            </label>
+            <label><input type="radio" name="density" checked={!compact} onChange={() => pickCompact(false)} />Стандартная</label>
+            <label><input type="radio" name="density" checked={compact} onChange={() => pickCompact(true)} />Компактная</label>
           </div>
         </section>
         <section className="settings-section">
           <h3>Автообновление плана</h3>
           <div className="settings-row">
             {REFRESH_OPTIONS.map((opt) => (
-              <label key={opt.value}>
-                <input type="radio" name="refresh" checked={refresh === opt.value} onChange={() => pickRefresh(opt.value)} />
-                {opt.label}
-              </label>
+              <label key={opt.value}><input type="radio" name="refresh" checked={refresh === opt.value} onChange={() => pickRefresh(opt.value)} />{opt.label}</label>
             ))}
           </div>
         </section>
-        {version && (
-          <footer className="settings-version">v{version}</footer>
-        )}
+        {version && <footer className="settings-version">v{version}</footer>}
       </div>
     </div>
   );

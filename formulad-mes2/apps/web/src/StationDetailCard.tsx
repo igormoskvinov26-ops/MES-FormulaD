@@ -28,18 +28,14 @@ export function StationDetailCard({
       <header className="stn-detail__head">
         <h3>Станция {station}</h3>
         <span className="stn-detail__badge">{STATION_STATE_LABEL[state]}</span>
-        <button type="button" className="stn-detail__close" aria-label="Закрыть сведения о станции" onClick={onClose}>
-          ×
-        </button>
+        <button type="button" className="stn-detail__close" aria-label="Закрыть сведения о станции" onClick={onClose}>×</button>
       </header>
 
       {list.length === 0 ? (
         <p className="stn-detail__empty">К станции не привязано компонентов — проверять нечего.</p>
       ) : (
         <>
-          <p className="stn-detail__count">
-            Отмечено <b>{done}</b> из <b>{list.length}</b>
-          </p>
+          <p className="stn-detail__count">Отмечено <b>{done}</b> из <b>{list.length}</b></p>
           <ul className="stn-detail__list">
             {list.map((c) => {
               const check = checks[c.code];
@@ -64,15 +60,10 @@ export function StationDetailCard({
           <div className="stn-detail__ncp-title">Открытые несоответствия · {open.length}</div>
           <ul>
             {open.map((n) => (
-              <li key={n.id}>
-                <strong>{n.number}</strong>
-                <small>{n.componentName} · {n.type}</small>
-              </li>
+              <li key={n.id}><strong>{n.number}</strong><small>{n.componentName} · {n.type}</small></li>
             ))}
           </ul>
-          <button type="button" className="stn-detail__action" onClick={onOpenNcp}>
-            К несоответствиям
-          </button>
+          <button type="button" className="stn-detail__action" onClick={onOpenNcp}>К несоответствиям</button>
         </div>
       )}
     </section>
