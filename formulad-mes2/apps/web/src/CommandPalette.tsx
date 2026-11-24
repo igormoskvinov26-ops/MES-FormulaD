@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type ProductionPlanItem } from './api';
 
-type Props = { onSelectVin: (vin: string) => void };
+type Props = {
+  onSelectVin: (vin: string) => void;
+};
 
 export function CommandPalette({ onSelectVin }: Props) {
   const [open, setOpen] = useState(false);
@@ -51,13 +53,26 @@ export function CommandPalette({ onSelectVin }: Props) {
   return (
     <div className="cp-backdrop" onClick={() => setOpen(false)}>
       <div className="cp-modal" role="dialog" aria-modal aria-label="Командная палитра" onClick={(e) => e.stopPropagation()}>
-        <input ref={inputRef} className="cp-input" type="text" placeholder="Введите VIN…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input
+          ref={inputRef}
+          className="cp-input"
+          type="text"
+          placeholder="Введите VIN…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
         {loading && <div className="cp-hint">Поиск…</div>}
-        {!loading && items.length === 0 && query.trim() && <div className="cp-hint">Не найдено</div>}
+        {!loading && items.length === 0 && query.trim() && (
+          <div className="cp-hint">Не найдено</div>
+        )}
         <ul className="cp-list" role="listbox">
           {items.map((item) => (
             <li key={item.vin} role="option" aria-selected={false}>
-              <button type="button" className="cp-item" onClick={() => { onSelectVin(item.vin); setOpen(false); }}>
+              <button
+                type="button"
+                className="cp-item"
+                onClick={() => { onSelectVin(item.vin); setOpen(false); }}
+              >
                 <span className="cp-vin">{item.vin}</span>
                 {item.modelArticle && <span className="cp-meta">{item.modelArticle}</span>}
                 {item.color && <span className="cp-meta">{item.color}</span>}

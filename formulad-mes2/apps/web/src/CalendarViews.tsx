@@ -3,6 +3,7 @@ import { atvImageFor } from './atvVariant';
 import { WEEKDAYS_SHORT, dayHourRows, dayInfo, isoWeekday, monthGrid, parseYmd, weekColumns, type CalendarConfig, type DayColumn, type Slot } from './calendar';
 import type { DayDraft } from './DaySettingsDialog';
 
+/** Перетаскивание карточек (нативный HTML5 drag-and-drop) и перенос с клавиатуры. */
 export type Dnd = {
   dragVin: string | null;
   over: string | null;
@@ -13,6 +14,7 @@ export type Dnd = {
   onDropBefore: (slot: Slot) => void;
   onDropAt: (date: string, minute: number) => void;
   onKeyMove: (slot: Slot, dir: -1 | 1) => void;
+  /** Перенос кнопкой (для сенсорных экранов): в начало или в конец очереди запланированных. */
   onMoveTo: (slot: Slot, where: 'first' | 'last') => void;
 };
 
@@ -177,8 +179,16 @@ export function WeekView({ anchor, cfg, slots, today, drafts, onEditDay, onOpenD
           <div
             className="cal__cards"
             data-over={dnd.over === `day:${day.date}` ? 'true' : undefined}
-            onDragOver={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onOver(`day:${day.date}`); }}
-            onDrop={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onDropAt(day.date, 24 * 60); }}
+            onDragOver={(e) => {
+              if (!dnd.dragVin) return;
+              e.preventDefault();
+              dnd.onOver(`day:${day.date}`);
+            }}
+            onDrop={(e) => {
+              if (!dnd.dragVin) return;
+              e.preventDefault();
+              dnd.onDropAt(day.date, 24 * 60);
+            }}
           >
             {day.slots.map((s) => <Card key={s.item.vin} slot={s} onOpen={onOpenItem} dnd={dnd} />)}
             {day.working && day.slots.length === 0 && <span className="cal__empty">нет изделий</span>}
@@ -207,8 +217,16 @@ export function DayView({ anchor, cfg, slots, today, drafts, onEditDay, onOpenIt
                 <div
                   className="cal__hour-cards"
                   data-over={dnd.over === `hour:${row.hour}` ? 'true' : undefined}
-                  onDragOver={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onOver(`hour:${row.hour}`); }}
-                  onDrop={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onDropAt(anchor, row.hour * 60); }}
+                  onDragOver={(e) => {
+                    if (!dnd.dragVin) return;
+                    e.preventDefault();
+                    dnd.onOver(`hour:${row.hour}`);
+                  }}
+                  onDrop={(e) => {
+                    if (!dnd.dragVin) return;
+                    e.preventDefault();
+                    dnd.onDropAt(anchor, row.hour * 60);
+                  }}
                 >
                   {row.isBreak && row.slots.length === 0 && <span className="cal__break">перерыв</span>}
                   {row.slots.map((s) => <Card key={s.item.vin} slot={s} onOpen={onOpenItem} wide dnd={dnd} />)}
