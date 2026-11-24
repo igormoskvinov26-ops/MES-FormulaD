@@ -112,6 +112,7 @@ describe('NcpScreen', () => {
 
     expect(installedCalled).toBe(true);
     await waitFor(() => expect(screen.getByRole('button', { name: /Отметить деталь не установленной/ })).toBeInTheDocument());
+    // Статус заявки остаётся прежним — закрытие это отдельное действие.
     expect(screen.getByRole('button', { name: 'Закрыть заявку' })).toBeInTheDocument();
   });
 
