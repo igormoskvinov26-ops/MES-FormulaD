@@ -10,7 +10,8 @@
 # Переменные: PORT (по умолчанию 5080), STAND_USER (demo-operator), STAND_PASSWORD (иначе случайный).
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.."; && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/." && pwd)"
+ROOT="$(dirname "$ROOT")"
 RUN="$ROOT/stand/.run"
 PORT="${PORT:-5080}"
 URL="http://localhost:$PORT"
@@ -39,9 +40,6 @@ up() {
   chmod 600 "$RUN/credentials"
 
   echo "▸ Запуск на $URL (Demo, без SQL)"
-  # Любые SQL-настройки из окружения оператора намеренно сбрасываются.
-  # `&` стоит на самой команде: так $! — это сам dotnet (лидер новой группы, её и гасит down),
-  # а канал вывода вызывающего не удерживается.
   cd "$API_DIR"
   env -u Sql__ConnectionString -u Sql__IsTestEnvironment \
     DataSource=Demo ASPNETCORE_ENVIRONMENT=Development \
@@ -65,7 +63,6 @@ up() {
 down() {
   if [ -f "$RUN/pid" ]; then
     local pid; pid="$(cat "$RUN/pid")"
-    # setsid сделал процесс лидером группы — гасим всю группу (dotnet run + дочерний API).
     kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
     rm -f "$RUN/pid"
   fi
@@ -82,7 +79,7 @@ smoke() {
   user="$(sed -n 1p "$RUN/credentials")"; password="$(sed -n 2p "$RUN/credentials")"
   jar="$(mktemp)"; trap 'rm -f "$jar"' RETURN
 
-  check() { # описание, ожидаемый код, фактический код
+  check() {
     if [ "$2" = "$3" ]; then echo "  ✓ $1"; else echo "  ✗ $1 (ожидали $2, получили $3)"; fails=$((fails+1)); fi
   }
   code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
