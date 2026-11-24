@@ -12,6 +12,11 @@ const forecastText = (slot: Slot) => {
   return `${d} ${MONTHS[m - 1]} ${y}${slot.time === '—' ? '' : `, ${slot.time}`}`;
 };
 
+/**
+ * Окно «Прогресс сборки»: шапка с данными изделия и линия станций, на которой стоит квадроцикл (текущий пост).
+ * Посты контроля качества (настраиваются в «Администрирование → Производственный календарь») показываются между станциями;
+ * лист контроля с галочками — этап 4 концепции.
+ */
 export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; posts?: ControlPost[]; onClose: () => void }) {
   const { item } = slot;
   const [stations, setStations] = useState<string[] | null>(null);
@@ -30,10 +35,15 @@ export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; po
     ])
       .then(([s, c, ch, n]) => {
         if (!alive) return;
-        setStations(s); setComponents(c); setChecks(ch); setNcpItems(n);
+        setStations(s);
+        setComponents(c);
+        setChecks(ch);
+        setNcpItems(n);
       })
       .catch(() => alive && setError('Не удалось загрузить станции'));
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [item.vin]);
 
   useEffect(() => {
@@ -48,6 +58,7 @@ export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; po
   );
   const position = linePosition(item.statusId, states);
   const image = atvImageFor(item) ?? '/atv-hero.png';
+  // колонки линии: станции и посты контроля качества после своих станций
   const columns = (stations ?? []).flatMap((s, i) => [
     { kind: 'station' as const, station: s, index: i },
     ...posts.filter((p) => p.afterStation === s).map((post) => ({ kind: 'post' as const, post })),
@@ -108,7 +119,7 @@ export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; po
             </ol>
           </section>
         )}
-        {posts.length === 0 && <p className="muted cal__hint">Посты контроля качества не заданы.</p>}
+        {posts.length === 0 && <p className="muted cal__hint">Посты контроля качества не заданы: добавьте их в «Администрирование → Производственный календарь → График работы линии».</p>}
 
         <div className="modal-actions">
           <button type="button" className="primary" onClick={onClose}>Закрыть</button>

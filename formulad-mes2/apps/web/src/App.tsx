@@ -109,6 +109,7 @@ export function App() {
   } }
 }
 
+/** Загрузка страницы плана. Вынесено, чтобы PlanScreen оставался про разметку. */
 export function usePlan(vin: string, status: string | null, page: number, pageSize: number, statusId?: number) {
   const [data, setData] = useState<Paged<ProductionPlanItem> | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -139,6 +140,8 @@ export function usePlan(vin: string, status: string | null, page: number, pageSi
 
 export type PlanCounts = { all: number; 0: number; 1: number; 2: number; 3: number } | null;
 
+/** Счётчики для плашек на экране плана — отдельные лёгкие запросы (pageSize=1, нужен только `total`),
+    без изменений на сервере: statusId уже поддержан фильтром `/production-plan`. */
 export function usePlanCounts(): PlanCounts {
   const [counts, setCounts] = useState<PlanCounts>(null);
 

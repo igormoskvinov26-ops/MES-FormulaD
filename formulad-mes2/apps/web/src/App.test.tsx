@@ -61,6 +61,7 @@ describe('App', () => {
     expect(await screen.findByText('DEMO-VIN-00001')).toBeInTheDocument();
     expect(screen.getByText('DEMO')).toBeInTheDocument();
     expect(screen.getByText('Позиций: 1')).toBeInTheDocument();
+    // Состояние строки подписано словом, а не только цветом.
     expect(screen.getAllByText('В производстве').length).toBeGreaterThan(0);
   });
 
@@ -76,10 +77,13 @@ describe('App', () => {
     render(<App />);
     const search = await screen.findByLabelText('Поиск VIN или сканирование');
 
+    // Эмуляция сканера: быстрый ввод строки и Enter.
     await userEvent.type(search, 'DEMO-VIN-00001{Enter}');
 
     expect(await screen.findByLabelText('Карточка изделия DEMO-VIN-00001')).toBeInTheDocument();
     expect(screen.getAllByText('DEMO-ENGINE-01').length).toBeGreaterThan(0);
+    // В карточке изделия нет кнопок изменения состояния — только печать JobCard (раздел 8) и
+    // сводного NCP-листа (раздел 15), это печатные документы, а не переходы статуса.
     const card = screen.getByLabelText('Карточка изделия DEMO-VIN-00001');
     expect(within(card).getAllByRole('button').map((b) => b.textContent)).toEqual([
       'Печать',

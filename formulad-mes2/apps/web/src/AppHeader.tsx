@@ -28,6 +28,7 @@ function MobileToggle() {
   );
 }
 
+/** Дата и время смены в шапке — как в концепте: оператор не лезет в угол Windows. */
 function Clock() {
   const [now, setNow] = useState(() => new Date());
 
@@ -64,6 +65,11 @@ const TABS: Tab[] = [
   { key: 'admin', label: 'Администрирование', Icon: IconAdmin, group: 'Администрирование' },
 ];
 
+/** Общая навигация всех экранов: боковое меню (фиксированное, только для рабочего места на ПК)
+    плюс тонкая верхняя полоса с текущим разделом, часами и выходом. Раньше это были вкладки
+    в один ряд — оправдано было, пока раздел всего два; сейчас их пять, и боковое меню читается
+    быстрее. Боковая панель позиционирована фиксированно, `.app` компенсирует отступом в CSS —
+    экраны (PlanScreen/NcpScreen/ScanTransitionScreen) не меняются. */
 export function AppHeader({
   screen,
   onNavigate,
@@ -76,6 +82,7 @@ export function AppHeader({
   onLogout: () => void;
 }) {
   const current = TABS.find((tab) => tab.key === screen);
+  // Название экрана уже стоит крупным заголовком на странице — в верхней полосе показываем только раздел.
   let crumb = 'Планирование';
   for (const tab of TABS) {
     if (tab.group) crumb = tab.group;
