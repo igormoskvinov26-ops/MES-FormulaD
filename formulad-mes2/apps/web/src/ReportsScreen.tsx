@@ -38,6 +38,10 @@ function summarizeIncoming(deliveries: Delivery[]): IncomingSummary {
 
 type StackPart = { key: string; name: string; value: number; tone: string };
 
+/**
+ * Полоса распределения: доли видны сразу, без библиотеки графиков. Цифры остаются в списках рядом, а сама полоса
+ * для скринридера — одна картинка с текстовым описанием (в сегментах нет текста).
+ */
 function StackBar({ label, parts }: { label: string; parts: StackPart[] }) {
   const total = parts.reduce((sum, p) => sum + p.value, 0);
   const description = parts.map((p) => `${p.name} ${p.value}`).join(', ');
@@ -54,6 +58,7 @@ function StackBar({ label, parts }: { label: string; parts: StackPart[] }) {
   );
 }
 
+/** Строка «подпись — полоса — число»: длина полосы пропорциональна максимуму в группе. */
 function BarLine({ label, value, max, tone, alert = false }: { label: string; value: number; max: number; tone?: string; alert?: boolean }) {
   return (
     <div className={`rep-line${alert ? ' rep-line--alert' : ''}`}>
@@ -66,13 +71,24 @@ function BarLine({ label, value, max, tone, alert = false }: { label: string; va
   );
 }
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function monthAgoStr() {
   const d = new Date();
   d.setMonth(d.getMonth() - 1);
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Отчётность (раздел 26, Этап 10): сводки по тем срезам, которые реально существуют в системе.
+ * «Сколько изделий на каждой станции» из [П] сознательно не делаю — в модели нет поля «изделие
+ * сейчас физически на станции N» (экран «Станции» — это чек-лист компонентов по VIN, а не трекер
+ * местоположения); отчёты за период тоже не делаю — [В-35] прямо говорит, что обязательный
+ * комплект выгрузок не согласован. Здесь — агрегаты по уже существующим данным: план (переиспользует
+ * тот же счётчик, что плашки экрана плана), NCP, входной контроль.
+ */
 export function ReportsScreen({
   session,
   onNavigate,
@@ -96,8 +112,14 @@ export function ReportsScreen({
 
   useEffect(() => {
     api.plan({ statusId: 4, page: 1, pageSize: 1 }).then((p) => setReworkCount(p.total)).catch(() => setReworkCount(null));
-    api.ncpList({ page: 1, pageSize: 100 }).then((p) => setNcp(summarizeNcp(p.items))).catch(() => setError('Нет связи с сервером'));
-    api.deliveries(1, 100).then((p) => setIncoming(summarizeIncoming(p.items))).catch(() => setError('Нет связи с сервером'));
+    api
+      .ncpList({ page: 1, pageSize: 100 })
+      .then((p) => setNcp(summarizeNcp(p.items)))
+      .catch(() => setError('Нет связи с сервером'));
+    api
+      .deliveries(1, 100)
+      .then((p) => setIncoming(summarizeIncoming(p.items)))
+      .catch(() => setError('Нет связи с сервером'));
   }, []);
 
   useEffect(() => {
@@ -105,7 +127,10 @@ export function ReportsScreen({
     setStationCounts(null);
     setTypeCounts(null);
     setRangeError('');
-    Promise.all([api.stationReport(dateFrom, dateTo), api.ncpCausesReport(dateFrom, dateTo)])
+    Promise.all([
+      api.stationReport(dateFrom, dateTo),
+      api.ncpCausesReport(dateFrom, dateTo),
+    ])
       .then(([sc, tc]) => { setStationCounts(sc); setTypeCounts(tc); })
       .catch(() => setRangeError('Не удалось загрузить отчёты за период'));
   }, [dateFrom, dateTo]);
@@ -133,12 +158,24 @@ export function ReportsScreen({
           </div>
         </div>
         <div className="rep-date-range">
-          <label>С&nbsp;<input type="date" value={dateFrom} max={dateTo} onChange={(e) => setDateFrom(e.target.value)} aria-label="Дата начала периода" /></label>
-          <label>По&nbsp;<input type="date" value={dateTo} min={dateFrom} max={todayStr()} onChange={(e) => setDateTo(e.target.value)} aria-label="Дата конца периода" /></label>
+          <label>
+            С&nbsp;
+            <input type="date" value={dateFrom} max={dateTo} onChange={(e) => setDateFrom(e.target.value)}
+              aria-label="Дата начала периода" />
+          </label>
+          <label>
+            По&nbsp;
+            <input type="date" value={dateTo} min={dateFrom} max={todayStr()} onChange={(e) => setDateTo(e.target.value)}
+              aria-label="Дата конца периода" />
+          </label>
         </div>
       </div>
 
-      {error && <p role="alert" className="error" style={{ margin: '12px 24px 0' }}>{error}</p>}
+      {error && (
+        <p role="alert" className="error" style={{ margin: '12px 24px 0' }}>
+          {error}
+        </p>
+      )}
 
       <main className="rep-grid">
         <article className="rep-card">
@@ -167,7 +204,9 @@ export function ReportsScreen({
                 </div>
               </dl>
             </>
-          ) : <LinesSkeleton />}
+          ) : (
+            <LinesSkeleton />
+          )}
         </article>
 
         <article className="rep-card">
@@ -179,16 +218,23 @@ export function ReportsScreen({
                 <div className="rep-kpi rep-kpi--warn"><strong>{ncp.open}</strong><span>открыто</span></div>
                 <div className="rep-kpi rep-kpi--ok"><strong>{ncp.closed}</strong><span>закрыто</span></div>
               </div>
-              <StackBar label="Несоответствия по состоянию" parts={[
-                { key: 'open', name: 'Открыто', value: ncp.open, tone: 'waiting' },
-                { key: 'closed', name: 'Закрыто', value: ncp.closed, tone: 'in-work' },
-              ]} />
+              <StackBar
+                label="Несоответствия по состоянию"
+                parts={[
+                  { key: 'open', name: 'Открыто', value: ncp.open, tone: 'waiting' },
+                  { key: 'closed', name: 'Закрыто', value: ncp.closed, tone: 'in-work' },
+                ]}
+              />
               <h3>По типу</h3>
               <dl className="rep-lines">
-                {typeEntries.map(([type, count]) => <BarLine key={type} label={type} value={count} max={typeMax} tone="complete" />)}
+                {typeEntries.map(([type, count]) => (
+                  <BarLine key={type} label={type} value={count} max={typeMax} tone="complete" />
+                ))}
               </dl>
             </>
-          ) : <LinesSkeleton />}
+          ) : (
+            <LinesSkeleton />
+          )}
         </article>
 
         <article className="rep-card">
@@ -200,11 +246,14 @@ export function ReportsScreen({
                 <div className="rep-kpi rep-kpi--ok"><strong>{incoming.verified}</strong><span>проверено</span></div>
                 <div className="rep-kpi rep-kpi--warn"><strong>{incoming.verifiedWithIssues}</strong><span>с замеч.</span></div>
               </div>
-              <StackBar label="Поставки по состоянию" parts={[
-                { key: 'verified', name: 'Проверено', value: incoming.verified, tone: 'in-work' },
-                { key: 'issues', name: 'С замечаниями', value: incoming.verifiedWithIssues, tone: 'waiting' },
-                { key: 'open', name: 'В работе', value: incoming.open, tone: 'complete' },
-              ]} />
+              <StackBar
+                label="Поставки по состоянию"
+                parts={[
+                  { key: 'verified', name: 'Проверено', value: incoming.verified, tone: 'in-work' },
+                  { key: 'issues', name: 'С замечаниями', value: incoming.verifiedWithIssues, tone: 'waiting' },
+                  { key: 'open', name: 'В работе', value: incoming.open, tone: 'complete' },
+                ]}
+              />
               <dl className="rep-lines">
                 <div className="rep-line"><dt>В работе</dt><dd>{incoming.open}</dd></div>
                 <BarLine label="Брак (шт.)" value={incoming.defect} max={incomingMax} tone="rework" alert={incoming.defect > 0} />
@@ -212,7 +261,9 @@ export function ReportsScreen({
                 <BarLine label="Недостача (шт.)" value={incoming.shortage} max={incomingMax} tone="waiting" />
               </dl>
             </>
-          ) : <LinesSkeleton />}
+          ) : (
+            <LinesSkeleton />
+          )}
         </article>
 
         <article className="rep-card rep-card--wide">
@@ -222,7 +273,13 @@ export function ReportsScreen({
           {stationCounts !== null && stationCounts.length === 0 && <p className="muted">Нет данных за период</p>}
           {stationCounts !== null && stationCounts.length > 0 && (() => {
             const max = stationCounts[0].count;
-            return <dl className="rep-lines">{stationCounts.map((s) => <BarLine key={s.station} label={`Станция ${s.station}`} value={s.count} max={max} tone="rework" />)}</dl>;
+            return (
+              <dl className="rep-lines">
+                {stationCounts.map((s) => (
+                  <BarLine key={s.station} label={`Станция ${s.station}`} value={s.count} max={max} tone="rework" />
+                ))}
+              </dl>
+            );
           })()}
         </article>
 
@@ -232,7 +289,13 @@ export function ReportsScreen({
           {typeCounts !== null && typeCounts.length === 0 && <p className="muted">Нет данных за период</p>}
           {typeCounts !== null && typeCounts.length > 0 && (() => {
             const max = typeCounts[0].count;
-            return <dl className="rep-lines">{typeCounts.map((t) => <BarLine key={t.type} label={t.type || 'Не указано'} value={t.count} max={max} tone="waiting" />)}</dl>;
+            return (
+              <dl className="rep-lines">
+                {typeCounts.map((t) => (
+                  <BarLine key={t.type} label={t.type || 'Не указано'} value={t.count} max={max} tone="waiting" />
+                ))}
+              </dl>
+            );
           })()}
         </article>
       </main>
