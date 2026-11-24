@@ -30,15 +30,10 @@ export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; po
     ])
       .then(([s, c, ch, n]) => {
         if (!alive) return;
-        setStations(s);
-        setComponents(c);
-        setChecks(ch);
-        setNcpItems(n);
+        setStations(s); setComponents(c); setChecks(ch); setNcpItems(n);
       })
       .catch(() => alive && setError('Не удалось загрузить станции'));
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [item.vin]);
 
   useEffect(() => {
@@ -113,7 +108,7 @@ export function AssemblyProgress({ slot, posts = [], onClose }: { slot: Slot; po
             </ol>
           </section>
         )}
-        {posts.length === 0 && <p className="muted cal__hint">Посты контроля качества не заданы: добавьте их в «Администрирование → Производственный календарь → График работы линии».</p>}
+        {posts.length === 0 && <p className="muted cal__hint">Посты контроля качества не заданы.</p>}
 
         <div className="modal-actions">
           <button type="button" className="primary" onClick={onClose}>Закрыть</button>

@@ -13,11 +13,7 @@ export function Qr({ value, size = 120 }: { value: string; size?: number }) {
   }, [value, size]);
 
   if (error) {
-    return (
-      <span className="qr-error" role="img" aria-label={`QR-код для ${value} не сформирован`}>
-        QR
-      </span>
-    );
+    return <span className="qr-error" role="img" aria-label={`QR-код для ${value} не сформирован`}>QR</span>;
   }
 
   return <canvas ref={canvasRef} role="img" aria-label={`QR-код: ${value}`} width={size} height={size} />;
