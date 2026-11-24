@@ -17,6 +17,7 @@ const VIEWS: { key: View; label: string }[] = [
   { key: 'month', label: 'Месяц' },
 ];
 
+/** Весь план: страницы по 100 (предел API) до исчерпания. */
 async function loadPlan(): Promise<ProductionPlanItem[]> {
   const all: ProductionPlanItem[] = [];
   for (let page = 1; page <= 50; page++) {
@@ -80,9 +81,7 @@ export function CalendarScreen({
         setCalendar(cal);
       })
       .catch((e: unknown) => alive && setError(e instanceof ApiError && e.status === 401 ? 'Нет доступа' : 'Нет связи с сервером'));
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
   const cfg = useMemo(() => (calendar ? configFrom(calendar.settings, calendar.days) : null), [calendar]);
@@ -148,10 +147,7 @@ export function CalendarScreen({
     over,
     isMovable: (s) => isMovable(s.item),
     onDragStart: setDragVin,
-    onDragEnd: () => {
-      setDragVin(null);
-      setOver(null);
-    },
+    onDragEnd: () => { setDragVin(null); setOver(null); },
     onOver: setOver,
     onDropBefore: (slot) => dragVin && requestMove(dragVin, slot.pinned ? (planned.find((s) => s.item.vin !== dragVin)?.item.vin ?? null) : slot.item.vin),
     onDropAt: (date, minute) => dragVin && requestMove(dragVin, beforeVinForPoint(slots, dragVin, date, minute)),
@@ -199,10 +195,7 @@ export function CalendarScreen({
     setEditing(null);
   };
 
-  const openDay = (date: string) => {
-    setAnchor(date);
-    setView('day');
-  };
+  const openDay = (date: string) => { setAnchor(date); setView('day'); };
 
   const shared = cfg && { cfg, slots, today, drafts, onEditDay: setEditing, onOpenDay: openDay, onOpenItem: setOpened, dnd };
 
@@ -225,9 +218,9 @@ export function CalendarScreen({
           ))}
         </div>
         <div className="cal__nav">
-          <button type="button" aria-label={view === 'day' ? 'Предыдущий день' : view === 'week' ? 'Предыдущая неделя' : 'Предыдущий месяц'} onClick={() => setAnchor(step(view, anchor, -1))}>&#x2039;</button>
+          <button type="button" aria-label={view === 'day' ? 'Предыдущий день' : view === 'week' ? 'Предыдущая неделя' : 'Предыдущий месяц'} onClick={() => setAnchor(step(view, anchor, -1))}>‹</button>
           <strong className="cal__range">{titleOf(view, anchor)}</strong>
-          <button type="button" aria-label={view === 'day' ? 'Следующий день' : view === 'week' ? 'Следующая неделя' : 'Следующий месяц'} onClick={() => setAnchor(step(view, anchor, 1))}>&#x203a;</button>
+          <button type="button" aria-label={view === 'day' ? 'Следующий день' : view === 'week' ? 'Следующая неделя' : 'Следующий месяц'} onClick={() => setAnchor(step(view, anchor, 1))}>›</button>
           <button type="button" onClick={() => setAnchor(today)}>Сегодня</button>
         </div>
       </section>
@@ -236,7 +229,7 @@ export function CalendarScreen({
         <p className="cal__assumptions">
           Прогноз по графику: {cfg.perShift} изделий в смену, смена {cfg.shiftStart}–{cfg.shiftEnd}
           {cfg.breaks.map((b) => ` (перерыв ${b.from}–${b.to})`).join('')}, рабочие дни: {cfg.workdays.map((d) => WEEKDAYS_SHORT[d - 1]).join(', ')}.
-          Выходные, праздники и особые часы дня — кнопкой ⦿ в шапке дня или в «Администрирование → Производственный календарь».
+          Выходные, праздники и особые часы дня — кнопкой ⚙ в шапке дня или в «Администрирование → Производственный календарь».
           Плановые даты в данных не меняются; «+N дн» — прогноз позже плановой даты завершения. Клик по изделию открывает «Прогресс сборки».
         </p>
       )}
@@ -259,12 +252,7 @@ export function CalendarScreen({
         </p>
       )}
 
-      {error && (
-        <p role="alert" className="error" style={{ margin: '12px 24px 0' }}>
-          {error}
-        </p>
-      )}
-
+      {error && <p role="alert" className="error" style={{ margin: '12px 24px 0' }}>{error}</p>}
       {!items && !error && <p className="muted" style={{ margin: '16px 24px' }} role="status">Загрузка…</p>}
 
       {items && shared && view === 'week' && <WeekView anchor={anchor} {...shared} />}

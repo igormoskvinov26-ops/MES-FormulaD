@@ -179,7 +179,7 @@ export function CalendarAdmin() {
       <section className="rep-card" aria-label="Загрузка календаря">
         <h2>Загрузка из Excel</h2>
         <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-          Скопируйте из Excel столбцы или загрузите файл CSV/TSV. Таблица, столбцы по порядку: <b>дата</b> (ДД.ММ.ГГГГ), <b>тип</b> (выходной, праздник, рабочий, сокращённый), начало и конец рабочего дня (необязательно), примечание (необязательно). Дни, которых нет в файле, не меняются.
+          Скопируйте из Excel столбцы или загрузите файл CSV/TSV. Таблица, столбцы по порядку: <b>дата</b> (ДД.ММ.ГГГГ), <b>тип</b> (выходной, праздник, рабочий, сокращённый), начало и конец рабочего дня, примечание.
         </p>
         <textarea aria-label="Вставка календаря из Excel" rows={6} className="mono" value={text} placeholder={'04.11.2026\tПраздник\t\t\tДень народного единства\n14.11.2026\tРабочий\t09:00\t15:00\tПеренос'} onChange={(e) => { setText(e.target.value); setPreview(null); }} />
         <div className="modal-actions">
@@ -190,34 +190,23 @@ export function CalendarAdmin() {
 
         {preview && (
           <div aria-label="Результат проверки">
-            {preview.format === 'months' && (
-              <p className="muted" style={{ margin: 0, fontSize: 14 }}>
-                Распознан формат «год × месяцы». Формат разобран по описанию и не проверялся на файле с официального сайта: сверьте предпросмотр ниже с вашим календарём.
-              </p>
-            )}
-            <p>
-              <strong>Строк: {preview.rows.length + preview.errors.length} · Ошибок: {preview.errors.length}</strong>
-              {preview.duplicates > 0 && <span className="muted"> · повторов даты: {preview.duplicates} (останется последняя)</span>}
-            </p>
+            <p><strong>Строк: {preview.rows.length + preview.errors.length} · Ошибок: {preview.errors.length}</strong></p>
             {preview.errors.length > 0 && (
               <ul className="error" role="alert">
                 {preview.errors.slice(0, 20).map((e) => <li key={e.line}>Строка {e.line}: {e.message}</li>)}
               </ul>
             )}
             {preview.rows.length > 0 && (
-              <>
-                <div className="table-wrap" style={{ maxHeight: 220, overflow: 'auto' }}>
-                  <table>
-                    <thead><tr><th>Дата</th><th>Тип</th><th>Часы</th><th>Примечание</th></tr></thead>
-                    <tbody>
-                      {preview.rows.slice(0, 50).map((r) => (
-                        <tr key={r.date}><td>{ruDate(r.date)}</td><td>{kindLabel(r.kind!, r.from ?? null)}</td><td>{r.from ? `${r.from}–${r.to}` : '—'}</td><td>{r.note ?? '—'}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {preview.rows.length > 50 && <p className="muted">Показаны первые 50 из {preview.rows.length}.</p>}
-              </>
+              <div className="table-wrap" style={{ maxHeight: 220, overflow: 'auto' }}>
+                <table>
+                  <thead><tr><th>Дата</th><th>Тип</th><th>Часы</th><th>Примечание</th></tr></thead>
+                  <tbody>
+                    {preview.rows.slice(0, 50).map((r) => (
+                      <tr key={r.date}><td>{ruDate(r.date)}</td><td>{kindLabel(r.kind!, r.from ?? null)}</td><td>{r.from ? `${r.from}–${r.to}` : '—'}</td><td>{r.note ?? '—'}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
             <div className="modal-actions">
               <button type="button" className="primary" disabled={busy || preview.errors.length > 0 || preview.rows.length === 0} onClick={() => void load()}>
@@ -271,11 +260,10 @@ export function CalendarAdmin() {
                   <td><button type="button" disabled={busy} aria-label={`Удалить отметку ${ruDate(d.date)}`} onClick={() => void apply([{ date: d.date, kind: null }])}>Удалить</button></td>
                 </tr>
               ))}
-              {days.length === 0 && <tr><td colSpan={6} className="center muted">На {year} год отметок нет: действует стандартный график (выходные по дням недели, без праздников)</td></tr>}
+              {days.length === 0 && <tr><td colSpan={6} className="center muted">На {year} год отметок нет: действует стандартный график</td></tr>}
             </tbody>
           </table>
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: 14 }}>После изменений откройте «Календарь»: прогноз выпуска пересчитывается по обновлённому графику.</p>
       </section>
     </div>
   );
