@@ -120,7 +120,7 @@ describe('FokScreen', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('NC-2026-0001');
 
     installed = true;
-    await userEvent.type(screen.getByLabelText('Скнирование VIN'), 'DEMO-VIN-00001{Enter}');
+    await userEvent.type(screen.getByLabelText('Сканирование VIN'), 'DEMO-VIN-00001{Enter}');
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Подтвердить FOK' })).toBeEnabled());
   });
