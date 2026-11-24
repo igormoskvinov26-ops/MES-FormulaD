@@ -177,16 +177,8 @@ export function WeekView({ anchor, cfg, slots, today, drafts, onEditDay, onOpenD
           <div
             className="cal__cards"
             data-over={dnd.over === `day:${day.date}` ? 'true' : undefined}
-            onDragOver={(e) => {
-              if (!dnd.dragVin) return;
-              e.preventDefault();
-              dnd.onOver(`day:${day.date}`);
-            }}
-            onDrop={(e) => {
-              if (!dnd.dragVin) return;
-              e.preventDefault();
-              dnd.onDropAt(day.date, 24 * 60);
-            }}
+            onDragOver={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onOver(`day:${day.date}`); }}
+            onDrop={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onDropAt(day.date, 24 * 60); }}
           >
             {day.slots.map((s) => <Card key={s.item.vin} slot={s} onOpen={onOpenItem} dnd={dnd} />)}
             {day.working && day.slots.length === 0 && <span className="cal__empty">нет изделий</span>}
@@ -205,7 +197,7 @@ export function DayView({ anchor, cfg, slots, today, drafts, onEditDay, onOpenIt
       <section className="cal__day" data-working={String(day.working)} data-today={anchor === today ? 'true' : undefined} data-draft={drafts[anchor] ? 'true' : undefined} aria-label={`${weekdayOf(anchor)} ${dayLabel(anchor)}`}>
         <DayHead day={day} draft={drafts[anchor]} onEdit={() => onEditDay(anchor)} />
         {!day.working ? (
-          <p className="cal__empty cal__empty--big">Выходной день. Кнопка ⦿ в шапке дня делает его рабочим или меняет часы работы.</p>
+          <p className="cal__empty cal__empty--big">Выходной день. Кнопка ⚙ в шапке дня делает его рабочим или меняет часы работы.</p>
         ) : (
           <>
           <ol className="cal__hourlist" aria-label="Часы дня">
@@ -215,16 +207,8 @@ export function DayView({ anchor, cfg, slots, today, drafts, onEditDay, onOpenIt
                 <div
                   className="cal__hour-cards"
                   data-over={dnd.over === `hour:${row.hour}` ? 'true' : undefined}
-                  onDragOver={(e) => {
-                    if (!dnd.dragVin) return;
-                    e.preventDefault();
-                    dnd.onOver(`hour:${row.hour}`);
-                  }}
-                  onDrop={(e) => {
-                    if (!dnd.dragVin) return;
-                    e.preventDefault();
-                    dnd.onDropAt(anchor, row.hour * 60);
-                  }}
+                  onDragOver={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onOver(`hour:${row.hour}`); }}
+                  onDrop={(e) => { if (!dnd.dragVin) return; e.preventDefault(); dnd.onDropAt(anchor, row.hour * 60); }}
                 >
                   {row.isBreak && row.slots.length === 0 && <span className="cal__break">перерыв</span>}
                   {row.slots.map((s) => <Card key={s.item.vin} slot={s} onOpen={onOpenItem} wide dnd={dnd} />)}
