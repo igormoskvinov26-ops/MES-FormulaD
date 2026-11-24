@@ -41,22 +41,15 @@ export function ColumnPicker({
       </button>
       {open && (
         <div className="picker-menu" role="group" aria-label="Видимые колонки">
-          <p className="picker-hint">Разкладка сохраняется на этом компьютере</p>
+          <p className="picker-hint">Раскладка сохраняется на этом компьютере</p>
           {COLUMNS.map((column) => (
             <label key={column.key} className={column.locked ? 'locked' : undefined}>
-              <input
-                type="checkbox"
-                checked={column.locked || visible.includes(column.key)}
-                disabled={column.locked}
-                onChange={() => onToggle(column.key)}
-              />
+              <input type="checkbox" checked={column.locked || visible.includes(column.key)} disabled={column.locked} onChange={() => onToggle(column.key)} />
               {column.label}
               {column.locked && <span className="muted"> · всегда</span>}
             </label>
           ))}
-          <button type="button" className="link" onClick={onReset}>
-            Вернуть стандартную разкладку
-          </button>
+          <button type="button" className="link" onClick={onReset}>Вернуть стандартную раскладку</button>
         </div>
       )}
     </div>
