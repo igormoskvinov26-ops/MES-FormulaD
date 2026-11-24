@@ -33,7 +33,7 @@ export function createCollapsePref({ key, attr, event, narrowPx }: { key: string
       try {
         localStorage.setItem(key, collapsed ? 'collapsed' : 'expanded');
       } catch {
-        /* no localStorage */
+        /* без localStorage выбор действует до перезагрузки */
       }
       apply(collapsed);
     },

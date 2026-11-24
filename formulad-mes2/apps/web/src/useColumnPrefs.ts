@@ -20,7 +20,7 @@ export function useColumnPrefs() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(visible));
     } catch {
-      // private mode or blocked storage: layout won't be remembered
+      // Приватный режим или заблокированное хранилище: разкладка просто не запомнится.
     }
   }, [visible]);
 
