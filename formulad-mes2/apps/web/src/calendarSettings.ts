@@ -23,7 +23,7 @@ export function validateSettings(s: CalendarSettings): string | null {
   if (posts.length > 10) return 'Постов контроля не больше десяти.';
   for (const p of posts) {
     if (p.name.trim().length === 0 || p.name.trim().length > 40) return 'Пост контроля: название от 1 до 40 символов.';
-    if (p.afterStation.trim().length === 0) return 'Пост контроля: выберите станцию, после которой он стоит.';
+    if (p.afterStation.trim().length === 0) return 'Пост контроля: выберите станцию.';
   }
   return null;
 }

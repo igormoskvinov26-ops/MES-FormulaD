@@ -13,6 +13,7 @@ const monthIndex = (cell: string) => {
   return MONTH_STEMS.findIndex((stem, i) => (i === 4 ? c === 'май' || c === 'мая' : c.startsWith(stem)));
 };
 const daysIn = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+
 const pad = (n: number) => String(n).padStart(2, '0');
 
 export function parseDate(raw: string): string | null {
@@ -30,7 +31,8 @@ export function parseDate(raw: string): string | null {
 function parseTime(raw: string): string | null {
   const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(raw.trim());
   if (!match) return null;
-  const h = +match[1], min = +match[2];
+  const h = +match[1];
+  const min = +match[2];
   return h > 23 || min > 59 ? null : `${pad(h)}:${pad(min)}`;
 }
 
@@ -62,7 +64,7 @@ function parseMonthMatrix(lines: string[], defaults: { shiftStart: string; shift
       for (const token of cell.split(/[,\s]+/).filter(Boolean)) {
         const m = /^(\d{1,2})([*+])?$/.exec(token);
         const day = m ? +m[1] : 0;
-        if (!m || day < 1 || day > daysIn(year, month)) { errors.push({ line: i + 1, message: `Непонятная отметка «${token}»` }); return; }
+        if (!m || day < 1 || day > daysIn(year, month)) { errors.push({ line: i + 1, message: `Непонятная отметка «${token}» в ${MONTH_STEMS[month]}…` }); continue; }
         const date = `${year}-${pad(month + 1)}-${pad(day)}`;
         const change: CalendarDayChange = m[2] === '*'
           ? { date, kind: 'work', from: defaults.shiftStart, to: shortEnd, note: 'Сокращённый день' }
@@ -96,6 +98,7 @@ export function parseCalendarImport(text: string, defaults: { shiftStart: string
       return;
     }
     first = false;
+
     const typeText = (cells[1] ?? '').toLowerCase();
     let kind: 'off' | 'work';
     let shortened = false;
@@ -116,7 +119,8 @@ export function parseCalendarImport(text: string, defaults: { shiftStart: string
       const end = minutes(defaults.shiftEnd) - 60;
       to = `${pad(Math.floor(end / 60))}:${pad(end % 60)}`;
     } else if (kind === 'off' && (cells[2] || cells[3])) {
-      errors.push({ line: lineNo, message: 'У выходного дня часы не задаются' }); return;
+      errors.push({ line: lineNo, message: 'У выходного дня часы не задаются' });
+      return;
     }
 
     const note = cells[4] || (kind === 'off' && /^пра/.test(typeText) ? 'Праздник' : shortened ? 'Сокращённый день' : '') || null;

@@ -162,7 +162,7 @@ export function weekColumns(anchor: string, slots: Slot[], cfg: CalendarConfig =
   });
 }
 
-export const WEEKDAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+export const WEEKDAYS_SHORT = ['\u041f\u043d', '\u0412\u0442', '\u0421\u0440', '\u0427\u0442', '\u041f\u0442', '\u0421\u0431', '\u0412\u0441'];
 
 export function addMonths(date: string, n: number) {
   const d = parseYmd(date);
@@ -202,7 +202,7 @@ export function dayHourRows(info: DayInfo, slots: Slot[], cfg: CalendarConfig = 
 
 const timeOf = (stamp: string) => {
   const t = stamp.slice(11, 16);
-  return /^\d\d:\d\d$/.test(t) && t !== '00:00' ? t : '—';
+  return /^\d\d:\d\d$/.test(t) && t !== '00:00' ? t : '\u2014';
 };
 
 export function releasedSlots(items: ProductionPlanItem[]): Slot[] {
