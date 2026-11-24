@@ -18,6 +18,9 @@ function buildUpdatedRow(current: PackingListRawRow, field: keyof PackingListRaw
   return { ...current, [field]: value || null };
 }
 
+/** Список поставок + карточка одной поставки (раздел 19-24, Этап 9): Packing List вставляется
+    тем же паттерном «вставка → проверка → исправление → подтверждение», что импорт плана
+    (Этап 8), дальше — список коробок с проверкой по строкам в модальном окне. */
 export function IncomingInspectionScreen({
   session: authSession,
   onNavigate,
@@ -80,7 +83,7 @@ export function IncomingInspectionScreen({
   useEffect(() => {
     if (!selectedId) {
       setDelivery(null);
-      reloadDeliveries(page);
+      reloadDeliveries(page); // список мог устареть — коробки/статус поставки менялись на экране карточки
       return;
     }
     api.delivery(selectedId).then(setDelivery).catch(() => setDelivery(null));
@@ -187,12 +190,16 @@ export function IncomingInspectionScreen({
 
   function onPackageChanged(updated: DeliveryPackage) {
     setOpenPackage(updated);
+    // Делаем локальный патч для мгновенного отклика в таблице коробок, но Delivery.status
+    // вычисляется на сервере (раздел 23: «проверена» ровно когда закрыты все коробки) — после
+    // close/reopen локальная правка одних Packages его не обновит, поэтому догружаем поставку.
     setDelivery((prev) => prev && { ...prev, packages: prev.packages.map((p) => (p.id === updated.id ? updated : p)) });
     if (delivery) {
       api.delivery(delivery.id).then(setDelivery).catch(() => undefined);
     }
   }
 
+  // --- Список поставок --------------------------------------------------
   if (!delivery) {
     return (
       <div className="app f7plan">
@@ -290,6 +297,7 @@ export function IncomingInspectionScreen({
     );
   }
 
+  // --- Карточка поставки --------------------------------------------------
   return (
     <div className="app f7plan">
       <AppHeader screen="incoming" onNavigate={onNavigate} session={authSession} onLogout={onLogout} />
@@ -379,20 +387,72 @@ export function IncomingInspectionScreen({
                   return (
                     <tr key={result.rowNumber} className={result.errors.length > 0 ? 'import-row-error' : undefined}>
                       <td>{result.rowNumber}</td>
-                      <td><input aria-label={`Строка ${result.rowNumber}: HU`} value={row.packageNumber ?? ''} onChange={(e) => onCellChange(result.rowNumber, 'packageNumber', e.target.value)} onBlur={() => void commitRow(result.rowNumber, row)} /></td>
-                      <td><input aria-label={`Строка ${result.rowNumber}: артикул`} value={row.article ?? ''} onChange={(e) => onCellChange(result.rowNumber, 'article', e.target.value)} onBlur={() => void commitRow(result.rowNumber, row)} /></td>
+                      <td>
+                        <input
+                          aria-label={`Строка ${result.rowNumber}: HU`}
+                          value={row.packageNumber ?? ''}
+                          onChange={(e) => onCellChange(result.rowNumber, 'packageNumber', e.target.value)}
+                          onBlur={() => void commitRow(result.rowNumber, row)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Строка ${result.rowNumber}: артикул`}
+                          value={row.article ?? ''}
+                          onChange={(e) => onCellChange(result.rowNumber, 'article', e.target.value)}
+                          onBlur={() => void commitRow(result.rowNumber, row)}
+                        />
+                      </td>
                       <td>{row.componentName ?? '—'}</td>
-                      <td><input aria-label={`Строка ${result.rowNumber}: количество`} value={row.quantity ?? ''} onChange={(e) => onCellChange(result.rowNumber, 'quantity', e.target.value)} onBlur={() => void commitRow(result.rowNumber, row)} /></td>
-                      <td><input aria-label={`Строка ${result.rowNumber}: вес нетто`} value={row.netWeight ?? ''} onChange={(e) => onCellChange(result.rowNumber, 'netWeight', e.target.value)} onBlur={() => void commitRow(result.rowNumber, row)} /></td>
-                      <td><input aria-label={`Строка ${result.rowNumber}: вес брутто`} value={row.grossWeight ?? ''} onChange={(e) => onCellChange(result.rowNumber, 'grossWeight', e.target.value)} onBlur={() => void commitRow(result.rowNumber, row)} /></td>
-                      <td><input aria-label={`Строка ${result.rowNumber}: партия`} value={row.batch ?? ''} onChange={(e) => onCellChange(result.rowNumber, 'batch', e.target.value)} onBlur={() => void commitRow(result.rowNumber, row)} /></td>
+                      <td>
+                        <input
+                          aria-label={`Строка ${result.rowNumber}: количество`}
+                          value={row.quantity ?? ''}
+                          onChange={(e) => onCellChange(result.rowNumber, 'quantity', e.target.value)}
+                          onBlur={() => void commitRow(result.rowNumber, row)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Строка ${result.rowNumber}: вес нетто`}
+                          value={row.netWeight ?? ''}
+                          onChange={(e) => onCellChange(result.rowNumber, 'netWeight', e.target.value)}
+                          onBlur={() => void commitRow(result.rowNumber, row)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Строка ${result.rowNumber}: вес брутто`}
+                          value={row.grossWeight ?? ''}
+                          onChange={(e) => onCellChange(result.rowNumber, 'grossWeight', e.target.value)}
+                          onBlur={() => void commitRow(result.rowNumber, row)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Строка ${result.rowNumber}: партия`}
+                          value={row.batch ?? ''}
+                          onChange={(e) => onCellChange(result.rowNumber, 'batch', e.target.value)}
+                          onBlur={() => void commitRow(result.rowNumber, row)}
+                        />
+                      </td>
                       <td>
                         {result.errors.length > 0 ? (
                           <>
-                            <ul className="import-errors">{result.errors.map((e) => <li key={e}>{e}</li>)}</ul>
-                            {unknownArticle && <button type="button" onClick={() => void addUnknownArticle(result.rowNumber, row)}>Добавить «{row.article}» в справочник</button>}
+                            <ul className="import-errors">
+                              {result.errors.map((e) => (
+                                <li key={e}>{e}</li>
+                              ))}
+                            </ul>
+                            {unknownArticle && (
+                              <button type="button" onClick={() => void addUnknownArticle(result.rowNumber, row)}>
+                                Добавить «{row.article}» в справочник
+                              </button>
+                            )}
                           </>
-                        ) : <span className="badge status-ok">OK</span>}
+                        ) : (
+                          <span className="badge status-ok">OK</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -407,7 +467,11 @@ export function IncomingInspectionScreen({
           <input aria-label="Сканирование HU" placeholder="Скан HU или номер коробки" value={scanHu} onChange={(e) => setScanHu(e.target.value)} autoFocus />
           <button type="submit">Открыть</button>
         </form>
-        {scanError && <p role="alert" className="error">{scanError}</p>}
+        {scanError && (
+          <p role="alert" className="error">
+            {scanError}
+          </p>
+        )}
 
         <div className="table-wrap">
           <table>
@@ -433,7 +497,11 @@ export function IncomingInspectionScreen({
                 </tr>
               ))}
               {delivery.packages.length === 0 && (
-                <tr><td colSpan={4} className="center muted">Коробок пока нет — вставьте Packing List выше</td></tr>
+                <tr>
+                  <td colSpan={4} className="center muted">
+                    Коробок пока нет — вставьте Packing List выше
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

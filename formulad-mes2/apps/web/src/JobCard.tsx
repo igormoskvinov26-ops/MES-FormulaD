@@ -3,7 +3,10 @@ import { dash } from './format';
 import { Qr } from './Qr';
 
 /**
- * Бланк JobCard (раздел 8 спецификации).
+ * Бланк JobCard (раздел 8 спецификации). Состав полей — рабочий перечень из [П] (раздел 147):
+ * «состав и дизайн бланка не согласованы» — точная вёрстка операций по станциям (см.
+ * docs/PRINTED_CARDS.md) требует справочника «Соединения», которого в демо-данных нет;
+ * здесь только шапка, которую подтверждает сам текст спецификации.
  */
 export function JobCard({ item, formedAt }: { item: ProductionPlanItem; formedAt: string }) {
   const rows: [string, string][] = [

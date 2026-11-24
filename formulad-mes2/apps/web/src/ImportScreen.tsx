@@ -12,6 +12,12 @@ function buildUpdatedRow(current: ImportRawRow, field: keyof ImportRawRow, value
   return { ...current, [field]: value || null };
 }
 
+/**
+ * Импорт производственного плана (раздел 6 спецификации, Этап 8 плана). Два равноправных
+ * способа ввода — файл (CSV) и вставка диапазона (раздел 6.1); парсинг общий
+ * (см. importParse.ts), дальше оба способа ведут в один и тот же конвейер «временная область →
+ * проверка → публикация», как и будущий вызов 1С (docs/INTEGRATION_1C.md).
+ */
 export function ImportScreen({
   session: authSession,
   onNavigate,
@@ -138,6 +144,7 @@ export function ImportScreen({
     }
   }
 
+  // Шаг конвейера «загрузка → проверка и исправление → публикация» (только подсказка, на логику не влияет).
   const currentStep = publishedCount !== null ? 3 : session ? (session.errorCount === 0 ? 2 : 1) : 0;
   const STEPS = ['Загрузка', 'Проверка и исправление', 'Публикация'];
 
@@ -260,8 +267,8 @@ export function ImportScreen({
                   return (
                     <tr key={result.rowNumber} className={result.errors.length > 0 ? 'import-row-error' : undefined}>
                       <td className="reorder-cell">
-                        <button type="button" className="reorder-btn" aria-label="Переместить вверх" disabled={idx === 0 || busy} onClick={() => moveRow(idx, -1)}>&uarr;</button>
-                        <button type="button" className="reorder-btn" aria-label="Переместить вниз" disabled={idx === session.rows.length - 1 || busy} onClick={() => moveRow(idx, 1)}>&darr;</button>
+                        <button type="button" className="reorder-btn" aria-label="Переместить вверх" disabled={idx === 0 || busy} onClick={() => moveRow(idx, -1)}>↑</button>
+                        <button type="button" className="reorder-btn" aria-label="Переместить вниз" disabled={idx === session.rows.length - 1 || busy} onClick={() => moveRow(idx, 1)}>↓</button>
                       </td>
                       <td>{result.rowNumber}</td>
                       <td>

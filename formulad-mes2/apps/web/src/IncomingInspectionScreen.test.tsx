@@ -47,7 +47,7 @@ beforeEach(() => vi.restoreAllMocks());
 afterEach(() => vi.unstubAllGlobals());
 
 function pasteBlock() {
-  return ['HU	Артикул	Наименование	Кол-во	Нетто	Брутто	Партия', 'строка'].join('\n');
+  return ['HU\tАртикул\tНаименование\tКол-во\tНетто\tБрутто\tПартия', 'строка'].join('\n');
 }
 
 describe('IncomingInspectionScreen', () => {
