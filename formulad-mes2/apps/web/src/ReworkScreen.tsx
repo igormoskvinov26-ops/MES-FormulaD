@@ -4,6 +4,12 @@ import { ScanTransitionScreen } from './ScanTransitionScreen';
 import { api, type NcpItem } from './api';
 import { NcpDetails } from './NcpDetails';
 
+/**
+ * Несоответствия найденного изделия прямо внутри карточки Rework (раздел 17, [С]):
+ * «пользователь окна Rework может открыть NCP, установить деталь, закрыть NCP» — без перехода
+ * на отдельный экран. После любого действия вызывает `onChanged`, чтобы ScanTransitionScreen
+ * заново проверил допуск к «Завершить Rework» без повторного скана.
+ */
 function ReworkNcpPanel({ vin, onChanged }: { vin: string; onChanged: () => void }) {
   const [items, setItems] = useState<NcpItem[]>([]);
   const [error, setError] = useState('');
@@ -66,6 +72,12 @@ function ReworkNcpPanel({ vin, onChanged }: { vin: string; onChanged: () => void
   );
 }
 
+/**
+ * Rework Zone (раздел 17, Этап 6 плана): экран для изделий в статусе 4 — та же механика
+ * сканирования, что у Старта/Завершения/FOK (eligibleStatusId=4 → confirm переводит в 2),
+ * расширенная списком NCP прямо в карточке и повторной проверкой обязательной детали на
+ * confirm (как у FOK — см. backend /production-plan/{vin}/rework/finish).
+ */
 export function ReworkScreen({
   session,
   onNavigate,
