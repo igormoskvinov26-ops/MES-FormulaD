@@ -18,7 +18,7 @@ export function initDensity(): void {
   try {
     if (localStorage.getItem(KEY) === 'compact') apply('compact');
   } catch {
-    /* no localStorage — comfortable density */
+    /* без localStorage — комфортная плотность */
   }
 }
 
@@ -26,7 +26,7 @@ export function setDensity(density: Density): void {
   try {
     localStorage.setItem(KEY, density);
   } catch {
-    /* choice lasts until reload */
+    /* выбор действует до перезагрузки */
   }
   apply(density);
 }
