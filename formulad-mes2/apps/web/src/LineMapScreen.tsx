@@ -135,20 +135,10 @@ export function LineMapScreen({
             <h2>История: {selectedPost.name}</h2>
             {historyLoading && <p className="muted">Загрузка…</p>}
             {historyError && <p role="alert" className="error">{historyError}</p>}
-            {!historyLoading && !historyError && history.length === 0 && (
-              <p className="muted">Сессий ещё не было</p>
-            )}
+            {!historyLoading && !historyError && history.length === 0 && <p className="muted">Сессий ещё не было</p>}
             {!historyLoading && history.length > 0 && (
               <table>
-                <thead>
-                  <tr>
-                    <th>VIN</th>
-                    <th>Начало</th>
-                    <th>Завершение</th>
-                    <th>Итог</th>
-                    <th>Инспектор</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>VIN</th><th>Начало</th><th>Завершение</th><th>Итог</th><th>Инспектор</th></tr></thead>
                 <tbody>
                   {history.map((s) => (
                     <tr key={s.id}>
