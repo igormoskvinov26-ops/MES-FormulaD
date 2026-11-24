@@ -32,7 +32,8 @@ up() {
   (cd "$ROOT/apps/web" && { [ -d node_modules ] || npm ci --no-audit --no-fund; } \
     && npx vite build --outDir "$API_DIR/wwwroot" --emptyOutDir >/dev/null)
 
-  echo "▸ API: сборка (Release)"
+  echo "▸ API: сборка (Release, чистая)"
+  rm -rf "$API_DIR/bin" "$API_DIR/obj"
   (cd "$ROOT" && dotnet build "$API_DIR" -c Release -v quiet --nologo >/dev/null)
 
   local password="${STAND_PASSWORD:-$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)}"
