@@ -37,7 +37,6 @@ export type NcpItem = {
   createdBy: string;
   closedAt: string | null;
   closedBy: string | null;
-  /** Из плана по VIN (подтягивает GET /ncp). */
   modelArticle?: string | null;
   modelName?: string | null;
   color?: string | null;
@@ -46,13 +45,10 @@ export type NcpItem = {
 export type ComponentItem = { code: string; name: string; station: string | null; modelIds?: string[] | null };
 
 export type ModelRef = { article: string; name: string };
-/** Пост контроля качества на линии: стоит после станции `afterStation` (по карте контроля). */
 export type ControlPost = { name: string; afterStation: string };
 export type CalendarSettings = { workdays: number[]; shiftStart: string; shiftEnd: string; breaks: { from: string; to: string }[]; perShift: number; controlPosts?: ControlPost[] };
-/** Отметка по дате: off — выходной/праздник; work — рабочий день (в т. ч. перенесённый), возможно с особыми часами. */
 export type CalendarDay = { date: string; kind: 'off' | 'work'; from: string | null; to: string | null; note: string | null };
 export type CalendarState = { settings: CalendarSettings; days: CalendarDay[] };
-/** kind = null — вернуть дату к стандартному графику. */
 export type CalendarDayChange = { date: string; kind: 'off' | 'work' | null; from?: string | null; to?: string | null; note?: string | null };
 
 export type EventLogEntry = { id: number; entityType: string; entityKey: string; action: string; oldValue: string | null; newValue: string | null; userName: string; occurredAt: string };
@@ -168,7 +164,6 @@ export type PrintTemplateItem = { id: number; name: string; bodyHtml: string; up
 export type StationCount = { station: string; count: number };
 export type TypeCount = { type: string; count: number };
 
-/** Ошибка API с кодом — UI различает 401 (нет доступа) и 404 (не найдено). */
 export class ApiError extends Error {
   constructor(readonly status: number, message: string, readonly detail?: string) {
     super(message);

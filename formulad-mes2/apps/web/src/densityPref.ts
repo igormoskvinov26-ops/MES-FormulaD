@@ -1,4 +1,3 @@
-/** Плотность таблиц: комфортная (по умолчанию) или компактная. Хранится как `data-density` на корне и в localStorage. */
 const KEY = 'f7-density';
 const EVENT = 'f7-density-change';
 
@@ -19,7 +18,7 @@ export function initDensity(): void {
   try {
     if (localStorage.getItem(KEY) === 'compact') apply('compact');
   } catch {
-    /* без localStorage — комфортная плотность */
+    /* no localStorage — comfortable density */
   }
 }
 
@@ -27,7 +26,7 @@ export function setDensity(density: Density): void {
   try {
     localStorage.setItem(KEY, density);
   } catch {
-    /* выбор действует до перезагрузки */
+    /* choice lasts until reload */
   }
   apply(density);
 }

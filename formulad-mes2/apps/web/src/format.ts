@@ -15,7 +15,6 @@ export function statusBadge(status: string | null): StatusBadge {
     : { label: `Другое: ${status}`, tone: 'unknown', title: status };
 }
 
-/** SQL datetime без зоны: показываем как есть, без конвертации в UTC. Пусто → «—». */
 export function formatDate(value: string | null): string {
   if (!value) return '—';
   const [date, time] = value.split('T');
@@ -57,7 +56,6 @@ export function statusCodeLabel(id: number | null): string {
   return STATUS_CODE_LABELS[id] ?? `код ${id}`;
 }
 
-/** 1 … 4 5 6 … 50: первая, последняя и соседи текущей; null — многоточие. */
 export function pageList(page: number, total: number): (number | null)[] {
   const keep = new Set([1, total, page - 1, page, page + 1].filter((n) => n >= 1 && n <= total));
   const out: (number | null)[] = [];
