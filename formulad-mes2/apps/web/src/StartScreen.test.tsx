@@ -78,10 +78,12 @@ describe('StartScreen', () => {
     render(<StartScreen session={session} onNavigate={noop} onLogout={noop} />);
     const input = screen.getByLabelText('Сканирование VIN');
 
+    // первый скан — поиск
     await userEvent.type(input, 'DEMO-VIN-00002{Enter}');
     expect(await screen.findByLabelText('Найдено изделие DEMO-VIN-00002')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Запустить' })).toBeEnabled();
 
+    // второй скан того же VIN — подтверждение
     await userEvent.type(input, 'DEMO-VIN-00002{Enter}');
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Готово'));
