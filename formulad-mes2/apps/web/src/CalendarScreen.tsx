@@ -81,7 +81,9 @@ export function CalendarScreen({
         setCalendar(cal);
       })
       .catch((e: unknown) => alive && setError(e instanceof ApiError && e.status === 401 ? 'Нет доступа' : 'Нет связи с сервером'));
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const cfg = useMemo(() => (calendar ? configFrom(calendar.settings, calendar.days) : null), [calendar]);
@@ -95,6 +97,7 @@ export function CalendarScreen({
 
   const reloadPlan = async () => setItems(await loadPlan());
 
+  /** Показать подтверждение переноса `vin` перед `beforeVin` (null — в конец очереди запланированных). */
   const requestMove = (vin: string, beforeVin: string | null) => {
     setDragVin(null);
     setOver(null);
@@ -126,6 +129,7 @@ export function CalendarScreen({
     }
   };
 
+  /** Откат последнего переноса: изделие возвращается на прежнюю позицию в плане. */
   const undoMove = async () => {
     if (!lastMove) return;
     setMoving(true);
@@ -147,7 +151,10 @@ export function CalendarScreen({
     over,
     isMovable: (s) => isMovable(s.item),
     onDragStart: setDragVin,
-    onDragEnd: () => { setDragVin(null); setOver(null); },
+    onDragEnd: () => {
+      setDragVin(null);
+      setOver(null);
+    },
     onOver: setOver,
     onDropBefore: (slot) => dragVin && requestMove(dragVin, slot.pinned ? (planned.find((s) => s.item.vin !== dragVin)?.item.vin ?? null) : slot.item.vin),
     onDropAt: (date, minute) => dragVin && requestMove(dragVin, beforeVinForPoint(slots, dragVin, date, minute)),
@@ -167,6 +174,7 @@ export function CalendarScreen({
     },
   };
 
+  /** Применить накопленные изменения календаря на сервере; прогноз пересчитывается по новому графику. */
   const recalc = async () => {
     setApplying(true);
     setError('');
@@ -182,6 +190,7 @@ export function CalendarScreen({
     }
   };
 
+  /** Запомнить черновик дня; совпадающий с текущим состоянием не считается изменением. */
   const saveDraft = (date: string, draft: DayDraft) => {
     const current = cfg?.overrides[date] ?? null;
     const same = draft.kind === null ? current === null : current !== null && current.kind === draft.kind && current.from === draft.from && current.to === draft.to && current.note === draft.note;
@@ -195,7 +204,10 @@ export function CalendarScreen({
     setEditing(null);
   };
 
-  const openDay = (date: string) => { setAnchor(date); setView('day'); };
+  const openDay = (date: string) => {
+    setAnchor(date);
+    setView('day');
+  };
 
   const shared = cfg && { cfg, slots, today, drafts, onEditDay: setEditing, onOpenDay: openDay, onOpenItem: setOpened, dnd };
 
@@ -252,7 +264,12 @@ export function CalendarScreen({
         </p>
       )}
 
-      {error && <p role="alert" className="error" style={{ margin: '12px 24px 0' }}>{error}</p>}
+      {error && (
+        <p role="alert" className="error" style={{ margin: '12px 24px 0' }}>
+          {error}
+        </p>
+      )}
+
       {!items && !error && <p className="muted" style={{ margin: '16px 24px' }} role="status">Загрузка…</p>}
 
       {items && shared && view === 'week' && <WeekView anchor={anchor} {...shared} />}
