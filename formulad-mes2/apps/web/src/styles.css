@@ -1411,4 +1411,3 @@ tr.drag-over { outline: 2px solid var(--f7-red); outline-offset: -2px; }
   cursor: grab; font-size: 1rem; color: var(--muted); padding: 0 4px;
   user-select: none; display: inline-block;
 }
-.drag-handle:active { cursor: grabbing; }
