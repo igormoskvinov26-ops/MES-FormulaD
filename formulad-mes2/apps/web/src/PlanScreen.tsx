@@ -482,7 +482,6 @@ export function PlanScreen({
                         return (
                           <td
                             key={column.key}
-                            // Длинная «Комплектация» обрезается многоточием, полный текст — в подсказке и в карточке.
                             title={value}
                           >
                             {value}
