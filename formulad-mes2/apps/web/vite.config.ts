@@ -1,21 +1,29 @@
+import { execSync } from 'child_process';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const commit = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'dev'; }
+})();
+
 export default defineConfig({
-  define: {
-    __BUILD_HASH__: JSON.stringify(process.env.VITE_BUILD_HASH ?? 'dev'),
-    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
-  },
+  define: { __COMMIT__: JSON.stringify(commit) },
   plugins: [react()],
+  build: { outDir: '../../src/FormulaD.Mes.Api/wwwroot', emptyOutDir: true },
   server: {
     port: 5173,
-    // Vite проксирует /api на локальный .NET API (dev-режим, только loopback).
     proxy: { '/api': { target: 'http://localhost:5080', changeOrigin: false } },
   },
   test: {
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
-    exclude: ['e2e/**', 'node_modules/**'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test-setup.ts', 'src/main.tsx'],
+      reporter: ['text-summary', 'lcov'],
+      thresholds: { lines: 80, statements: 80, branches: 78, functions: 58 },
+    },
   },
 });
