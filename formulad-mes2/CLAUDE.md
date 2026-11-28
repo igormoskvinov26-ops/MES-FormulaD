@@ -21,33 +21,39 @@
 
 ## Локальная разработка (Mac владельца)
 
-**Путь к репо на Mac:** `/Users/imosk/Desktop/MES/audit/2026-11-06/source`
+**Путь к репо на Mac: `/Users/imosk/WEB-MES-F7`**
 
 - Проект API: `src/FormulaD.Mes.Api`
 - Stand-скрипт: `stand/stand.sh`
-- user-secrets хранятся в macOS keychain через `dotnet user-secrets` (проект `src/FormulaD.Mes.Api`)
+- user-secrets хранятся в macOS через `dotnet user-secrets` (проект `src/FormulaD.Mes.Api`)
 
 Команды для Mac:
 ```bash
-cd /Users/imosk/Desktop/MES/audit/2026-11-06/source
+cd /Users/imosk/WEB-MES-F7
 ./stand/stand.sh up
+```
+
+Установка user-secrets (если нужно перенастроить):
+```bash
+dotnet user-secrets set "Sql:ConnectionString" \
+  "Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_reader;Password=MesReader2024!;Encrypt=True;TrustServerCertificate=True" \
+  --project /Users/imosk/WEB-MES-F7/src/FormulaD.Mes.Api
+
+dotnet user-secrets set "Sql:WriteConnectionString" \
+  "Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_writer;Password=MesWriter2024!;Encrypt=True;TrustServerCertificate=True" \
+  --project /Users/imosk/WEB-MES-F7/src/FormulaD.Mes.Api
 ```
 
 ## Тестовая среда
 
 - Docker Compose: `docker/docker-compose.yml` (SQL Server 2022 + init + mes-api)
 - Stand-скрипт: `./stand/stand.sh up` — поднимает API на macOS с SQL-режимом
-- БД: `FormulaD_TEST`, порт 5080
+- Докер SQL Server контейнер: `mes-test-sql` (порт 1433)
+- БД: `FormulaD_TEST`, стенд на порту 5080
 - Стенд всегда запускается в **SQL-режиме** (DataSource=Sql), Demo-режима нет
 - Логины БД: `mes_reader` / `MesReader2024!` (чтение), `mes_writer` / `MesWriter2024!` (запись)
 - **SA пароль контейнера `mes-test-sql`: `NLy75RGRgTS0wHqoiYAa1`** (узнан через `docker inspect`)
 - SQL connection string хранится в dotnet user-secrets (`Sql:ConnectionString` и `Sql:WriteConnectionString`)
-
-**user-secrets (уже настроены на Mac):**
-```
-Sql:ConnectionString = Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_reader;Password=MesReader2024!;Encrypt=True;TrustServerCertificate=True
-Sql:WriteConnectionString = Server=localhost,1433;Database=FormulaD_TEST;User ID=mes_writer;Password=MesWriter2024!;Encrypt=True;TrustServerCertificate=True
-```
 
 **ВАЖНО:** Docker-стенд запускается **на машине владельца**, не в облаке Claude Code.
 Облачный контейнер Claude Code не имеет Docker daemon — Docker-in-Docker не работает.
@@ -113,7 +119,7 @@ Sql:WriteConnectionString = Server=localhost,1433;Database=FormulaD_TEST;User ID
 | 2026-11 | Multi-stage Dockerfile | T-108: одна команда для стенда |
 | 2026-11 | Стенд переведён на SQL-режим по умолчанию | Demo-режим убран из stand.sh |
 | 2026-11 | DevAuth credentials зафиксированы admin/mes | Больше не генерировать случайные пароли |
-| 2026-11 | Путь Mac репо зафиксирован в CLAUDE.md | /Users/imosk/Desktop/MES/audit/2026-11-06/source |
+| 2026-11 | Путь Mac репо зафиксирован в CLAUDE.md | /Users/imosk/WEB-MES-F7 |
 
 ## Выполненные задачи
 
@@ -132,4 +138,4 @@ T-029 ✔, T-077 ✔, T-084 ✔, T-090 ✔, T-091 ◐ (scaffold), T-094 ✔, T-1
 - Docker запускается на машине владельца, НЕ в облаке Claude Code (нет Docker daemon)
 - Облачный контейнер Claude Code эфемерен — всё что не в репо теряется
 - DevAuth credentials всегда `admin` / `mes` — не менять, не генерировать случайные
-- **Путь к репо на Mac: `/Users/imosk/Desktop/MES/audit/2026-11-06/source`** — не забывать!
+- **Путь к репо на Mac: `/Users/imosk/WEB-MES-F7`** — не забывать!
