@@ -17,15 +17,17 @@
 по `tblUser`, как на проде. Цель — MVP, который переключается на прод сменой connection string,
 без доработки авторизации. Блокер: нужен настоящий бэкап прода с этой таблицей.
 
-Временно (DevAuth, пока нет бэкапа): `admin` / `F7mes`
+**DevAuth credentials (всегда фиксированные): `admin` / `mes`**
 
 ## Тестовая среда
 
 - Docker Compose: `docker/docker-compose.yml` (SQL Server 2022 + init + mes-api)
-- Stand-скрипт: `./stand/stand.sh up` — поднимает всё одной командой
+- Stand-скрипт: `./stand/stand.sh up` — поднимает API на macOS с SQL-режимом
 - БД: `FormulaD_TEST`, порт 5080
+- Стенд всегда запускается в **SQL-режиме** (DataSource=Sql), Demo-режима нет
 - Логины БД: `mes_reader` / `MesReader2024!` (чтение), `mes_writer` / `MesWriter2024!` (запись)
 - SA: `FormulaD_Test2024!`
+- SQL connection string хранится в dotnet user-secrets (`Sql:ConnectionString`)
 
 **ВАЖНО:** Docker-стенд запускается **на машине владельца**, не в облаке Claude Code.
 Облачный контейнер Claude Code не имеет Docker daemon — Docker-in-Docker не работает.
@@ -63,7 +65,7 @@
 а отвечал не он. Отсюда «401 на верный пароль» и «пересборка ничего не меняет».
 
 Правило: прежде чем чинить поведение стенда, проверить `lsof -nP -iTCP:5080 -sTCP:LISTEN`
-и убедиться, что порт держит только Docker.
+и убедиться, что порт держит только нужный процесс.
 
 ## Стратегия
 
@@ -89,6 +91,8 @@
 | 2026-10 | PROD-guard убран | Физическая изоляция сети |
 | 2026-11 | SqlEventLog вместо InMemoryEventLog | Append-only tblEventLog для аудита |
 | 2026-11 | Multi-stage Dockerfile | T-108: одна команда для стенда |
+| 2026-11 | Стенд переведён на SQL-режим по умолчанию | Demo-режим убран из stand.sh |
+| 2026-11 | DevAuth credentials зафиксированы admin/mes | Больше не генерировать случайные пароли |
 
 ## Выполненные задачи
 
@@ -106,3 +110,4 @@ T-029 ✔, T-077 ✔, T-084 ✔, T-090 ✔, T-091 ◐ (scaffold), T-094 ✔, T-1
 - **Перед реализацией — составить план, проанализировать на ошибки и слабые места, потом делать**
 - Docker запускается на машине владельца, НЕ в облаке Claude Code (нет Docker daemon)
 - Облачный контейнер Claude Code эфемерен — всё что не в репо теряется
+- DevAuth credentials всегда `admin` / `mes` — не менять, не генерировать случайные
